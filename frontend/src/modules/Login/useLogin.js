@@ -48,11 +48,11 @@ export const useLogin = () => {
           // const userDetailsResponse = await AuthServices.userDetails(values?.username);
           // console.log('userDetailsResponse', userDetailsResponse)
           // if (userDetailsResponse) {
-          const { pfId, role, } = response?.data?.user;
+          const { pfId, employeeId, role, } = response?.data?.user;
           // Store user details
           sessionStorage.setItem("userDetails", JSON.stringify({ ...response?.data?.user }));
           sessionStorage.setItem("role", role || "");
-          sessionStorage.setItem("userId", pfId);
+          sessionStorage.setItem("userId", pfId || employeeId);
           successNotification("Login successful ✅");
           window.location.href = APPLICATION_ROUTES_URLS.DASHBOARD;
           // } 
