@@ -1,7 +1,8 @@
+import { centralbanklogo } from "&src/assets";
 import {
   ACCEPTED_PROJECTION_COLUMNS_FOR_RO,
-  user_Id,
-  user_role
+  isRO,
+  user_Id
 } from "&src/constants/PaymentAggregratorConstant";
 import aggregatorProjections from "&src/services/aggregatorProjections";
 import applicationServices from "&src/services/applications";
@@ -16,13 +17,12 @@ import {
   FormControlLabel,
   Grid,
   Paper,
-  Stack,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableRow,
-  Typography,
+  Typography
 } from "@mui/material";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
@@ -32,7 +32,6 @@ import FileUploadOrView from "../FileUploadOrView";
 import FullScreenLoader from "../Loaders/FullScreenLoader";
 import NoData from "../NoData";
 import useStatusWiseAlert from "../ToastNotifications/useStatusWiseAlert";
-import { centralbanklogo } from "&src/assets";
 
 // ---------------- COMPONENTS ----------------
 const QuoteTableRO = ({ quoteDetails }) => (
@@ -390,7 +389,7 @@ const AcceptedQuoteTable = ({ customer, applicationId }) => {
             <Grid item xs={12} md={6}>
               <FileUploadOrView
                 appId={customer?.customerAcceptanceFile}
-                canUpload={user_role === "RO"}
+                canUpload={isRO}
                 name="customerAcceptanceFile"
                 label="Customer Acceptance"
                 value={customerAcceptanceFile || customer?.customerAcceptanceFile}
@@ -402,7 +401,7 @@ const AcceptedQuoteTable = ({ customer, applicationId }) => {
             <Grid item xs={12} md={6}>
               <FileUploadOrView
                 appId={customer?.rhRecommendationFile}
-                canUpload={user_role === "RO"}
+                canUpload={isRO}
                 name="rhRecommendationFile"
                 label="RH Recommendation"
                 value={rhRecommendationFile || customer?.rhRecommendationFile}

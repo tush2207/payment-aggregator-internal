@@ -1,10 +1,9 @@
-import { useEffect, useState, useRef } from "react";
-import { Box, Typography, Paper, TextField, IconButton } from "@mui/material";
-import SendIcon from "@mui/icons-material/Send";
-import { user_Id, user_role } from "&src/constants/PaymentAggregratorConstant";
-import HelpdeskServices from "&src/services/helpdesk";
-import { ChatBubbleOutline } from "@mui/icons-material";
 import { message } from "&src/assets";
+import { isBO, isCO, user_role } from "&src/constants/PaymentAggregratorConstant";
+import HelpdeskServices from "&src/services/helpdesk";
+import SendIcon from "@mui/icons-material/Send";
+import { Box, IconButton, Paper, TextField, Typography } from "@mui/material";
+import { useEffect, useRef, useState } from "react";
 
 
 // ---------- FIXED PARSE FUNCTION ----------
@@ -101,9 +100,9 @@ const TicketChatSection = ({ ticketData, openMessegner }) => {
         if (!msg.trim()) return;
 
         const senderLabel =
-            user_role === "CO"
+            isCO
                 ? "Central Office"
-                : user_role === "BO"
+                : isBO
                     ? "Branch Office"
                     : user_role; // fallback for RO / ZO / others
 
@@ -173,7 +172,7 @@ const TicketChatSection = ({ ticketData, openMessegner }) => {
                         }}
                     >
                         {/* <ChatBubbleOutline sx={{ fontSize: 60, mb: 1 }} /> */}
-                        <img src={message}  width={150} />
+                        <img src={message} width={150} />
                         <Typography fontSize='20px'>No chats yet. Start conversation…</Typography>
                     </Box>
                 ) : (

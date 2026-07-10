@@ -5,11 +5,11 @@ import { useFormik } from 'formik';
 import { useEffect, useState } from 'react';
 
 import FullScreenLoader from '&src/components/Loaders/FullScreenLoader';
-import { HELP_DESK_FORM_VALUES, user_Id, user_role } from '&src/constants/PaymentAggregratorConstant';
+import { HELP_DESK_FORM_VALUES, isCO, user_Id } from '&src/constants/PaymentAggregratorConstant';
+import applicationServices from '&src/services/applications';
 import HelpdeskServices from '&src/services/helpdesk';
 import { helpDeskFormSchema } from '&src/utils/validationSchemas';
-import applicationServices from '&src/services/applications';
-import { InfoOutlined, VerifiedOutlined, VerifiedRounded } from '@mui/icons-material';
+import { InfoOutlined, VerifiedRounded } from '@mui/icons-material';
 
 const PriorityChip = styled(Chip)(({ theme }) => ({
     padding: "18px 22px",
@@ -351,7 +351,7 @@ const ManageHelpDeskForm = ({ updateDetails, fetchAllTickets, formClosed } = {})
                         />
                     </Grid>
                     {
-                        user_role === 'CO' && <Grid item xs={12} md={12}>
+                        isCO && <Grid item xs={12} md={12}>
                             <TextAreaField
                                 name="remark"
                                 label="Remark"
@@ -381,7 +381,7 @@ const ManageHelpDeskForm = ({ updateDetails, fetchAllTickets, formClosed } = {})
                             </Grid>
                         </>) :
                         (<>
-                            {user_role === 'CO' &&
+                            {isCO &&
                                 <>
                                     <Grid item xs={4}>
                                         <Button fullWidth variant="outlined" color="primary" disabled={values?.status === 'inprogress' || values?.status === 'resolved'} onClick={() => updateStatus("inprogress")}>

@@ -10,7 +10,7 @@ const ApiUrls = {
   // GET_ALL_APPLICATIONS: (zoneId, page, search, status, category) => `/get-all-applications/${zoneId}/?page=${page}&search=${search}&status=${status}&category=${category}`,
   GET_APPLICATION_BY_ID: (applicationId) => `/get-single-applications/${applicationId}`,
   ADD_APPLICATION: "/applications",
-  UPDATE_APPLICATION: (applicationId) => `/applications/${applicationId}`,
+  UPDATE_APPLICATION: (applicationId) => `/applications-sunil/${applicationId}`,
   DELETE_APPLICATION: (applicationId) => `/applications/${applicationId}`,
 
   // ---------------- Files ----------------

@@ -41,9 +41,9 @@ const usePOGenerator = (applicationDetails, setOpenPOModal, openPOModal) => {
         status: 'completed'
       };
 
-      if (!currentFinalApproved) {
+      // if (!currentFinalApproved) {
         await applicationServices.updateApplication(applicationId, updatePayload);
-      }
+      // }
 
       // Step 2: Generate PO PDF
       const res = await applicationServices.generatePO(applicationId, aggregatorId, {

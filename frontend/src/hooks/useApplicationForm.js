@@ -60,7 +60,7 @@ const useApplicationForm = ({
   }, [updateDetails]);
 
 
-  console.log(formClosed,'formClosed');
+  console.log(formClosed, 'formClosed');
   useEffect(() => {
     if (!formClosed) {
       resetForm();
@@ -143,6 +143,12 @@ const useApplicationForm = ({
         payload.status = isApprove
           ? WORK_FLOW_OPTIONS.APPROVED_BY_ZO
           : WORK_FLOW_OPTIONS.REJECTED_BY_ZO;
+        payload.approvedByZOId = user_Id;
+      case "CO":
+        payload.isReviewByCO = isApprove;
+        payload.status = isApprove
+          ? WORK_FLOW_OPTIONS.APPROVED_BY_CO
+          : WORK_FLOW_OPTIONS.REJECTED_BY_CO;
         payload.approvedByZOId = user_Id;
         break;
       default:

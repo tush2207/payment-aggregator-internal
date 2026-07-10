@@ -1,5 +1,6 @@
 import {
   ACCEPTED_PROJECTION_COLUMNS_FOR_RO,
+  isRO,
   PROJECTION_COLUMNS_FOR_CO,
   user_role,
 } from "&src/constants/PaymentAggregratorConstant";
@@ -223,7 +224,7 @@ const AcceptedQuoteTable = ({ customer, applicationId, aggregatorId, application
 
       {/* Buttons Outside PDF */}
       <Box display="flex" gap={2} justifyContent="center" mt={2}>
-        {user_role === "RO" && !customer?.isQuoteAcceptRO && (
+        {isRO && !customer?.isQuoteAcceptRO && (
           <Button
             variant="contained"
             color="success"

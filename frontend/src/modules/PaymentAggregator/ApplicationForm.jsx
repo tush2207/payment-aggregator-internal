@@ -13,6 +13,10 @@ import {
   BUSINESS_CATEGORIES,
   CONSENT_TEXT,
   CONSENT_TEXT_FOR_BR,
+  isBO,
+  isCO,
+  isRO,
+  isZO,
   PAYMENT_PROJECTIONS,
   user_role,
 } from "&src/constants/PaymentAggregratorConstant";
@@ -216,7 +220,7 @@ const ApplicationForm = ({ updateDetails, handleClose, formClosed, fetchAllAppli
                 appId={updateDetails?.kycFile}
                 touched={touched}
                 helperText={errors}
-                canUpload={user_role === "BO"}
+                canUpload={isBO}
                 name="kycFile"
                 label="KYC Document"
                 value={values?.kycFile}
@@ -228,7 +232,7 @@ const ApplicationForm = ({ updateDetails, handleClose, formClosed, fetchAllAppli
                 appId={updateDetails?.customerApplicationFile}
                 touched={touched}
                 helperText={errors}
-                canUpload={user_role === "BO"}
+                canUpload={isBO}
                 name="customerApplicationFile"
                 label="Customer Application"
                 value={values?.customerApplicationFile}
@@ -236,12 +240,12 @@ const ApplicationForm = ({ updateDetails, handleClose, formClosed, fetchAllAppli
                 required
                 formClosed={formClosed}
               />
-              {(user_role === "RO" || user_role === "ZO" || user_role === "CO") && (
+              {(isRO || isZO || user_role === "CO") && (
                 <FileUploadOrView
                   appId={updateDetails?.rhRecommendationFile}
                   touched={touched}
                   helperText={errors}
-                  canUpload={user_role === "RO"}
+                  canUpload={isRO}
                   name="rhRecommendationFile"
                   label="RH Recommendation"
                   value={values?.rhRecommendationFile}
@@ -250,12 +254,12 @@ const ApplicationForm = ({ updateDetails, handleClose, formClosed, fetchAllAppli
                   formClosed={formClosed}
                 />
               )}
-              {(user_role === "ZO" || user_role === "CO") && (
+              {(isZO || user_role === "CO") && (
                 <FileUploadOrView
                   appId={updateDetails?.zhRecommendationFile}
                   touched={touched}
                   helperText={errors}
-                  canUpload={user_role === "ZO"}
+                  canUpload={isZO}
                   name="zhRecommendationFile"
                   label="ZO Recommendation"
                   value={values?.zhRecommendationFile}
@@ -264,10 +268,10 @@ const ApplicationForm = ({ updateDetails, handleClose, formClosed, fetchAllAppli
                 />
               )}
 
-              {(user_role === "RO" || user_role === "ZO" || user_role === "CO") && values?.customerAcceptanceFile && (
+              {(isRO || isZO || user_role === "CO") && values?.customerAcceptanceFile && (
                 <FileUploadOrView
                   appId={updateDetails?.customerAcceptanceFile}
-                  canUpload={user_role === "RO"}
+                  canUpload={isRO}
                   name="customerAcceptanceFile"
                   label="Customer Acceptance"
                   value={values?.customerAcceptanceFile}
@@ -282,17 +286,20 @@ const ApplicationForm = ({ updateDetails, handleClose, formClosed, fetchAllAppli
           {/* Consent + Action Buttons */}
           {(() => {
             let shouldShow = true;
-            if (user_role === "BO" && updateDetails?.isApplicationSubmittedBR) {
+            if (isBO && updateDetails?.isApplicationSubmittedBR) {
               shouldShow = false;
             }
-            if (user_role === "RO" && updateDetails?.isReviewByRO) {
+            if (isRO && updateDetails?.isReviewByRO) {
               shouldShow = false;
             }
-            if (user_role === "ZO" && updateDetails?.isReviewByZO && updateDetails?.isReviewByRO) {
+            if (isZO && updateDetails?.isReviewByZO && updateDetails?.isReviewByRO) {
+              shouldShow = false;
+            }
+            if ((isCO && updateDetails?.isReviewByCO && updateDetails?.isReviewByRO) || isCO && updateDetails?.isReviewByCO && updateDetails?.isReviewByZO && updateDetails?.isReviewByRO) {
               shouldShow = false;
             }
 
-            if (user_role === "ZO" && updateDetails?.isReviewByRO === null) {
+            if (isZO && updateDetails?.isReviewByRO === null) {
               message = `Application Approval is pending by RO`
               shouldShow = false;
             }
@@ -313,9 +320,9 @@ const ApplicationForm = ({ updateDetails, handleClose, formClosed, fetchAllAppli
                         onChange={(e) => setConsentChecked(e.target.checked)}
                       />
                     }
-                    label={user_role === "BO" ? CONSENT_TEXT_FOR_BR : CONSENT_TEXT}
+                    label={isBO ? CONSENT_TEXT_FOR_BR : CONSENT_TEXT}
                   />
-                  {user_role === "BO" && <Typography variant="caption" color='text.secondary'>
+                  {isBO && <Typography variant="caption" color='text.secondary'>
                     <b>Note:</b> Please review all Information carefully before submitting. This action is irreversible.
                   </Typography>}
                 </Grid>
@@ -324,7 +331,7 @@ const ApplicationForm = ({ updateDetails, handleClose, formClosed, fetchAllAppli
                 {/* Action Buttons */}
                 <Grid item xs={4} />
                 <Grid item xs={4}>
-                  {user_role === "BO" && !values?.applicationId && (
+                  {isBO && !values?.applicationId && (
                     <Button
                       fullWidth
                       type="button"
@@ -334,7 +341,7 @@ const ApplicationForm = ({ updateDetails, handleClose, formClosed, fetchAllAppli
                       Reset
                     </Button>
                   )}
-                  {(user_role !== "BO" && user_role !== "CO") && (
+                  {!isBO && (
                     <Button
                       fullWidth
                       variant="outlined"
@@ -347,7 +354,7 @@ const ApplicationForm = ({ updateDetails, handleClose, formClosed, fetchAllAppli
                   )}
                 </Grid>
                 <Grid item xs={4}>
-                  {(user_role === "BO" || (user_role === "CO" && updateDetails?.isReviewByCO)) && (
+                  {isBO && (
                     <Button
                       fullWidth
                       type="submit"
@@ -360,7 +367,7 @@ const ApplicationForm = ({ updateDetails, handleClose, formClosed, fetchAllAppli
                       Submit
                     </Button>
                   )}
-                  {(user_role !== "BO" && user_role !== "CO") && (
+                  {!isBO && (
                     <Button
                       fullWidth
                       variant="contained"
@@ -382,7 +389,7 @@ const ApplicationForm = ({ updateDetails, handleClose, formClosed, fetchAllAppli
             <Grid item xs={12}>
               <FormControlLabel
                 control={<Checkbox checked={consentChecked} onChange={(e) => setConsentChecked(e.target.checked)} />}
-                label={user_role === "BO" ? CONSENT_TEXT_FOR_BR : CONSENT_TEXT}
+                label={isBO ? CONSENT_TEXT_FOR_BR : CONSENT_TEXT}
               />
             </Grid>
           )} */}
@@ -390,24 +397,24 @@ const ApplicationForm = ({ updateDetails, handleClose, formClosed, fetchAllAppli
           {/* Action Buttons */}
           {/* <Grid item xs={4} />
           <Grid item xs={4}>
-            {user_role === "BO" && !values?.applicationId && (
+            {isBO && !values?.applicationId && (
               <Button fullWidth type="button" variant="outlined" onClick={() => resetForm()}>
                 Reset
               </Button>
             )}
-            {(user_role !== "BO" && user_role !== "CO") && (
+            {(!isBO && user_role !== "CO") && (
               <Button fullWidth variant="outlined" color="error" onClick={() => setConfirmDialogOpen(true)} disabled={!consentChecked}>
                 Reject
               </Button>
             )}
           </Grid>
           <Grid item xs={4}>
-            {user_role === "BO" && (
+            {isBO && (
               <Button fullWidth type="submit" variant="contained" color="primary" disabled={!consentChecked}>
                 Submit
               </Button>
             )}
-            {(user_role !== "BO" && user_role !== "CO") && (
+            {(!isBO && user_role !== "CO") && (
               <Button fullWidth variant="contained" color="success" onClick={() => handleAction(values, "approve")} disabled={!consentChecked}>
                 Approve
               </Button>

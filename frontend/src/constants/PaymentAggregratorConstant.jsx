@@ -4,12 +4,17 @@ import StatusChipOrSelect from "&src/components/StatusChipOrSelect";
 import { APPLICATION_ROUTES_URLS } from "&src/routes/routesConfig";
 import { formatDateAndTime } from "&src/utils";
 import { DashboardRounded, Groups2, HelpCenterRounded } from "@mui/icons-material";
-import { Box, TextField, Typography } from "@mui/material";
+import { TextField } from "@mui/material";
 
 export const user_Id = sessionStorage.getItem('userId');
 
 
 export const user_role = sessionStorage.getItem('role');
+
+export const isBO = user_role === 'BO'
+export const isRO = user_role === 'RO'
+export const isZO = user_role === 'ZO'
+export const isCO = user_role === 'CO'
 
 // =========== ROLE-BASED NAVIGATION WITH ICONS ==============
 export const ROLE_NAV_ACCESS = {
@@ -260,11 +265,11 @@ export const AGGREGATOR_FORM_VALUES = {
   mobileNo: '',
   location: '',
   services: '',
-  password:'',  
-  is_logged_in:'',
-  password_history:'',
-  failed_login_attempts:'',
-  lockout_until:'',
+  password: '',
+  is_logged_in: '',
+  password_history: '',
+  failed_login_attempts: '',
+  lockout_until: '',
 
 };
 
@@ -478,6 +483,12 @@ export const PROJECTION_COLUMNS_FOR_PA = [
   "Rate",
 ];
 
+export const UPDATE_PROJECTION_COLUMNS = [
+  "Sr No",
+  "Type of Transaction",
+  "Share Transaction Count (%)",
+  "Share Transaction Value (%)",
+]
 
 export const MANAGE_AGGREGATOR_TABLE_COLUMNS = [
   {
@@ -520,7 +531,7 @@ export const MANAGE_AGGREGATOR_TABLE_COLUMNS = [
       const servicesArray = params?.value || [];
       return servicesArray?.length > 0 ? servicesArray?.replace(/\|/g, ", ") : "-"
     },
-  }
+  },
 ];
 
 export const HELP_DESK_TABLE_COLUMNS = [

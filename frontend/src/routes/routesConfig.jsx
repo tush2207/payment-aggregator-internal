@@ -6,7 +6,8 @@ const APPLICATION_ROUTES_URLS = {
   DASHBOARD: '/dashboard',
   AGGREGRATOR_DASHBOARD: '/aggregrator-dashboard',
   MANAGE_AGGREGRATOR: '/manage-aggregrator',
-  HELP_DESK:'/helpdesk'
+  HELP_DESK:'/helpdesk',
+  TEST_FLOW: '/test-flow'
 };
 
 //-------------------------------LAZY IMPORTS-------------------------------//
@@ -20,6 +21,8 @@ const ManageAggregator = lazy(() => import('&src/pages/ManageAggregator'));
 const AggregratorDashboard = lazy(() => import('&src/pages/AggregratorDashboard'));
 
 const HelpDesk = lazy(() => import('&src/pages/HelpDesk'));
+
+const TestApplicationFlow = lazy(() => import('&src/pages/TestApplicationFlow'));
 
 //-------------------------------DEFAULT ROUTES-------------------------------//
 
@@ -54,6 +57,11 @@ const PROTECTED_ROUTES = [
     pageTitle: 'Help Desk',
     path: APPLICATION_ROUTES_URLS.HELP_DESK,
     element: <HelpDesk />,
+  },
+  {
+    pageTitle: 'Test Application Flow',
+    path: APPLICATION_ROUTES_URLS.TEST_FLOW,
+    element: <TestApplicationFlow />,
   }
 ];
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Stack, Typography, Divider, Button, Alert } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-import { user_role } from '&src/constants/PaymentAggregratorConstant';
+import { isRO, isZO } from '&src/constants/PaymentAggregratorConstant';
 import { ContactMail, People } from '@mui/icons-material';
 
 const SectionHeader = ({
@@ -41,7 +41,7 @@ const SectionHeader = ({
           </Button>
         )}
 
-        {!showButton && (user_role === "RO" || user_role === "ZO") && <Alert severity='info'>Note: Click <b>Verify</b> button review and <b>Approve or Reject</b> application. </Alert>}
+        {!showButton && (isRO || isZO) && <Alert severity='info'>Note: Click <b>Verify</b> button review and <b>Approve or Reject</b> application. </Alert>}
 
       </Stack>
       {subComponent}

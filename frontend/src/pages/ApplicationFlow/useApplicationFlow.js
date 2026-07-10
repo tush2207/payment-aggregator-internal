@@ -4,7 +4,7 @@ import useStatusWiseAlert from '&src/components/ToastNotifications/useStatusWise
 
 export default function useApplicationFlow() {
   const { successNotification, errorNotification } = useStatusWiseAlert();
-  
+
   const [applications, setApplications] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -17,7 +17,7 @@ export default function useApplicationFlow() {
       // For now, since we don't have the exact API, let's use the provided JSON as fallback if needed
       // or just trust the API if it's there. 
       const response = await applicationFlowService.fetchApplications(params);
-      setApplications(response.data || []);
+      // setApplications(response.data || []);
     } catch (err) {
       console.error(err);
       setError(err?.response?.data?.message || 'Failed to fetch applications');

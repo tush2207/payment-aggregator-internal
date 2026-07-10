@@ -1,4 +1,5 @@
 import {
+  Add,
   CheckCircle,
   CurrencyRupee,
   Gavel,
@@ -29,27 +30,27 @@ import React, { useCallback, useEffect, useState } from "react";
 
 import {
   AGGREGATOR_COLUMNS,
+  isCO,
   MANAGE_AGGREGATOR_TABLE_COLUMNS,
-  PROJECTION_CAL_DETAILS,
-  user_role,
+  PROJECTION_CAL_DETAILS
 } from "&src/constants/PaymentAggregratorConstant";
 
 import { AGGREGRATOR_BY_APPLICATION_RESPONSE } from "&src/data/data";
 import useAggregatorDetails from "&src/hooks/useAggregatorDetails";
 import aggregatorByApplication from "&src/services/aggregatorByApplication";
 import aggregatorProjections from "&src/services/aggregatorProjections";
-import { RS, sortAggregatorsByQuote } from "&src/utils";
+import { sortAggregatorsByQuote } from "&src/utils";
 import { calculateProjectionDetails, generateProjectionArray } from "&src/utils/calculation";
 
 import applicationServices from "&src/services/applications";
+import CenterAlign from "../CenterAlign";
 import DatePicker from "../DatePicker";
 import EndAlignedCell from "../EndAlignedCell";
 import FullScreenLoader from "../Loaders/FullScreenLoader";
 import StatusChipOrSelect from "../StatusChipOrSelect";
 import useStatusWiseAlert from "../ToastNotifications/useStatusWiseAlert";
-import QuoteTable from "./QuoteTable";
 import AddCharges from "./AddCharges";
-import CenterAlign from "../CenterAlign";
+import QuoteTable from "./QuoteTable";
 
 // ✅ Conditional hook wrapper
 function useConditionalAggregatorDetails(condition) {
@@ -68,7 +69,7 @@ const AggregatorDetails = ({ customerDetails }) => {
   const { applicationId, aggregateDepositAmt, avgTransactionYearly, isAggregatorAdded, isQuoteAcceptRO, finalizedAggregatorId, category, avgTransactionSize } =
     customerDetails || {};
 
-  const condition = isAggregatorAdded === null && user_role === "CO";
+  const condition = isAggregatorAdded === null && isCO;
   const { aggregatorDetails } = useConditionalAggregatorDetails(condition);
 
   // 🔹 Manage Tabs
@@ -109,7 +110,7 @@ const AggregatorDetails = ({ customerDetails }) => {
   }, [applicationId]);
 
   useEffect(() => {
-    if (applicationId && customerDetails?.isAggregatorAdded && user_role === "CO") {
+    if (applicationId && customerDetails?.isAggregatorAdded && isCO) {
       fetchSelectedAggregatorDetails();
     }
   }, [applicationId, customerDetails?.isAggregatorAdded]);
@@ -127,6 +128,7 @@ const AggregatorDetails = ({ customerDetails }) => {
       const aggregatorPayload = selectedAggregators.map((agg) => ({
         aggregatorId: agg.aggregatorId,
         aggregatorName: agg.aggregatorName,
+        email: agg.email,
         endDate,
         applicationId,
         totalEstimatedTransactions: 0,
@@ -139,7 +141,7 @@ const AggregatorDetails = ({ customerDetails }) => {
         sumOfRate: 0,
         avgTransactionYearly,
         avgTransactionSize,
-        category
+        category,
       }));
 
       const projectionList = generateProjectionArray(PROJECTION_CAL_DETAILS, avgTransactionSize)
@@ -211,6 +213,12 @@ const AggregatorDetails = ({ customerDetails }) => {
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
             <Typography variant="h6" fontWeight="bold">
               Add Aggregator for Quote
+
+              {/* in this click open pop up and in that show ManageAggregator from AND Then call once getaggregator call so i can get all the details in belwo add aggregator for quote table   */}
+              <Button variant="outlined" className="ml-2" startIcon={<Add />}>
+                Add New Aggregator
+              </Button>
+
             </Typography>
 
             <Stack direction="row" spacing={2} alignItems="center">
@@ -242,7 +250,7 @@ const AggregatorDetails = ({ customerDetails }) => {
       )}
 
       {/* ➤ Added Aggregators Section */}
-      {customerDetails?.isAggregatorAdded && user_role === "CO" && (
+      {customerDetails?.isAggregatorAdded && isCO && (
         <Box sx={{ mt: 2 }}>
           <Box display='flex' justifyContent='space-between' m={2}>
             <Typography variant="subtitle1" fontWeight={600} sx={{ mt: 1 }}>

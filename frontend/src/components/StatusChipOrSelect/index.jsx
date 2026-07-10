@@ -7,6 +7,9 @@ import TextFieldLabel from "../Label";
 // -------------------------------------------------------------
 const CHIP_CONFIG = {
   // Status
+  active: { label: "Active", color: "#30D158" },
+  inactive: { label: "In-Active", color: "#FF3B30" },
+
   "all": { label: "All", color: "#FF3B30" },
 
   todo: { label: "To Do", color: "#FF3B30" },
@@ -30,7 +33,8 @@ const CHIP_CONFIG = {
   applicationSubmitted: { label: "Application Submitted", color: "#0A84FF" },
   approvedbyro: { label: "Approved by RO", color: "#BF5AF2" },
   approvedbyzo: { label: "Approved by ZO", color: "#AC8E00" },
-  approvedbyco: { label: "Send to Aggregators", color: "#5E5CE6" },
+  approvedbyco: { label: "Approved by CO", color: "#5E5CE6" },
+  sendtoaggregators: { label: "Send to Aggregators", color: "#5E5CE6" },
   rejectedbyro: { label: "Rejected by RO", color: "#FF3B30" },
   rejectedbyzo: { label: "Rejected by ZO",color: "#B00020"},
   quoterequested: {label: "Quote Requested",color: "#7B1FA2"},
@@ -52,6 +56,8 @@ const STATUS_OPTIONS = [
   "submitted",
   "approved",
   "rejected",
+  "active",
+  "inactive"
 ];
 
 const PRIORITY_OPTIONS = ["high", "medium", "low"];

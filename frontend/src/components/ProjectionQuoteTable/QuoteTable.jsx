@@ -15,18 +15,18 @@ import {
 import { useEffect, useMemo, useState } from "react";
 
 import {
+  isCO,
+  isRO,
   PROJECTION_COLUMNS_FOR_CO,
-  user_Id,
-  user_role
+  user_Id
 } from "&src/constants/PaymentAggregratorConstant";
-import { PROJECTION_LIST_BASED_ON_AGG } from "&src/data/data";
 import usePOGenerator from "&src/hooks/usePOGenerator";
 import aggregatorByApplication from "&src/services/aggregatorByApplication";
 import aggregatorProjections from "&src/services/aggregatorProjections";
 import applicationServices from "&src/services/applications";
 import { formatNumber, PERCENTAGE, RS } from "&src/utils";
 import { calculateQuoteRow, calculateTotals } from "&src/utils/calculation";
-import { CurrencyRupee, ForwardOutlined, ForwardRounded, InfoOutlined } from "@mui/icons-material";
+import { CurrencyRupee, ForwardOutlined, InfoOutlined } from "@mui/icons-material";
 import EndAlignedCell from "../EndAlignedCell";
 import FullScreenLoader from "../Loaders/FullScreenLoader";
 import NoData from "../NoData";
@@ -35,6 +35,7 @@ import GetRates from "./GetRates";
 import POForm from "./POForm";
 
 const QuoteTable = ({ applicationDetails, aggregatorId, aggregatorName, isRateAdded }) => {
+  let serialNo = 0;
   const { applicationId, isQuoteReviewCO, isQuoteAcceptRO, finalizedAggregatorId, isFinalApproved, isQuoteAddedPA } = applicationDetails || {};
   const { errorNotification, successNotification } = useStatusWiseAlert();
   const [openPOModal, setOpenPOModal] = useState(false);
@@ -44,7 +45,7 @@ const QuoteTable = ({ applicationDetails, aggregatorId, aggregatorName, isRateAd
   const [openModal, setOpenModal] = useState(false);
   const [errorRowIds, setErrorRowIds] = useState([]);
 
-console.log(isQuoteReviewCO,'isQuoteReviewCO')
+  console.log(isQuoteReviewCO, 'isQuoteReviewCO')
   const calculateAllQuoteRows = (details) => {
     console.log('calculateAll', details)
 
@@ -233,7 +234,7 @@ console.log(isQuoteReviewCO,'isQuoteReviewCO')
       {
         !isRateAdded &&
         <Box>
-          <Button startIcon={<CurrencyRupee/>} variant="outlined" onClick={() => setOpenModal(!openModal)}>
+          <Button startIcon={<CurrencyRupee />} variant="outlined" onClick={() => setOpenModal(!openModal)}>
             Add Rates
           </Button>
           <Tooltip title="Add rate as per given by the Payment Aggregator." placement="top" arrow>
@@ -244,24 +245,24 @@ console.log(isQuoteReviewCO,'isQuoteReviewCO')
         </Box>
       }
 
-      {(user_role === "CO" && !isQuoteReviewCO) && (
-        <Button  startIcon={<ForwardOutlined/>} variant="contained" onClick={sendForCustomerAcceptance}>
+      {(isCO && !isQuoteReviewCO) && (
+        <Button startIcon={<ForwardOutlined />} variant="contained" onClick={sendForCustomerAcceptance}>
           Forward for Acceptance
         </Button>
       )}
 
-      {user_role === "CO" && isQuoteAcceptRO && (
+      {isCO && isQuoteAcceptRO && (
         <Button
           variant="contained"
           color="success"
-          onClick={() => setOpenPOModal(true)}
-          // onClick={() => generatePO({ applicationId, aggregatorId: finalizedAggregatorId })}
-          disabled={poLoading || isFinalApproved}
+          // onClick={() => setOpenPOModal(true)}
+          onClick={() => generatePO({ applicationId, aggregatorId: finalizedAggregatorId })}
+        // disabled={poLoading || isFinalApproved}
         >
           Approve & Submit
         </Button>
       )}
-      {user_role === "RO" && !isQuoteAcceptRO && (
+      {isRO && !isQuoteAcceptRO && (
         <Button variant="contained" color="success" onClick={handleAcceptance}>
           Quote Acceptance By Customer
         </Button>
@@ -271,11 +272,12 @@ console.log(isQuoteReviewCO,'isQuoteReviewCO')
 
   const QuoteRow = ({ row, rowIndex, errorRowIds, isFinalApproved }) => {
     const [localCharges, setLocalCharges] = useState(row.chargesProposed ?? "");
+    if (!row.isIB) serialNo += 1;
 
-    if (user_role === "CO") {
+    if (isCO) {
       return (
         <TableRow>
-          <TableCell>{rowIndex + 1}</TableCell>
+          <TableCell>{!row.isIB ? serialNo : ""}</TableCell>
           <TableCell>{row.transactionCount}</TableCell>
           <TableCell>{row.transactionValue}</TableCell>
           <TableCell>
@@ -361,7 +363,7 @@ console.log(isQuoteReviewCO,'isQuoteReviewCO')
 
 
   const TotalsRow = () => (
-    <TableRow sx={{ backgroundColor: "#f5f5f5"}}>
+    <TableRow sx={{ backgroundColor: "#f5f5f5" }}>
       <TableCell colSpan={4} align="center" sx={{ fontWeight: 700 }}>
         TOTAL
       </TableCell>
@@ -414,7 +416,7 @@ console.log(isQuoteReviewCO,'isQuoteReviewCO')
               {quoteDetails.map((row, i) => (
                 <QuoteRow key={i} row={row} rowIndex={i} errorRowIds={errorRowIds} />
               ))}
-              {user_role === "CO" && <TotalsRow />}
+              {isCO && <TotalsRow />}
             </>
           ) : (
             <TableRow>

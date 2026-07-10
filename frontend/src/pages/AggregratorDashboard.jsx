@@ -6,7 +6,7 @@ import StatusChipOrSelect from '&src/components/StatusChipOrSelect';
 import ExpandableTable from '&src/components/Tables/ExpandableTable';
 import TransactionRateTable from '&src/components/Tables/TransactionRateTable';
 import useStatusWiseAlert from "&src/components/ToastNotifications/useStatusWiseAlert";
-import { AGGREGRATOR_DASHBOARD_TABLE_DATA, GET_ALL_APPLICATION_RESPONSE } from '&src/data/data';
+import { GET_ALL_APPLICATION_RESPONSE } from '&src/data/data';
 import useToggle from '&src/hooks/useToggle';
 import applicationServices from '&src/services/applications';
 import { RS } from '&src/utils';
@@ -54,7 +54,6 @@ function transformProjectionData(input) {
     rate,
   }));
 }
-
 
 const AggregratorDashboard = () => {
   const { errorNotification, successNotification } = useStatusWiseAlert()

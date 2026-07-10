@@ -12,13 +12,13 @@ import {
 import { useEffect, useState } from "react";
 
 import { PROJECTION_COLUMNS_FOR_PA } from "&src/constants/PaymentAggregratorConstant";
+import aggregatorByApplication from "&src/services/aggregatorByApplication";
+import aggregatorProjections from "&src/services/aggregatorProjections";
+import applicationServices from "&src/services/applications";
 import { PERCENTAGE, RS, sumofAggregatorRates } from "&src/utils";
 import DialogWithHeader from "../Dialog/DialogWithHeader";
 import FullScreenLoader from "../Loaders/FullScreenLoader";
 import useStatusWiseAlert from "../ToastNotifications/useStatusWiseAlert";
-import aggregatorProjections from "&src/services/aggregatorProjections";
-import applicationServices from "&src/services/applications";
-import aggregatorByApplication from "&src/services/aggregatorByApplication";
 
 
 const GetRates = ({
@@ -28,6 +28,7 @@ const GetRates = ({
     openModal,
     setOpenModal
 }) => {
+    let serialNo = 0;
     const { applicationId } = applicationDetails || {};
     const { errorNotification, successNotification } = useStatusWiseAlert();
 
@@ -169,68 +170,72 @@ const GetRates = ({
 
                     <TableBody>
                         {rateDetails?.length ? (
-                            rateDetails.map((row, i) => (
-                                <TableRow key={row.id}>
-                                    <TableCell>{i + 1}</TableCell>
-                                    <TableCell width="50%">{row.transactionType}</TableCell>
+                            rateDetails.map((row, i) => {
+                                if (!row.isIB) serialNo += 1;
 
-                                    {row.allow ? (
-                                        <TableCell>
-                                            <TextField
-                                                size="small"
-                                                variant="outlined"
-                                                type="text"
-                                                value={row.rate}
-                                                error={errorRowIds.includes(row.id)}
-                                                helperText={
-                                                    errorRowIds.includes(row.id)
-                                                        ? "Required"
-                                                        : ""
-                                                }
-                                                onChange={(e) => {
-                                                    const val = e.target.value;
-                                                    if (
-                                                        val === "" ||
-                                                        /^\d{0,3}(\.\d{0,3})?$/.test(val)
-                                                    ) {
-                                                        handleRateChange(row.transactionType, val);
+                                return (
+                                    <TableRow key={row.id}>
+                                        <TableCell>{!row.isIB ? serialNo : ""}</TableCell>
+                                        <TableCell width="50%">{row.transactionType}</TableCell>
+
+                                        {row.allow ? (
+                                            <TableCell>
+                                                <TextField
+                                                    size="small"
+                                                    variant="outlined"
+                                                    type="text"
+                                                    value={row.rate}
+                                                    error={errorRowIds.includes(row.id)}
+                                                    helperText={
+                                                        errorRowIds.includes(row.id)
+                                                            ? "Required"
+                                                            : ""
                                                     }
-                                                }}
-                                                inputProps={{ style: { textAlign: "right" } }}
-                                                InputProps={{
-                                                    startAdornment: (
-                                                        <TextField
-                                                            select
-                                                            value={row.unit}
-                                                            onChange={(e) =>
-                                                                handleRateTypeChange(
-                                                                    row.transactionType,
-                                                                    e.target.value
-                                                                )
-                                                            }
-                                                            variant="standard"
-                                                            size="small"
-                                                            sx={{
-                                                                minWidth: 45,
-                                                                "& .MuiSelect-select": {
-                                                                    padding: "2px 0px",
-                                                                },
-                                                            }}
-                                                        >
-                                                            <MenuItem value={RS}>{RS}</MenuItem>
-                                                            <MenuItem value={PERCENTAGE}>
-                                                                {PERCENTAGE}
-                                                            </MenuItem>
-                                                        </TextField>
-                                                    ),
-                                                }}
-                                            />
-                                        </TableCell>
-                                    ) : (
-                                        <TableCell />
-                                    )}
-                                </TableRow>
-                            ))
+                                                    onChange={(e) => {
+                                                        const val = e.target.value;
+                                                        if (
+                                                            val === "" ||
+                                                            /^\d{0,3}(\.\d{0,3})?$/.test(val)
+                                                        ) {
+                                                            handleRateChange(row.transactionType, val);
+                                                        }
+                                                    }}
+                                                    inputProps={{ style: { textAlign: "right" } }}
+                                                    InputProps={{
+                                                        startAdornment: (
+                                                            <TextField
+                                                                select
+                                                                value={row.unit}
+                                                                onChange={(e) =>
+                                                                    handleRateTypeChange(
+                                                                        row.transactionType,
+                                                                        e.target.value
+                                                                    )
+                                                                }
+                                                                variant="standard"
+                                                                size="small"
+                                                                sx={{
+                                                                    minWidth: 45,
+                                                                    "& .MuiSelect-select": {
+                                                                        padding: "2px 0px",
+                                                                    },
+                                                                }}
+                                                            >
+                                                                <MenuItem value={RS}>{RS}</MenuItem>
+                                                                <MenuItem value={PERCENTAGE}>
+                                                                    {PERCENTAGE}
+                                                                </MenuItem>
+                                                            </TextField>
+                                                        ),
+                                                    }}
+                                                />
+                                            </TableCell>
+                                        ) : (
+                                            <TableCell />
+                                        )}
+                                    </TableRow>
+                                )
+                            })
                         ) : (
                             <TableRow>
                                 <TableCell colSpan={3} align="center">

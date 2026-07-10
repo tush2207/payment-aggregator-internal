@@ -1,7 +1,3 @@
-import { ClearAll, UploadFile } from '@mui/icons-material';
-import { IconButton, Grid, Typography, Button, Box } from '@mui/material';
-import { useEffect, useMemo, useState } from 'react';
-import dayjs from 'dayjs';
 import DialogWithHeader from '&src/components/Dialog/DialogWithHeader';
 import SectionHeader from '&src/components/Headers/SectionHeader';
 import FullScreenLoader from '&src/components/Loaders/FullScreenLoader';
@@ -9,23 +5,27 @@ import ProjectionQuoteTable from '&src/components/ProjectionQuoteTable';
 import RoleBasedStepper from '&src/components/RoleBasedStepper';
 import useStatusWiseAlert from '&src/components/ToastNotifications/useStatusWiseAlert';
 import {
-  BUSINESS_CATEGORIES,
-  PAYMENT_AGGREGATOR_WORKFLOW,
-  user_role
+  isBO,
+  isCO,
+  isRO,
+  isZO,
+  PAYMENT_AGGREGATOR_WORKFLOW
 } from '&src/constants/PaymentAggregratorConstant';
+import { ClearAll, UploadFile } from '@mui/icons-material';
+import { Box, Button, Grid, IconButton, Typography } from '@mui/material';
+import dayjs from 'dayjs';
+import { useEffect, useMemo, useState } from 'react';
 
 import useToggle from '&src/hooks/useToggle';
 import ApplicationForm from '&src/modules/PaymentAggregator/ApplicationForm';
 import applicationServices from '&src/services/applications';
 
 import DatePicker from '&src/components/DatePicker';
-import useDebounce from '&src/hooks/useDebounce';
-import StatusChipOrSelect from '&src/components/StatusChipOrSelect';
-import { FormField } from '&src/components/FormFields';
-import AutocompleteDropdown from '&src/components/AutocompleteDropdown';
 import ConfirmationDialogWithReason from '&src/components/Dialog/ConfirmationDialogWithReason';
-import { toTitleCase } from '&src/utils';
+import { FormField } from '&src/components/FormFields';
+import StatusChipOrSelect from '&src/components/StatusChipOrSelect';
 import { GET_ALL_APPLICATION_RESPONSE } from '&src/data/data';
+import useDebounce from '&src/hooks/useDebounce';
 
 
 const Dashboard = () => {
@@ -120,7 +120,7 @@ const Dashboard = () => {
     setShowLoader(true);
 
     try {
-      const filterby = user_role === "CO" ? "00000" : zoneId;
+      const filterby = isCO ? "00000" : zoneId;
       console.log('fetchAllApplicationsData 1', filterby)
       // const response = await applicationServices.getAllApplications(filterby);
       // console.log('fetchAllApplicationsData',response)
@@ -134,7 +134,7 @@ const Dashboard = () => {
       console.log('fetchAllApplicationsDataresponse', response)
 
 
-      setAllApplicationDetails(response?.data || []);
+      setAllApplicationDetails(GET_ALL_APPLICATION_RESPONSE || []);
       // setTotalPages(response?.data?.totalPages || 1);
       successNotification("Fetched data successfully");
     } catch (error) {
@@ -177,7 +177,7 @@ const Dashboard = () => {
 
       <SectionHeader
         title="Customer Applications"
-        showButton={user_role === 'BO'}
+        showButton={isBO}
         buttonText="Add Customer Application"
         onButtonClick={handleOpen}
       />
@@ -257,10 +257,10 @@ const Dashboard = () => {
       <ProjectionQuoteTable
         applicationDetails={allApplicationDetails}
         onView={handleView}
-        onEdit={user_role === "CO" ? handleEdit : undefined}
-        onVerify={user_role !== "BO" && user_role !== "CO" ? handleEdit : undefined}
-        onDelete={user_role === "BO" ? onDeleteClick : undefined}
-        actionElement={user_role === "ZO" || user_role === "RO" ? uploadAction : undefined}
+        onEdit={isCO ? handleEdit : undefined}
+        onVerify={handleEdit}
+        onDelete={isBO ? onDeleteClick : undefined}
+        actionElement={isZO || isRO ? uploadAction : undefined}
         totalPages={totalPages}
         page={page}
         onPageChange={(p) => setPage(p)}
@@ -271,7 +271,7 @@ const Dashboard = () => {
         open={open}
         onClose={handleClose}
         maxWidth="sm"
-        headerText={(user_role === 'RO' || user_role === 'RO')? "Review Customer Application":applicationData ? "Customer Application Details" : "Add Customer Details"}
+        headerText={(isRO || isZO) ? "Review Customer Application" : applicationData ? "Customer Application Details" : "Add Customer Details"}
       >
         <ApplicationForm
           fetchAllApplications={fetchAllApplicationsData}

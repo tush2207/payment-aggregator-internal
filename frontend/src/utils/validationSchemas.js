@@ -1,3 +1,4 @@
+import { isBO, isRO } from "&src/constants/PaymentAggregratorConstant";
 import * as Yup from "yup";
 
 // Alphanumeric regex (allows letters and numbers only, no special characters)
@@ -82,7 +83,7 @@ export const applicationFormSchema = (user_role) => {
       .min(1000, "Account Balance must be at least ₹1000"),
 
     // 🔹 Conditionally add file validations based on role
-    ...(user_role === "BO"
+    ...(isBO
       ? {
         kycFile: Yup.mixed().required("KYC File is required"),
         customerApplicationFile: Yup.mixed().required(
@@ -91,7 +92,7 @@ export const applicationFormSchema = (user_role) => {
       }
       : {}),
 
-    ...(user_role === "RO"
+    ...(isRO
       ? {
         rhRecommendationFile: Yup.mixed().required(
           "RH Recommendation File is required"

@@ -1,5 +1,5 @@
-import { Person } from '@mui/icons-material';
-import { Typography, useMediaQuery, useTheme } from '@mui/material';
+import { LockOpenOutlined, LockPerson, Person } from '@mui/icons-material';
+import { IconButton, Typography, useMediaQuery, useTheme } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
 
 import DialogWithHeader from '&src/components/Dialog/DialogWithHeader';
@@ -14,7 +14,9 @@ import { getActionsColumn } from '&src/utils';
 import FullScreenLoader from '&src/components/Loaders/FullScreenLoader';
 import manageAggregatorServices from '&src/services/manageAggregator';
 import ConfirmationDialogWithReason from '&src/components/Dialog/ConfirmationDialogWithReason';
+import StatusChipOrSelect from '&src/components/StatusChipOrSelect';
 
+//TODO: Add active  & inactive API calls
 const ManageAggregator = () => {
   const theme = useTheme();
   const { value: isLoading, setValue: setShowLoader } = useToggle();
@@ -62,6 +64,34 @@ const ManageAggregator = () => {
   const columns = useMemo(() => {
     return [
       ...MANAGE_AGGREGATOR_TABLE_COLUMNS,
+      {
+        field: 'status',
+        headerName: 'Status',
+        flex: 0.5,
+        renderCell: (params) => {
+
+          const isUserActive = params?.row?.status === 'active' ? 'green' : 'red';
+
+          return (
+            <>
+              <StatusChipOrSelect
+                value={params?.row?.status}
+                type="status"
+              />
+              <IconButton>
+             
+                <LockPerson style={{
+                  color: 'red'
+                }} />
+                <LockOpenOutlined style={{
+                  color: 'green'
+                }} />
+              </IconButton>
+
+            </>
+          )
+        },
+      },
       getActionsColumn({
         onEdit: onEditClick,
         onDelete: onDeleteClick,

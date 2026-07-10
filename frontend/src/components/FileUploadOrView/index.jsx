@@ -8,7 +8,7 @@ import {
 import { useEffect, useState } from "react";
 import TextFieldLabel from "../Label";
 import { Delete, Replay, UploadFile, Download } from "@mui/icons-material";
-import { user_role } from "&src/constants/PaymentAggregratorConstant";
+import { isBO, isRO, isZO, user_role } from "&src/constants/PaymentAggregratorConstant";
 import applicationServices from "&src/services/applications";
 import FullScreenLoader from "../Loaders/FullScreenLoader";
 import useStatusWiseAlert from "../ToastNotifications/useStatusWiseAlert";
@@ -57,9 +57,9 @@ const FileUploadOrView = ({
 
   // 🔹 Check if user can upload/replace
   const canCurrentUserManage = () => {
-    if (user_role === "BO" && allowBRFiles.includes(name)) return true;
-    if (user_role === "RO" && allowROFiles.includes(name)) return true;
-    if (user_role === "ZO" && allowZOFiles.includes(name)) return true;
+    if (isBO && allowBRFiles.includes(name)) return true;
+    if (isRO && allowROFiles.includes(name)) return true;
+    if (isZO && allowZOFiles.includes(name)) return true;
     return false;
   };
 

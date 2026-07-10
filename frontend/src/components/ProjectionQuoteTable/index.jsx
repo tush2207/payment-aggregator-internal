@@ -1,20 +1,19 @@
 import {
-  Chat,
+  ArrowDownward,
+  ArrowUpward,
   Delete,
+  Download,
   Edit,
   KeyboardArrowDown,
   KeyboardArrowUp,
-  Visibility,
-  ArrowUpward,
-  ArrowDownward,
-  Download,
-  Info,
   MessageOutlined,
+  Visibility
 } from "@mui/icons-material";
 
 import {
   Button,
   IconButton,
+  Pagination,
   Paper,
   Stack,
   Table,
@@ -24,20 +23,20 @@ import {
   TableHead,
   TableRow,
   Tooltip,
-  Pagination,
 } from "@mui/material";
 
-import React, { useEffect, useState, useMemo } from "react";
+import { isRO, PAYMENT_AGGREGATOR_WORKFLOW, user_role } from "&src/constants/PaymentAggregratorConstant";
+import usePOGenerator from "&src/hooks/usePOGenerator";
+import { formatDateAndTime } from "&src/utils";
+import React, { useMemo, useState } from "react";
+import CenterAlign from "../CenterAlign";
+import EndAlignedCell from "../EndAlignedCell";
 import NoData from "../NoData";
 import RoleBasedStepper from "../RoleBasedStepper";
 import StatusChipOrSelect from "../StatusChipOrSelect";
-import AggregatorDetails from "./AggregatorQuoteTable";
 import AcceptedQuoteTable from "./AcceptedQuoteTable";
-import EndAlignedCell from "../EndAlignedCell";
-import { PAYMENT_AGGREGATOR_WORKFLOW, user_role } from "&src/constants/PaymentAggregratorConstant";
-import usePOGenerator from "&src/hooks/usePOGenerator";
-import { formatDateAndTime } from "&src/utils";
-import CenterAlign from "../CenterAlign";
+import AggregatorDetails from "./AggregatorQuoteTable";
+import UpdateProjectionPercentage from "./UpdateProjectionPercentage";
 
 export default function ProjectionQuoteTable({
   applicationDetails = [],
@@ -115,6 +114,33 @@ export default function ProjectionQuoteTable({
     const start = (page - 1) * rowsPerPage;
     return sortedData.slice(start, start + rowsPerPage);
   }, [sortedData, page]);
+
+  const showAggregatorsForSendQuote = (check) => {
+    const approveByROAndCO = check?.isApplicationSubmittedBR && check?.isReviewByRO && check?.isReviewByCO && !check?.isProjectionAdded
+    return approveByROAndCO || (approveByROAndCO && check?.isReviewByZO);
+  }
+  // TDOO : udpate projection Conditions Logics do !check?.isProjectionAdded  ==> check?.isProjectionAdded in  showAggregatorsForSendQuote and uncomment below given code "showProjectionsUpdation"
+  const showProjectionsUpdation = (check) => {
+    const approveByROAndCO = check?.isApplicationSubmittedBR && check?.isReviewByRO && check?.isReviewByCO && !check?.isProjectionAdded
+    return approveByROAndCO || (approveByROAndCO && check?.isReviewByZO);
+  }
+
+  const isQuoteAccepted = (check) => check?.isMarkUpAddedCO && isRO && check?.status !== 'quoterejected';
+
+  const shouldShowBtn = (check) => {
+    if (!check) return false;
+    console.log(check, 'checkcheck')
+    switch (user_role) {
+      case "RO":
+        return check?.isReviewByRO === null;
+      case "ZO":
+        return check?.isReviewByZO === null;
+      case "CO":
+        return check?.isReviewByCO === null
+      default:
+        return false
+    }
+  }
 
   return (
     <>
@@ -201,8 +227,21 @@ export default function ProjectionQuoteTable({
                               </IconButton>
                             </Tooltip>
                           )}
+                          {/* TODO:check the role based varify button */}
 
-                          {onVerify && ((!customer?.isReviewByRO && user_role === "RO") ||  (!customer?.isReviewByZO  && user_role === "ZO")) && (
+                          {shouldShowBtn(customer) && !customer?.isFinalApproved && (
+                            <Tooltip title="Update" placement="top" arrow>
+                              <Button
+                                size="small"
+                                sx={{ height: "25px", mt: 1 }}
+                                variant="outlined"
+                                onClick={() => onVerify(customer)}
+                              >
+                                Verify
+                              </Button>
+                            </Tooltip>
+                          )}
+                          {/* {onVerify && (!customer?.isReviewByRO || !customer?.isReviewByZO || !customer?.isReviewByCO) && (
                             <Tooltip title="Update" placement="top" arrow>
 
                               <Button
@@ -216,7 +255,7 @@ export default function ProjectionQuoteTable({
                               </Button>
                             </Tooltip>
 
-                          )}
+                          )} */}
 
                           {onDelete && (
                             <Tooltip title="Delete" placement="top" arrow>
@@ -272,7 +311,7 @@ export default function ProjectionQuoteTable({
                     {expandedRow === index && (
                       <TableRow sx={{ p: 0 }}>
                         <TableCell colSpan={11}>
-                          {(customer?.isMarkUpAddedCO && user_role === 'RO' && customer?.status !== 'quoterejected') ? (
+                          {isQuoteAccepted(customer) ? (
                             <AcceptedQuoteTable customer={customer} applicationId={customer?.applicationId} />
                           ) : (
                             <>
@@ -281,8 +320,9 @@ export default function ProjectionQuoteTable({
                                 steps={PAYMENT_AGGREGATOR_WORKFLOW(customer)}
                                 statusChip
                               />
-                              {customer?.isApplicationSubmittedBR && (customer?.isReviewByRO || customer?.isReviewByZO) && <AggregatorDetails customerDetails={customer} />
-                              }
+                              {showProjectionsUpdation(customer) && <UpdateProjectionPercentage customerDetails={customer} />}
+
+                              {showAggregatorsForSendQuote(customer) && <AggregatorDetails customerDetails={customer} />}
                             </>
                           )}
                         </TableCell>

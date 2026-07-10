@@ -1,4 +1,4 @@
-import { BugReport, CheckCircle, DoneAllOutlined, PendingActions, PendingActionsOutlined, Person } from '@mui/icons-material';
+import { BugReport, DoneAllOutlined, PendingActionsOutlined, Person } from '@mui/icons-material';
 import { Grid, Typography, useMediaQuery, useTheme } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -8,9 +8,8 @@ import DialogWithHeader from '&src/components/Dialog/DialogWithHeader';
 import SectionHeader from '&src/components/Headers/SectionHeader';
 import FullScreenLoader from '&src/components/Loaders/FullScreenLoader';
 import DataGridTable from '&src/components/Tables/DataGrid';
-import TicketChatSection from '&src/components/TicketChatSection';
 import useStatusWiseAlert from "&src/components/ToastNotifications/useStatusWiseAlert";
-import { HELP_DESK_TABLE_COLUMNS, user_role } from '&src/constants/PaymentAggregratorConstant';
+import { HELP_DESK_TABLE_COLUMNS, isBO, isCO } from '&src/constants/PaymentAggregratorConstant';
 import useToggle from '&src/hooks/useToggle';
 import ManageHelpDeskForm from '&src/modules/HelpDesk/ManageHelpDeskForm';
 import HelpdeskServices from '&src/services/helpdesk';
@@ -22,7 +21,6 @@ const ManageHelpDesk = () => {
   const { errorNotification, successNotification } = useStatusWiseAlert();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [open, setOpen] = useState(false);
-  const [openMessegner, setOpenMessegner] = useState(false);
   const [ticketData, setTicketData] = useState(null);
   const [allTicketsDetails, setAllTicketsDetails] = useState({});
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
@@ -83,21 +81,14 @@ const ManageHelpDesk = () => {
     setConfirmDialogOpen(true);
   };
 
-
-  const handleCloseDelete = () => {
-    setTicketData(null);
-    setOpenMessegner(false);
-  };
-  console.log(ticketData, 'ticketData')
-
   const columns = useMemo(() => {
     return [
       ...HELP_DESK_TABLE_COLUMNS,
       getActionsColumn({
         width: '160',
-        onView: user_role !== "CO" ? onEditClick : undefined,
-        onReply: user_role === "CO" ? onEditClick : undefined,
-        onDelete: user_role === "BO" ? onDeleteClick : undefined,
+        onView: !isCO ? onEditClick : undefined,
+        onReply: isCO ? onEditClick : undefined,
+        onDelete: isBO ? onDeleteClick : undefined,
         onMgs: true
       }),
     ];
@@ -106,7 +97,7 @@ const ManageHelpDesk = () => {
   return (
     <>
       <SectionHeader
-        showButton={user_role !== 'CO'}
+        showButton={!isCO}
         title="Help Desk"
         buttonText={isMobile ? "Add" : "Add Query"}
         buttonProps={{
@@ -114,7 +105,7 @@ const ManageHelpDesk = () => {
         }}
         onButtonClick={handleOpen}
       />
-      {user_role === 'CO' &&
+      {isCO &&
         <Grid container spacing={3} mb={3}>
           <Grid item xs={12} sm={6} md={3}>
             <AnalyticsCard title="Open Tickets" value={allTicketsDetails?.openTkCount} icon={<BugReport sx={{ fontSize: '50px' }} />} color="#ff9800" />
@@ -164,14 +155,6 @@ const ManageHelpDesk = () => {
         isLoading={showLoader}
         showReasonSec={false}
       />
-
-      {/* <DialogWithHeader
-        open={openMessegner}
-        onClose={handleCloseMessenger}
-        headerText="Conversation"
-      >
-        <TicketChatSection ticketData={ticketData} openMessegner={openMessegner} />
-      </DialogWithHeader> */}
 
       {(showLoader || showLoader) && <FullScreenLoader />}
     </>
