@@ -1,0 +1,58 @@
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+from fastapi.openapi.docs import get_swagger_ui_html
+
+from app.database.engine import init_db
+from app.api.routes import auth, users, aggregators, applications, helpdesk
+
+app = FastAPI(docs_url="/docs", redoc_url="/redoc")
+
+origins = [
+    "*",
+    "http://localhost:5173",      # React local dev
+    "http://127.0.0.1:5173",
+    "http://yourserverip:5173",
+    "https://yourdomain.com"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Initialize database
+init_db()
+
+# Mount static directories
+try:
+    app.mount("/static", StaticFiles(directory="static"), name="static")
+except RuntimeError:
+    pass # Directory might not exist
+
+try:
+    app.mount("/dist", StaticFiles(directory="dist"), name="dist")
+    app.mount("/assets", StaticFiles(directory="dist/assets"), name="assets")
+except RuntimeError:
+    pass # Directory might not exist
+
+# Include Routers
+app.include_router(auth.router)
+app.include_router(users.router)
+app.include_router(aggregators.router)
+app.include_router(applications.router)
+app.include_router(helpdesk.router)
+
+
+
+@app.get("/")
+async def serve_react():
+    return FileResponse("dist/index.html")
+
+@app.get("/{full_path:path}")
+async def serve_react_spa(full_path: str):
+    return FileResponse("dist/index.html")

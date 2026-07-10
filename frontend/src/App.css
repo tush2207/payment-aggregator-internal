@@ -1,0 +1,126 @@
+/* Work Sans Regular */
+@font-face {
+  font-family: 'Work Sans';
+  src: url('/fonts/WorkSans/WorkSans-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+/* Work Sans Italic */
+@font-face {
+  font-family: 'Work Sans';
+  src: url('/fonts/WorkSans/WorkSans-Italic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+}
+
+/* Work Sans Medium */
+@font-face {
+  font-family: 'Work Sans';
+  src: url('/fonts/WorkSans/WorkSans-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+}
+
+/* Work Sans SemiBold */
+@font-face {
+  font-family: 'Work Sans';
+  src: url('/fonts/WorkSans/WorkSans-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+}
+
+/* Work Sans Bold */
+@font-face {
+  font-family: 'Work Sans';
+  src: url('/fonts/WorkSans/WorkSans-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+}
+
+/* Work Sans ExtraBold */
+@font-face {
+  font-family: 'Work Sans';
+  src: url('/fonts/WorkSans/WorkSans-ExtraBold.ttf') format('truetype');
+  font-weight: 800;
+  font-style: normal;
+}
+
+/* Work Sans ExtraLight */
+@font-face {
+  font-family: 'Work Sans';
+  src: url('/fonts/WorkSans/WorkSans-ExtraLight.ttf') format('truetype');
+  font-weight: 200;
+  font-style: normal;
+}
+
+/* Work Sans Thin */
+@font-face {
+  font-family: 'Work Sans';
+  src: url('/fonts/WorkSans/WorkSans-Thin.ttf') format('truetype');
+  font-weight: 100;
+  font-style: normal;
+}
+
+/* Optional: Italic versions can also be added similarly */
+
+html, body, * {
+  font-family: 'Work Sans', sans-serif !important;
+}
+
+#root {
+  /* max-width: 1280px; */
+  margin: 0 auto;
+  /* padding: 2rem; */
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+
+/*
+.material-text-field:focus {
+    border: 2px solid red;
+} */
+.myDatePicker fieldset.MuiOutlinedInput-notchedOutline {
+  border-color: green;
+}
+
+.myDatePicker .Mui-focused fieldset.MuiOutlinedInput-notchedOutline {
+  border-color: red;
+}
