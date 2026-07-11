@@ -159,7 +159,7 @@ export default function ApplicationFlowTable({
                     <TableHead>
                         <TableRow
                             sx={{
-                                background: 'linear-gradient(90deg,#b71c1c,#d32f2f,#fcc419,#d32f2f,#b71c1c)',
+                                background: (theme) => theme.palette.gradients.accent,
                             }}>
                             <TableCell sx={{ color: '#fff', fontWeight: 700 }}>
                                 Location

@@ -1,5 +1,5 @@
 import React, { Fragment, memo, useState, useCallback } from 'react';
-import { TableRow, TableCell, Typography, Box, IconButton, Tooltip, Menu, MenuItem } from '@mui/material';
+import { TableRow, TableCell, Typography, Box, IconButton, Tooltip, Menu, MenuItem, alpha } from '@mui/material';
 import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownRounded';
 import KeyboardArrowUpRoundedIcon from '@mui/icons-material/KeyboardArrowUpRounded';
 import MoreVertRoundedIcon from '@mui/icons-material/MoreVertRounded';
@@ -152,7 +152,7 @@ const ApplicationRow = memo(
                                         
                                         {/* RO PENDING ACTIONS */}
                                         {userRole === 'RO' && application?.isReviewByRO === null && (
-                                            <Box mt={3} p={2} sx={{ border: '1px dashed #1976d2', borderRadius: 2, backgroundColor: '#f5f9ff' }}>
+                                            <Box mt={3} p={2} sx={{ border: (theme) => `1px dashed ${theme.palette.primary.main}`, borderRadius: 2, backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.05) }}>
                                                 <Typography variant="subtitle1" color="primary" fontWeight={700} gutterBottom>
                                                     Pending Actions
                                                 </Typography>
@@ -169,7 +169,7 @@ const ApplicationRow = memo(
 
                                         {/* ZO PENDING ACTIONS */}
                                         {userRole === 'ZO' && application?.isReviewByZO === null && (
-                                            <Box mt={3} p={2} sx={{ border: '1px dashed #1976d2', borderRadius: 2, backgroundColor: '#f5f9ff' }}>
+                                            <Box mt={3} p={2} sx={{ border: (theme) => `1px dashed ${theme.palette.primary.main}`, borderRadius: 2, backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.05) }}>
                                                 <Typography variant="subtitle1" color="primary" fontWeight={700} gutterBottom>
                                                     Pending Actions
                                                 </Typography>
@@ -186,7 +186,7 @@ const ApplicationRow = memo(
                                         
                                         {/* CO PENDING ACTIONS */}
                                         {userRole === 'CO' && !application?.isFinalApproved && (
-                                            <Box mt={3} p={2} sx={{ border: '1px dashed #1976d2', borderRadius: 2, backgroundColor: '#f5f9ff' }}>
+                                            <Box mt={3} p={2} sx={{ border: (theme) => `1px dashed ${theme.palette.primary.main}`, borderRadius: 2, backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.05) }}>
                                                 <Typography variant="subtitle1" color="primary" fontWeight={700} gutterBottom>
                                                     Pending Actions
                                                 </Typography>

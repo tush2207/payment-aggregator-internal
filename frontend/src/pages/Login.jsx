@@ -9,7 +9,7 @@ const Login = () => (
       minHeight: '100vh',
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: '#f5f5f5',
+      backgroundColor: 'background.default',
     }}
     spacing={4}
   >
