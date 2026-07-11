@@ -27,7 +27,8 @@ export function FormField({
   size = 'small',
   required,
   placeholder,
-  view = false
+  view = false,
+  ...rest
 }) {
   return (
     <>
@@ -48,6 +49,7 @@ export function FormField({
             disabled={disabled}
             size={size}
             placeholder={placeholder || `Enter ${label}`}
+            {...rest}
           />
         </>}
     </>

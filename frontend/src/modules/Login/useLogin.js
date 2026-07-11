@@ -7,10 +7,20 @@ import { useFormik } from "formik";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+export const IS_DEV = import.meta.env.VITE_ENV !== "prod";
+
+export const DEV_ROLES = [
+  { value: "CO", label: "CO — Central Office" },
+  { value: "RO", label: "RO — Regional Office" },
+  { value: "ZO", label: "ZO — Zonal Office" },
+  { value: "BO", label: "BO — Branch Office" },
+];
+
 export const useLogin = () => {
   const navigate = useNavigate();
   const { errorNotification, successNotification } = useStatusWiseAlert();
   const [isLoading, setLoading] = useState(false);
+  const [devRole, setDevRole] = useState("CO"); // only used in DEV
 
   const formik = useFormik({
     initialValues: {
@@ -26,48 +36,62 @@ export const useLogin = () => {
   const login = async (values) => {
     setLoading(true);
     try {
-      // const username = encodeBase64(values?.username);
-
-      // const password = encodeBase64(values?.password);
-
       const username = values?.username;
-
       const password = values?.password;
-      // 1️⃣ Call login API
-      const response = await AuthServices.devLogin({ username, password });
-      console.log('userDetailsResponse', response?.data?.access_token, response?.data)
+      
+      let response;
+      if (IS_DEV) {
+        // Dev login: backend expects { username } or { username, password }
+        response = await AuthServices.devLogin({ username, password });
+      } else {
+        // Normal login: backend expects Base64 encoded username/password in form URL encoded form
+        const encUsername = encodeBase64(username);
+        const encPassword = encodeBase64(password);
+        response = await AuthServices.login({ username: encUsername, password: encPassword });
+      }
+
+      console.log("Login Response Status:", response?.status);
 
       if (response?.status === 200 || response?.status === 201) {
         const accessToken = response?.data?.access_token;
-
-        // Store access token
         sessionStorage.setItem("accessToken", accessToken);
 
         try {
-          // 2️⃣ Call userDetails API
-          // const userDetailsResponse = await AuthServices.userDetails(values?.username);
-          // console.log('userDetailsResponse', userDetailsResponse)
-          // if (userDetailsResponse) {
-          const { pfId, employeeId, role, } = response?.data?.user;
-          // Store user details
-          sessionStorage.setItem("userDetails", JSON.stringify({ ...response?.data?.user }));
-          sessionStorage.setItem("role", role || "");
-          sessionStorage.setItem("userId", pfId || employeeId);
+          let userObj;
+          if (IS_DEV) {
+            userObj = response?.data?.user || {};
+            // Override the role and locationType based on selected Dev Role
+            userObj.role = devRole;
+            userObj.locationType = devRole;
+          } else {
+            // Retrieve actual user details from the backend
+            const userDetailsResponse = await AuthServices.userDetails(username);
+            if (userDetailsResponse && (userDetailsResponse.status === 200 || userDetailsResponse.status === 201)) {
+              userObj = userDetailsResponse.data;
+            } else {
+              throw new Error("Failed to fetch user details.");
+            }
+          }
+
+          // Store in sessionStorage
+          sessionStorage.setItem("userDetails", JSON.stringify(userObj));
+          sessionStorage.setItem("role", userObj.role || "");
+          sessionStorage.setItem("userId", userObj.pfId || userObj.employeeId);
+
           successNotification("Login successful ✅");
           window.location.href = APPLICATION_ROUTES_URLS.DASHBOARD;
-          // } 
-          // else {
-          //   errorNotification("Failed to fetch user details. Please login again.");
-          // }
         } catch (err) {
-          errorNotification(err?.response?.data?.detail || "Failed to fetch user details. Please login again.");
+          console.error("Error fetching user details:", err);
+          errorNotification(err?.response?.data?.detail || err?.message || "Failed to fetch user details. Please login again.");
           sessionStorage.clear();
         }
       } else {
         errorNotification(response?.data?.message || "Login failed, please try again later.");
       }
     } catch (err) {
-      errorNotification(err?.response?.data?.detail || "Login failed, please try again later.");
+      console.error("Login exception:", err);
+      const msg = err?.response?.data?.detail || "Login failed, please try again later.";
+      errorNotification(msg);
     } finally {
       setLoading(false);
     }
@@ -78,5 +102,5 @@ export const useLogin = () => {
     navigate(APPLICATION_ROUTES_URLS.LOGIN, { replace: true });
   };
 
-  return { login, logout, isLoading, formik };
+  return { login, logout, isLoading, formik, devRole, setDevRole };
 };
