@@ -10,7 +10,7 @@ const ApiUrls = {
   // GET_ALL_APPLICATIONS: (zoneId, page, search, status, category) => `/get-all-applications/${zoneId}/?page=${page}&search=${search}&status=${status}&category=${category}`,
   GET_APPLICATION_BY_ID: (applicationId) => `/get-single-applications/${applicationId}`,
   ADD_APPLICATION: "/applications",
-  UPDATE_APPLICATION: (applicationId) => `/applications-sunil/${applicationId}`,
+  UPDATE_APPLICATION: (applicationId) => `/applications/${applicationId}`,
   DELETE_APPLICATION: (applicationId) => `/applications/${applicationId}`,
 
   // ---------------- Files ----------------
@@ -22,7 +22,7 @@ const ApiUrls = {
   GET_ALL_AGGREGATORS: `/all-manage-aggregator`,
   GET_AGGREGATOR_BY_ID: (aggregatorId) =>
     `single-manage-aggregator/${aggregatorId}`,
-  ADD_AGGREGATOR: "/manage-aggregator/plain",
+  ADD_AGGREGATOR: "/manage-aggregator",
   UPDATE_AGGREGATOR: (aggregatorId) => `/manage-aggregator/${aggregatorId}`,
   DELETE_AGGREGATOR: (aggregatorId) => `/manage-aggregator/${aggregatorId}`,
 

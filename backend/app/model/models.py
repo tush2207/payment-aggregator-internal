@@ -64,6 +64,8 @@ class ApplicationsInDB(Base):
     isReviewByRO = Column(Boolean, nullable=True)
     isReviewByZO = Column(Boolean, nullable=True)
     isReviewByCO = Column(Boolean, nullable=True)
+    isProjectionAdded = Column(Boolean, nullable=True)
+    isSendForQuoteAccpcetance  = Column(Boolean, nullable=True)
     isAggregatorAdded = Column(Boolean, nullable=True)
     isQuoteAddedPA = Column(Boolean, nullable=True)
     isQuoteReviewCO = Column(Boolean, nullable=True)

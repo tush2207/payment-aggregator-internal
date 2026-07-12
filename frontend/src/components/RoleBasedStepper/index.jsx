@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import {
   Box,
@@ -10,36 +10,73 @@ import {
   StepConnector,
   stepConnectorClasses,
 } from '@mui/material';
-import { styled } from '@mui/material/styles';
+import { styled, keyframes } from '@mui/material/styles';
+import { useSelector } from 'react-redux';
+import { selectUserRole } from '&src/store/applicationFlowSlice';
 import StatusChipOrSelect from '../StatusChipOrSelect';
+
+// ------------------------------------------------------
+// 🌀 CBI Premium Keyframe Animations
+// ------------------------------------------------------
+const pulseGlow = keyframes`
+  0% {
+    box-shadow: 0 0 6px rgba(255, 152, 0, 0.3);
+    transform: scale(0.92);
+  }
+  50% {
+    box-shadow: 0 0 14px rgba(255, 152, 0, 0.65);
+    transform: scale(1.04);
+  }
+  100% {
+    box-shadow: 0 0 6px rgba(255, 152, 0, 0.3);
+    transform: scale(0.92);
+  }
+`;
+
+const flowingLine = keyframes`
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+`;
 
 // ------------------------------------------------------
 // 🌈 CBI Premium Gradient Connector (OUTSIDE BOX)
 // ------------------------------------------------------
 const CBIConnector = styled(StepConnector)(({ theme }) => ({
   [`&.${stepConnectorClasses.alternativeLabel}`]: {
-    top: 36, // Pull connector OUTSIDE the box
+    top: 24, // Pull connector OUTSIDE the box
     position: 'relative',
   },
   [`& .${stepConnectorClasses.line}`]: {
-    height: 4,
+    height: 3,
     border: 0,
     borderRadius: 8,
     margin: '0px',
     background: 'linear-gradient(90deg, #003A8C, #005FCC)',
+    backgroundSize: '200% 200%',
     opacity: 0.4,
     transition: '0.4s ease',
-    boxShadow: '0 0 12px rgba(0, 90, 255, 0.35)',
+    boxShadow: '0 0 8px rgba(0, 90, 255, 0.25)',
   },
   [`&.${stepConnectorClasses.active} .${stepConnectorClasses.line}`]: {
     opacity: 1,
-    background: 'linear-gradient(90deg, #003A8C, #D32F2F)',
-    boxShadow: '0 0 14px rgba(0, 70, 200, 0.6)',
+    background: 'linear-gradient(270deg, #003A8C, #D32F2F, #003A8C)',
+    backgroundSize: '200% 200%',
+    animation: `${flowingLine} 3s ease infinite`,
+    boxShadow: '0 0 10px rgba(0, 70, 200, 0.4)',
   },
   [`&.${stepConnectorClasses.completed} .${stepConnectorClasses.line}`]: {
     opacity: 1,
-    background: 'linear-gradient(90deg, #003A8C, #4CAF50)',
-    boxShadow: '0 0 16px rgba(0, 200, 100, 0.6)',
+    background: 'linear-gradient(270deg, #003A8C, #4CAF50, #003A8C)',
+    backgroundSize: '200% 200%',
+    animation: `${flowingLine} 3s ease infinite`,
+    boxShadow: '0 0 12px rgba(0, 200, 100, 0.4)',
   },
 }));
 
@@ -55,22 +92,58 @@ export default function RoleBasedStepper({
 }) {
   const [activeStep, setActiveStep] = useState(0);
 
+  // Fetch the current user role
+  let userRole = 'CO';
+  try {
+    const reduxRole = useSelector(selectUserRole);
+    userRole = reduxRole || sessionStorage.getItem('role') || 'CO';
+  } catch (e) {
+    userRole = sessionStorage.getItem('role') || 'CO';
+  }
+
+  // Filter steps based on role mapping
+  const filteredSteps = useMemo(() => {
+    if (!steps || steps.length === 0) return [];
+    
+    return steps.filter(step => {
+      if (!step.role) return true; // fallback
+      
+      const roleUpper = step.role.toUpperCase();
+      const userUpper = userRole.toUpperCase();
+      
+      if (userUpper === 'BO') {
+        return roleUpper.includes('BO');
+      }
+      if (userUpper === 'ZO') {
+        return roleUpper.includes('ZO');
+      }
+      if (userUpper === 'RO') {
+        return roleUpper.includes('RO');
+      }
+      if (userUpper === 'CO') {
+        // CO drives the quotes submission and analysis, so they see CO steps and AEPA (Aggregator) steps
+        return roleUpper.includes('CO') || roleUpper.includes('AEPA');
+      }
+      return true;
+    });
+  }, [steps, userRole]);
+
   // ✔ Auto-detect active step
   useEffect(() => {
-    if (!allActive && steps?.length > 0) {
-      const currentIndex = steps.findIndex((step) => !step.status);
-      setActiveStep(currentIndex === -1 ? steps.length : currentIndex);
+    if (!allActive && filteredSteps?.length > 0) {
+      const currentIndex = filteredSteps.findIndex((step) => !step.status);
+      setActiveStep(currentIndex === -1 ? filteredSteps.length : currentIndex);
     } else {
       setActiveStep(0);
     }
-  }, [steps, allActive]);
+  }, [filteredSteps, allActive]);
 
   // ------------------------------------------------------
   // 🎨 Premium Step Label Renderer
   // ------------------------------------------------------
   const renderStepLabel = (step, index) => {
     const isCompleted = allActive || step.status;
-    const isActive = Boolean(step.status);
+    const isCurrentStep = !isCompleted && index === activeStep;
 
     const labelContent = (
       <Box
@@ -90,42 +163,63 @@ export default function RoleBasedStepper({
           StepIconComponent={() => (
             <Box
               sx={{
-                width: 68,
-                height: 68,
-                borderRadius: "18px",
+                width: 48,
+                height: 48,
+                borderRadius: "12px",
                 overflow: "hidden",
                 background: "#fff",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 boxShadow: isCompleted
-                  ? "0 0 18px rgba(0, 120, 255, 0.50)"
-                  : "0 0 12px rgba(0,0,0,0.25)",
-                transform: isCompleted ? "scale(1.07)" : "scale(0.92)",
+                  ? "0 0 12px rgba(0, 120, 255, 0.40)"
+                  : isCurrentStep
+                    ? "0 0 14px rgba(255, 152, 0, 0.60)"
+                    : "0 0 8px rgba(0,0,0,0.15)",
+                transform: isCompleted ? "scale(1.05)" : "scale(0.92)",
                 transition: "0.35s ease",
+                animation: isCurrentStep ? `${pulseGlow} 2s infinite ease-in-out` : "none",
 
+                color: isCompleted ? "#003A8C" : isCurrentStep ? "#ff9800" : "#777",
                 "&:hover": {
-                  transform: "scale(1.12)",
+                  transform: "scale(1.1)",
                   boxShadow:
-                    "0 0 22px rgba(0, 100, 255, 0.55), 0 6px 14px rgba(0,0,0,0.15)",
+                    "0 0 16px rgba(0, 100, 255, 0.45), 0 4px 8px rgba(0,0,0,0.1)",
                 },
               }}
             >
-              <img
-                src={step.icon}
-                alt={step.label}
-                style={{
-                  width: 46,
-                  height: 46,
-                  objectFit: "contain",
-                  filter: isCompleted
-                    ? "none"
-                    : isActive
+              {React.isValidElement(step.icon) ? (
+                React.cloneElement(step.icon, {
+                  sx: {
+                    fontSize: 22,
+                    color: "inherit",
+                    transition: "0.3s ease",
+                  }
+                })
+              ) : typeof step.icon === "function" ? (
+                React.createElement(step.icon, {
+                  sx: {
+                    fontSize: 22,
+                    color: "inherit",
+                  }
+                })
+              ) : (
+                <img
+                  src={step.icon}
+                  alt={step.label}
+                  style={{
+                    width: 32,
+                    height: 32,
+                    objectFit: "contain",
+                    filter: isCompleted
                       ? "none"
-                      : "grayscale(100%) opacity(0.6)",
-                  transition: "0.3s ease",
-                }}
-              />
+                      : isActive
+                        ? "none"
+                        : "grayscale(100%) opacity(0.6)",
+                    transition: "0.3s ease",
+                  }}
+                />
+              )}
             </Box>
           )}
           sx={{
@@ -134,16 +228,16 @@ export default function RoleBasedStepper({
           }}
         >
           <Typography
-            fontSize="13px"
+            fontSize="11px"
             fontWeight={700}
             sx={{
               color: isCompleted ? "#003A8C" : "#777",
-              mt: 1,
+              mt: 0.5,
               transition: "0.3s",
 
               "&:hover": {
                 color: "#003A8C",
-                textShadow: "0 0 6px rgba(0, 80, 200, 0.45)",
+                textShadow: "0 0 4px rgba(0, 80, 200, 0.35)",
               },
             }}
           >
@@ -153,7 +247,7 @@ export default function RoleBasedStepper({
           {showDescription && step.description && (
             <Typography
               variant="caption"
-              sx={{ color: "#555", transition: "0.3s", "&:hover": { color: "#003A8C" } }}
+              sx={{ color: "#555", fontSize: "9px", transition: "0.3s", "&:hover": { color: "#003A8C" } }}
             >
               {step.description}
             </Typography>
@@ -184,9 +278,9 @@ export default function RoleBasedStepper({
               background: '#fff',
               color: '#003A8C',
               border: '1px solid #003A8C',
-              fontSize: '13px',
+              fontSize: '11px',
               p: 1,
-              boxShadow: '0 0 12px rgba(0, 60, 150, 0.35)',
+              boxShadow: '0 0 8px rgba(0, 60, 150, 0.25)',
             },
           },
           arrow: { sx: { color: '#003A8C' } },
@@ -203,11 +297,7 @@ export default function RoleBasedStepper({
       <Box
         sx={{
           width: '100%',
-          py: 3,
-          // background: 'rgba(0, 58, 140, 0.05)',
-          // borderRadius: '22px',
-          // boxShadow: '0 0 18px rgba(0,0,0,0.10)',
-          // zIndex: 2,
+          py: 1,
           position: 'relative',
         }}
       >
@@ -217,7 +307,7 @@ export default function RoleBasedStepper({
           nonLinear
           connector={<CBIConnector />}
         >
-          {steps.map((step, idx) => (
+          {filteredSteps.map((step, idx) => (
             <Step
               key={step.label || idx}
               completed={allActive ? true : step.status}

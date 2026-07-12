@@ -9,6 +9,7 @@ import ProjectionEditorModal from '&src/components/ProjectionQuoteTable/Projecti
 
 import useApplicationFlow from './useApplicationFlow';
 import ApplicationFlowTable from './ApplicationFlowTable';
+import { ApplicationFlowDialog } from '&src/components/ApplicationFlow';
 import { GET_ALL_APPLICATION_RESPONSE } from "&src/data/data";
 // ^ Using local data as fallback if no real applications are fetched from the API yet
 
@@ -155,6 +156,7 @@ const ApplicationFlowDashboard = () => {
         }}
         applicationDetails={editorApp}
       />
+      <ApplicationFlowDialog />
     </>
   );
 };

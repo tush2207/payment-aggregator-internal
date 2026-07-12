@@ -1,430 +1,347 @@
-import { centralbanklogo } from "&src/assets";
 import {
-  ACCEPTED_PROJECTION_COLUMNS_FOR_RO,
-  isRO,
-  user_Id
-} from "&src/constants/PaymentAggregratorConstant";
-import aggregatorProjections from "&src/services/aggregatorProjections";
-import applicationServices from "&src/services/applications";
-import { PERCENTAGE } from "&src/utils";
-import { Download } from "@mui/icons-material";
-import {
-  Box,
-  Button,
-  Checkbox,
-  Container,
-  Divider,
-  FormControlLabel,
-  Grid,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  Typography
-} from "@mui/material";
-import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
-import { useEffect, useMemo, useRef, useState } from "react";
-import ConfirmationDialogWithReason from "../Dialog/ConfirmationDialogWithReason";
-import FileUploadOrView from "../FileUploadOrView";
-import FullScreenLoader from "../Loaders/FullScreenLoader";
-import NoData from "../NoData";
-import useStatusWiseAlert from "../ToastNotifications/useStatusWiseAlert";
+  Add,
+  CheckCircle,
+          // Calculate totals for each aggregator
+          const aggregatorTotals = {};
+activeAggs.forEach((agg) => {
+  aggregatorTotals[agg.aggregatorId] = calculateTotals(allProjections[agg.aggregatorId] || []);
+});
+aggregatorTotals[agg.aggregatorId] = calculateTotals(allProjections[ag          const baseTotals = calculateTotals(baseRows);
+const baseTotals = calculateTotals(baseRows);
+const sortedActiveAggs = [...activeAggs].sort((a, b) => {
+  const shareA = aggregatorTotals[a.aggregatorId]?.totalVendorShare || 0;
+  const shareB = aggregatorTotals[b.aggregatorId]?.totalVendorShare || 0;
+  return shareA - shareB;
+});
+let serialNo = 0;
+const handleExportExcel = () => {
+  const data = [];
+  // Title
+  data.push([`Cost Benefit Analysis for ${customerDetails?.customerName || "Customer"}`]);
+  data.push([]);
+  // Headers
+  const headers = [
+    "% Share Txn Count",
+    "% Share Txn Value",
+    "Type of Transaction",
+    "Estimated No of Transactions",
+    "Aggregate amount (Rs)",
+    "Charges proposed",
+    "Gross Amount Received (Rs)"
+  ];
 
-// ---------------- COMPONENTS ----------------
-const QuoteTableRO = ({ quoteDetails }) => (
-  <Table size="small" sx={{ border: "1px solid #e0e0e0", mb: 2 }}>
-    <TableHead>
-      <TableRow>
-        {ACCEPTED_PROJECTION_COLUMNS_FOR_RO.map((col, idx) => (
-          <TableCell key={idx} sx={{ fontWeight: 600, fontSize: "14px" }}>
-            {col}
-          </TableCell>
-        ))}
-      </TableRow>
-    </TableHead>
-    <TableBody>
-      {quoteDetails?.length ? (
-        quoteDetails.map((row, i) => (
-          <TableRow key={i}>
-            <TableCell>{i + 1}</TableCell>
-            <TableCell>{row.transactionType}</TableCell>
-            <TableCell sx={{ fontWeight: '600' }}>
-              {!["Internet banking", "Debit card - Rupay", "UPI"].includes(row.transactionType) && row.chargesProposed}{row.unit === PERCENTAGE && row.unit}
-            </TableCell>
-          </TableRow>
-        ))
-      ) : (
-        <TableRow>
-          <TableCell colSpan={ACCEPTED_PROJECTION_COLUMNS_FOR_RO.length} align="center">
-            <NoData />
-          </TableCell>
-        </TableRow>
-      )}
-    </TableBody>
-  </Table>
-);
+  activeAggs.forEach(agg => {
+    const isAccepted = customerDetails?.isQuoteAcceptRO;
+    const label = finalizedAggregatorId
+      ? (Number(agg.aggregatorId) === Number(finalizedAggregatorId) ? `${agg.aggregatorName} (FINALIZED)` : `${agg.aggregatorName} (REJECTED)`)
+        ? ((Number(agg.aggregatorId) === Number(finalizedAggregatorId) && isAccepted) ? `${agg.aggregatorName} (FINALIZED)` : `${agg.aggregatorName} (REJECTED)`)
+        : agg.aggregatorName;
+    headers.push(`${label} - Rate`);
+    headers.push(`${label} - Vendor Share (Rs)`);
+    headers.push(`${label} - Expected Revenue (Rs)`);
+  });
+  data.push(headers);
+  // Data Rows
+  baseRows.forEach(row => {
+    const rowData = [
+      row.transactionCount ? `${row.transactionCount}%` : "",
+      row.transactionValue ? `${row.transactionValue}%` : "",
+      row.transactionType,
+      Math.round(row.estimatedTransactions) || 0,
+      row.aggregateAmount || 0,
+      row.chargesProposed || 0,
+      row.grossAmount || 0
+    ];
 
-const AcceptanceSection = ({ accepted, onReject, setAccepted, onAccept }) => (
-  <Box mt={4}>
-    <Typography variant="body2" color="text.secondary" sx={{ mb: 2, mt: 2 }}>
-      Kindly review carefully before final acceptance.
-    </Typography>
-    <FormControlLabel
-      control={
-        <Checkbox
-          checked={accepted}
-          onChange={(e) => setAccepted(e.target.checked)}
-          color="success"
-        />
-      }
-      label="I hereby accept the above quotation details."
-    />
-    <Box mt={2} display="flex" justifyContent="flex-end" gap={2}>
-      <Button
-        sx={{
-          width: 100
-        }}
-        disabled={!accepted}
-        variant="outlined"
-        color="error"
-        onClick={onReject}
-      >
-        Reject
-      </Button>
-      <Button
-        sx={{
-          width: 100
-        }}
-        disabled={!accepted}
-        variant="contained"
-        color="success"
-        onClick={onAccept}
-      >
-        Accept
-      </Button>
+    activeAggs.forEach(agg => {
+      const aggProjList = allProjections[agg.aggregatorId] || [];
+      const aggRow = aggProjList.find(r => r.transactionType === row.transactionType) || {};
+      rowData.push(aggRow.rate || 0);
+      rowData.push(aggRow.vendorShare || 0);
+      rowData.push(aggRow.expectedRevenue || 0);
+    });
+    data.push(rowData);
+  });
+  // Totals
+  const totalsRow = [
+    "",
+    "",
+    "TOTAL",
+    baseTotals.totalEstimatedTransactions,
+    baseTotals.totalAggregateAmount,
+    "",
+    baseTotals.totalGrossAmount
+  ];
+
+  activeAggs.forEach(agg => {
+    const totals = aggregatorTotals[agg.aggregatorId] || {};
+    totalsRow.push("");
+    totalsRow.push(totals.totalVendorShare || 0);
+    totalsRow.push(totals.totalExpectedRevenue || 0);
+  });
+  data.push(totalsRow);
+  // Create Excel
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Cost Benefit Analysis");
+  const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+  const blob = new Blob([excelBuffer], { type: "application/octet-stream" });
+  saveAs(blob, `Cost_Benefit_Analysis_${customerDetails?.customerName || "Customer"}.xlsx`);
+};
+const cbaTableRef = React.useRef(null);
+const handleExportPDF = async () => {
+  try {
+    const element = cbaTableRef.current;
+    const oldBg = element.style.background;
+    element.style.background = "#ffffff";
+    const canvas = await html2canvas(element, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: "#ffffff",
+    });
+    element.style.background = oldBg;
+    const imgData = canvas.toDataURL("image/png");
+    const pdf = new jsPDF("l", "mm", "a4");
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pdfWidth = pageWidth - 20;
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+    pdf.addImage(imgData, "PNG", 10, 10, pdfWidth, pdfHeight);
+    pdf.save(`Cost_Benefit_Analysis_${customerDetails?.customerName || "Customer"}.pdf`);
+  } catch (err) {
+    console.error("PDF generation error: ", err);
+  }
+};
+const headerCellSx = {
+  fontWeight: 700,
+  fontSize: "10px",
+  py: "6px !important",
+  px: "4px !important",
+  color: "#ffffff",
+  bgcolor: "#1e293b",
+  whiteSpace: "normal !important",
+  wordBreak: "break-word",
+  lineHeight: 1.1,
+  verticalAlign: "top",
+  textTransform: "none !important",
+  border: "1px solid #334155"
+};
+const subHeaderCellSx = {
+  fontWeight: 700,
+  fontSize: "9px",
+  py: "4px !important",
+  px: "3px !important",
+  color: "#475569",
+  bgcolor: "#f1f5f9",
+  whiteSpace: "normal !important",
+  wordBreak: "break-word",
+  lineHeight: 1.1,
+  verticalAlign: "top",
+  textTransform: "none !important",
+  border: "1px solid #cbd5e1"
+};
+const cellSx = {
+  fontSize: "10px",
+  p: "4px !important",
+  whiteSpace: "normal",
+  wordBreak: "break-word",
+  border: "1px solid #e2e8f0"
+};
+const totalCellSx = {
+  fontWeight: 700,
+  fontSize: "10px",
+  p: "4px !important",
+  bgcolor: "#f8fafc",
+  border: "1px solid #cbd5e1"
+};
+const isAccepted = customerDetails?.isQuoteAcceptRO;
+return (
+  <Box sx={{ width: "100%", mt: 2, p: 2 }}>
+    {/* Downloader & Legend Bar */}
+    <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ mb: 2, bgcolor: "#f8fafc", p: 1.5, borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+      <Typography variant="body2" color="text.secondary" fontWeight={500}>
+        {finalizedAggregatorId ? (
+          { isAccepted && finalizedAggregatorId ? (
+            <span>
+              ℹ️ Color Legend: <strong style={{ color: "#16a34a" }}>Green columns</strong> represent the Finalized Aggregator. <strong style={{ color: "#dc2626" }}>Red columns</strong> represent other rejected aggregators.
+            </span>
+          ) : (
+            <span>
+              ℹ️ Propose markup charges and select finalized aggregator in the action tabs.
+              ℹ️ Quote Rank Legend: L1 represents the lowest quote based on vendor share, followed by L2, L3. Color highlighting applies once customer acceptance is completed.
+            </span>
+          )}
+      </Typography>
+      <Stack direction="row" spacing={1}>
+        <Button
+          variant="outlined"
+          color="primary"
+          size="small"
+          startIcon={<Download />}
+          onClick={handleExportExcel}
+          sx={{ textTransform: "none", fontWeight: 700 }}
+        >
+          Download Excel
+        </Button>
+        <Button
+          variant="outlined"
+          color="primary"
+          size="small"
+          startIcon={<Download />}
+          onClick={handleExportPDF}
+          sx={{ textTransform: "none", fontWeight: 700 }}
+        >
+          Download PDF
+        </Button>
+      </Stack>
+    </Box>
+    <Box ref={cbaTableRef} sx={{ p: 1, bgcolor: "#ffffff" }}>
+      <TableContainer sx={{ overflowX: "auto", maxWidth: "100%" }}>
+        <Table size="small" sx={{ width: "100%", tableLayout: "auto", borderCollapse: "collapse" }}>
+          <TableHead>
+            {/* Row 1: Aggregator Headers */}
+            <TableRow>
+              <TableCell colSpan={7} sx={headerCellSx} align="center">
+                Cost Benefit Analysis for Payment Aggregation (Online)
+              </TableCell>
+              {activeAggs.map((agg) => {
+                const isFinalized = finalizedAggregatorId && Number(agg.aggregatorId) === Number(finalizedAggregatorId);
+                const headerBg = finalizedAggregatorId
+                const headerBg = isAccepted
+                  ? (isFinalized ? "#16a34a" : "#dc2626")
+                  : "#0f766e";
+                const rankIndex = sortedActiveAggs.findIndex(a => a.aggregatorId === agg.aggregatorId) + 1;
+                const rankLabel = rankIndex > 0 ? `L${rankIndex}${rankIndex === 1 ? " - Lowest" : ""}` : "";
+                return (
+                  <TableCell key={agg.aggregatorId} colSpan={3} sx={{ ...headerCellSx, bgcolor: headerBg, border: `1px solid ${headerBg}` }} align="center">
+                    {agg.aggregatorName} {finalizedAggregatorId && (isFinalized ? " (Selected)" : " (Rejected)")}
+                    <Box>
+                      <Typography sx={{ fontWeight: 700, fontSize: "10px" }}>{agg.aggregatorName}</Typography>
+                      <Typography sx={{ fontSize: "9px", opacity: 0.95, fontWeight: 600 }}>
+                        {isAccepted
+                          ? (isFinalized ? "(Selected)" : "(Rejected)")
+                          : `(${rankLabel})`
+                        }
+                      </Typography>
+                    </Box>
+                  </TableCell>
+                );
+              })}
+              <TableCell sx={{ ...subHeaderCellSx, minWidth: "140px" }}>Gross Amount Received from Charges (Rs)</TableCell>
+              {activeAggs.map((agg) => {
+                const isFinalized = finalizedAggregatorId && Number(agg.aggregatorId) === Number(finalizedAggregatorId);
+                const subHeaderBg = finalizedAggregatorId
+                const subHeaderBg = isAccepted
+                  ? (isFinalized ? "#dcfce7" : "#fee2e2")
+                  : "#ccfbf1";
+                return (
+                  <React.Fragment key={agg.aggregatorId}>
+                    <TableCell sx={{ ...subHeaderCellSx, bgcolor: subHeaderBg, minWidth: "80px" }}>Rate</TableCell>
+                    <TableCell sx={{ ...subHeaderCellSx, bgcolor: subHeaderBg, minWidth: "90px" }}>Vendor Share (Rs)</TableCell>
+                    <TableCell sx={{ ...subHeaderCellSx, bgcolor: subHeaderBg, minWidth: "100px" }}>Expected Revenue (Rs)</TableCell>
+                  </React.Fragment>
+                );
+              })}
+            </TableRow>
+          </TableHead>
+          <TableBody>ableHead>
+            <TableBody>
+              {baseRows.map((row, idx) => {
+                const isSubBank = row.isIB;
+                if (!isSubBank) serialNo += 1;
+                return (
+                  <TableRow key={idx} sx={{ "&:hover": { bgcolor: "#f8fafc" }, bgcolor: isSubBank ? "#fdfdfd" : "transparent" }}>
+                    {/* Count % */}
+                    <TableCell sx={cellSx} align="right">
+                      {isSubBank ? "" : (row.transactionCount ? `${row.transactionCount}%` : "")}
+                    </TableCell>
+                    {/* Value % */}
+                    <TableCell sx={cellSx} align="right">
+                      {isSubBank ? "" : (row.transactionValue ? `${row.transactionValue}%` : "")}
+                    </TableCell>
+                    {/* Type of Transaction */}
+                    <TableCell sx={{ ...cellSx, pl: isSubBank ? 3 : 1, fontStyle: isSubBank ? "italic" : "normal", color: isSubBank ? "#64748b" : "inherit" }}>
+                      {row.transactionType}
+                      {row.transactionTypePercent && isSubBank ? ` (${row.transactionTypePercent})` : ""}
+                    </TableCell>
+                    {/* Estimated Txns */}
+                    <TableCell sx={cellSx} align="right">
+                      {Math.round(row.estimatedTransactions) || "0"}
+                    </TableCell>
+                    {/* Aggregate Amount */}
+                    <TableCell sx={cellSx} align="right">
+                      {formatNumber(row.aggregateAmount)}
+                    </TableCell>
+                    {/* Charges Proposed */}
+                    <TableCell sx={cellSx} align="right">
+                      {row.allow ? (row.unit === PERCENTAGE ? `${row.chargesProposed}${PERCENTAGE}` : `${row.chargesProposed}`) : ""}
+                    </TableCell>
+                    {/* Gross Amount Received */}
+                    <TableCell sx={cellSx} align="right">
+                      {row.allow ? formatNumber(row.grossAmount) : ""}
+                    </TableCell>
+                    {/* Aggregators Data */}
+                    {activeAggs.map((agg) => {
+                      const aggProjList = allProjections[agg.aggregatorId] || [];
+                      const aggRow = aggProjList.find(r => r.transactionType === row.transactionType) || {};
+                      const isFinalized = finalizedAggregatorId && Number(agg.aggregatorId) === Number(finalizedAggregatorId);
+                      const columnBg = finalizedAggregatorId
+                        ? (isFinalized ? "#f0fdf4" : "#f0fdfa")
+                        : "#f0fdfa";
+                      return (
+                        <React.Fragment key={agg.aggregatorId}>
+                          <TableCell sx={{ ...cellSx, bgcolor: columnBg }} align="right">
+                            {aggRow.allow && aggRow.rate !== undefined ? (aggRow.unit === PERCENTAGE ? `${aggRow.rate}${PERCENTAGE}` : `${aggRow.rate}`) : ""}
+                          </TableCell>
+                          <TableCell sx={{ ...cellSx, bgcolor: columnBg }} align="right">
+                            {aggRow.allow ? formatNumber(aggRow.vendorShare) : ""}
+                          </TableCell>
+                          <TableCell sx={{ ...cellSx, bgcolor: columnBg }} align="right">
+                            {aggRow.allow ? formatNumber(aggRow.expectedRevenue) : ""}
+                          </TableCell>
+                        </React.Fragment>
+                      );
+                    })}
+                  </TableRow>
+                );
+              })}
+              {/* Totals Row */}
+              <TableRow>
+                <TableCell colSpan={3} sx={{ ...totalCellSx }} align="center">TOTAL</TableCell>
+                <TableCell sx={totalCellSx} align="right">
+                  {baseTotals.totalEstimatedTransactions}
+                </TableCell>
+                <TableCell sx={totalCellSx} align="right">
+                  {formatNumber(baseTotals.totalAggregateAmount)}
+                </TableCell>
+                <TableCell sx={totalCellSx}></TableCell>
+                <TableCell sx={totalCellSx} align="right">
+                  {formatNumber(baseTotals.totalGrossAmount)}
+                </TableCell>
+                {activeAggs.map((agg) => {
+                  const totals = aggregatorTotals[agg.aggregatorId] || {};
+                  const isFinalized = finalizedAggregatorId && Number(agg.aggregatorId) === Number(finalizedAggregatorId);
+                  const totalsBg = finalizedAggregatorId
+                    ? (isFinalized ? "#dcfce7" : "#e6f4f1")
+                    : "#e6f4f1";
+                  return (
+                    <React.Fragment key={agg.aggregatorId}>
+                      <TableCell sx={{ ...totalCellSx, bgcolor: totalsBg }}></TableCell>
+                      <TableCell sx={{ ...totalCellSx, bgcolor: totalsBg }} align="right">
+                        {formatNumber(totals.totalVendorShare)}
+                      </TableCell>
+                      <TableCell sx={{ ...totalCellSx, bgcolor: totalsBg }} align="right">
+                        {formatNumber(totals.totalExpectedRevenue)}
+                      </TableCell>
+                    </React.Fragment>
+                  );
+                })}
+              </TableRow>
+            </TableBody>
+        </Table>
+      </TableContainer>
     </Box>
   </Box>
 );
-
-// ---------------- MAIN ----------------
-const AcceptedQuoteTable = ({ customer, applicationId }) => {
-  const { finalizedAggregatorId: aggregatorId } = customer || {};
-
-  // ⬇️ Get user details from session storage
-  const userDetails = useMemo(() => {
-    const stored = sessionStorage.getItem('userDetails');
-    return stored && JSON.parse(stored)
-  }, []);
-
-  const { employeeName, pfId, department, branchName, branchLocation, role: userRole } = userDetails || {};
-  const pdfRef = useRef();
-  const { errorNotification, successNotification } = useStatusWiseAlert();
-  const [customerAcceptanceFile, setCustomerAcceptanceFile] = useState(customer?.customerAcceptanceFile);
-  const [rhRecommendationFile, setRhRecommendationFile] = useState(customer?.rhRecommendationFile);
-
-  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
-  const [showQuotation, setShowQuotation] = useState(false);
-  const [quoteDetails, setQuoteDetails] = useState([]);
-  const [accepted, setAccepted] = useState(false);
-  const [fileError, SetFileError] = useState({});
-  const [loading, setLoading] = useState(false);
-  const [reason, setReason] = useState("");
-  const [showDownload, setShowDownload] = useState(false)
-
-
-  console.log('customerAcceptanceFile', customerAcceptanceFile)
-  useEffect(() => {
-    if (!applicationId || !aggregatorId) return;
-
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const res = await aggregatorProjections.getAllProjections(applicationId, aggregatorId);
-        setQuoteDetails(Array.isArray(res?.data) && res.data);
-      } catch {
-        errorNotification("Failed to fetch projections");
-        setQuoteDetails([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [applicationId, aggregatorId]);
-
-  const updateApplicationFlow = async (payload) => {
-    setLoading(true);
-    try {
-      await applicationServices.updateApplication(applicationId, payload);
-      successNotification("✅ Application updated successfully");
-      window.location.reload();
-    } catch {
-      errorNotification("Failed to update application");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAccept = async () => {
-    if (customerAcceptanceFile === null || !rhRecommendationFile === null) {
-      SetFileError('Please upload RH Recommendation / Customer Acceptance')
-      errorNotification("Please upload RH Recommendation / Customer Acceptance")
-      return;
-    };
-
-    if (!accepted) return errorNotification("Please accept before proceeding");
-
-    if (customer?.approvedByROId !== user_Id) return errorNotification("You are not the authorised person to approve this quotation.");
-
-    await updateApplicationFlow({ isQuoteAcceptRO: true, reasonOfRejection: "", status: 'quoteaccepted', approvedByQuoteId: user_Id, customerAcceptanceFile: customerAcceptanceFile, rhRecommendationFile: rhRecommendationFile });
-
-  };
-
-  const handleReject = () => {
-    if (!accepted) return errorNotification("Please check acceptance before rejecting");
-    setConfirmDialogOpen(true);
-  };
-
-  const handleConfirmReject = async (reasonText) => {
-    console.log(reasonText, 'reasonText')
-    if (reasonText === '') return errorNotification('Reason of rejection is required.')
-    setConfirmDialogOpen(false);
-    await updateApplicationFlow({
-      isQuoteAcceptRO: false,
-      reasonOfRejection: reasonText || null,
-      isQuoteReviewCO: false,
-      status: 'quoterejected'
-    });
-  };
-
-  const handleDownloadPDF = async () => {
-    try {
-      setShowDownload(true);
-
-      // Wait for table + content to fully render
-      await new Promise((res) => setTimeout(res, 300));
-
-      const pdfElement = pdfRef.current;
-
-      // CLEAN WHITE BACKGROUND
-      pdfElement.style.background = "#fff";
-
-      const canvas = await html2canvas(pdfElement, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: "#fff",
-        allowTaint: true,
-      });
-
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF("p", "mm", "a4");
-
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pdfWidth = pageWidth - 20;
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-
-      pdf.addImage(imgData, "PNG", 10, 10, pdfWidth, pdfHeight);
-      pdf.save(`Quotation_${customer?.customerName || "Customer"}.pdf`);
-
-      successNotification("Downloaded successfully");
-    } catch (err) {
-      console.log(err);
-      errorNotification("Failed to generate PDF");
-    }
-  };
-
-  return (
-    <>
-      {loading && <FullScreenLoader />}
-
-      {/* Confirmation Dialog for Rejection */}
-      <ConfirmationDialogWithReason
-        showReasonSec={true}
-        open={confirmDialogOpen}
-        onClose={() => setConfirmDialogOpen(false)}
-        onConfirm={handleConfirmReject}
-        reason={reason}
-        setReason={setReason}
-        isLoading={loading}
-        title="Reject Quotation"
-        description="Please confirm rejection and provide reason for rejecting this quotation."
-      />
-
-      {/* Toggle Line */}
-      <Box display="flex" gap={2} justifyContent={showQuotation ? "space-between" : "center"} m="12px 0">
-        <Typography variant="body1" color="green" border="1px solid green" p={1} borderRadius={2}>
-          Quotation has been prepared based on transaction projections.&nbsp;
-          <Typography
-            component="span"
-            sx={{ color: "blue", cursor: "pointer", textDecoration: "underline" }}
-            onClick={() => setShowQuotation(!showQuotation)}
-          >
-            {showQuotation ? "Hide Quotation" : "View Quotation"}
-          </Typography>
-        </Typography>
-        {showQuotation && !customer?.isQuoteAcceptRO && (
-          <Typography
-            component="span"
-            sx={{ color: "primary.main", cursor: "pointer", textDecoration: "underline" }}
-            onClick={handleDownloadPDF}
-          >
-            Download Quotation <Download />
-          </Typography>
-        )}
-      </Box>
-
-      {showQuotation && customer?.isQuoteAcceptRO &&
-        <Container sx={{ position: 'relative' }}>
-          <Typography variant="h5" fontWeight={700} textAlign="center" gutterBottom>
-            Quotation Document
-          </Typography>
-          <Divider sx={{ mb: 3 }} />
-          <Typography variant="body1"><b>Customer Name:</b> {customer?.customerName}</Typography>
-          <Typography variant="body1" color="blue" sx={{ mt: 2, mb: 2 }}>
-            <b>Note:</b> This quotation has been prepared based on transaction projections and may vary as per actual usage.
-          </Typography>
-
-          <Typography variant="subtitle1" fontWeight={600} sx={{ mt: 2, mb: 1 }}>
-            Projection Quote Details
-          </Typography>
-          <Box
-            sx={{
-              position: "absolute",
-              top: "65%",
-              left: "50%",
-              transform: "translate(-50%, -50%) rotate(-30deg)",
-              fontSize: "70px",
-              fontWeight: 900,
-              color: "rgba(0, 128, 0, 0.2)",
-              zIndex: 0,
-            }}
-          >
-            ACCEPTED
-          </Box>
-          <QuoteTableRO quoteDetails={quoteDetails} />
-        </Container>
-      }
-
-      {/* Quotation */}
-      {showQuotation && !customer?.isQuoteAcceptRO && (
-        <Container maxWidth='md'
-          component={Paper} mt={2} mb={4}
-          sx={{ p: 5, pl: '50px', borderRadius: 3, position: "relative", overflow: "hidden" }}
-        >
-          <Container
-            maxWidth='md'
-            component={Paper}
-            elevation={3}
-            ref={pdfRef}
-            sx={{ p: 5, pl: '50px', borderRadius: 3, position: "relative", overflow: "hidden", }}
-          >
-            <Box sx={{ display: "flex", justifyContent: "center", mb: 3 }}>
-              <img src={centralbanklogo} alt="Logo" style={{ height: 75 }} />
-            </Box>
-
-            <Box sx={{ p: 5, mt: 5, color: "#000", fontSize: "14px", lineHeight: 1.7 }}>
-
-              {/* LETTER HEADER */}
-              <Box sx={{ mb: 4 }}>
-                <Typography sx={{ fontWeight: 600 }}>To,</Typography>
-                <Typography>The Regional Office</Typography>
-                <Typography>Central Bank of India</Typography>
-                <Typography>{branchName} Branch</Typography>
-                <Typography>Mumbai</Typography>
-              </Box>
-
-              {/* SUBJECT */}
-              <Typography sx={{ fontWeight: 600, mb: 2 }}>
-                Subject: Acceptance of Quotation for Payment Aggregator Services
-              </Typography>
-
-              {/* BODY PARAGRAPH */}
-              <Typography sx={{ mb: 3 }}>
-                Dear Sir/Madam,
-                <br /><br />
-                I/We hereby confirm that the quotation provided by the Bank for Payment Aggregator
-                services has been reviewed, verified and accepted. Below are the quotation details
-                that have been mutually agreed upon:
-              </Typography>
-
-              {/* INSERT QUOTATION TABLE HERE */}
-              {/* ——— THIS IS THE TABLE BLOCK FROM STEP 1 ——— */}
-              <Box sx={{ mt: 2, mb: 2 }}>
-                <Typography sx={{ fontWeight: 600, mb: 1 }}>
-                  Quotation Details (As Accepted):
-                </Typography>
-
-                <QuoteTableRO quoteDetails={quoteDetails} />
-
-              </Box>
-
-              {/* DECLARATION */}
-              <Typography sx={{ mt: 3 }}>
-                I/We understand that the final charges may vary based on the actual transactions,
-                and hereby authorize the Bank to proceed with the implementation accordingly.
-              </Typography>
-
-              {/* SIGNATURE SECTION */}
-              <Box sx={{ mt: 5 }}>
-                {/* Customer Signature */}
-                <Box sx={{ mb: 4 }}>
-                  <Typography sx={{ fontWeight: 600, mb: 1 }}>Customer Signature:</Typography>
-                  <Box sx={{ border: "1px solid #000", height: 70, width: "30%", borderRadius: 1 }} />
-                </Box>
-                {/* Date */}
-                <Box sx={{ mb: 4 }}>
-                  <Typography sx={{ fontWeight: 600, mb: 1 }}>Date:</Typography>
-                  <Box sx={{ borderBottom: "1px solid #000", width: "25%", height: 25 }} />
-                </Box>
-              </Box>
-
-            </Box>
-          </Container>
-
-
-          <Grid container spacing={1} mt={2}>
-            <Grid item xs={12} md={6}>
-              <FileUploadOrView
-                appId={customer?.customerAcceptanceFile}
-                canUpload={isRO}
-                name="customerAcceptanceFile"
-                label="Customer Acceptance"
-                value={customerAcceptanceFile || customer?.customerAcceptanceFile}
-                setFieldValue={setCustomerAcceptanceFile}
-                required
-                direct
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <FileUploadOrView
-                appId={customer?.rhRecommendationFile}
-                canUpload={isRO}
-                name="rhRecommendationFile"
-                label="RH Recommendation"
-                value={rhRecommendationFile || customer?.rhRecommendationFile}
-                setFieldValue={setRhRecommendationFile}
-                required
-                direct
-              />
-            </Grid>
-          </Grid>
-
-          {!customer?.isQuoteAcceptRO &&
-            <AcceptanceSection
-              accepted={accepted}
-              customerDetails={customer}
-              setAccepted={setAccepted}
-              onAccept={handleAccept}
-              onReject={handleReject}
-            />
-          }
-        </Container>
-      )}
-    </>
-  );
 };
-
-export default AcceptedQuoteTable;
+};
+export default AggregatorDetails;

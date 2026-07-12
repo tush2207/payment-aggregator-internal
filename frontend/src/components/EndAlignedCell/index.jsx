@@ -7,11 +7,11 @@ const formatNumber = (value) => {
   }).format(value);
 };
 
-const EndAlignedCell = ({ children, textAlign= "end", format = true, fontWeight }) => {
+const EndAlignedCell = ({ children, textAlign= "end", format = true, fontWeight, sx = {} }) => {
   const displayValue = format ? formatNumber(children) : children;
 
   return (
-    <TableCell sx={{ textAlign:textAlign, fontWeight: fontWeight }} >
+    <TableCell sx={{ textAlign:textAlign, fontWeight: fontWeight, ...sx }} >
       {displayValue}
     </TableCell>
   );

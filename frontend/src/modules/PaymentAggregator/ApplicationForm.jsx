@@ -245,7 +245,7 @@ const ApplicationForm = ({ updateDetails, handleClose, formClosed, fetchAllAppli
                   appId={updateDetails?.rhRecommendationFile}
                   touched={touched}
                   helperText={errors}
-                  canUpload={isRO}
+                  canUpload={isRO && !approvedByCO}
                   name="rhRecommendationFile"
                   label="RH Recommendation"
                   value={values?.rhRecommendationFile}
@@ -259,7 +259,7 @@ const ApplicationForm = ({ updateDetails, handleClose, formClosed, fetchAllAppli
                   appId={updateDetails?.zhRecommendationFile}
                   touched={touched}
                   helperText={errors}
-                  canUpload={isZO}
+                  canUpload={isZO && !approvedByCO}
                   name="zhRecommendationFile"
                   label="ZO Recommendation"
                   value={values?.zhRecommendationFile}
@@ -271,7 +271,7 @@ const ApplicationForm = ({ updateDetails, handleClose, formClosed, fetchAllAppli
               {(isRO || isZO || user_role === "CO") && values?.customerAcceptanceFile && (
                 <FileUploadOrView
                   appId={updateDetails?.customerAcceptanceFile}
-                  canUpload={isRO}
+                  canUpload={isRO && !approvedByCO}
                   name="customerAcceptanceFile"
                   label="Customer Acceptance"
                   value={values?.customerAcceptanceFile}
@@ -286,6 +286,9 @@ const ApplicationForm = ({ updateDetails, handleClose, formClosed, fetchAllAppli
           {/* Consent + Action Buttons */}
           {(() => {
             let shouldShow = true;
+            if (approvedByCO) {
+              shouldShow = false;
+            }
             if (isBO && updateDetails?.isApplicationSubmittedBR) {
               shouldShow = false;
             }

@@ -3,7 +3,7 @@ import CenterAlign from "&src/components/CenterAlign";
 import StatusChipOrSelect from "&src/components/StatusChipOrSelect";
 import { APPLICATION_ROUTES_URLS } from "&src/routes/routesConfig";
 import { formatDateAndTime } from "&src/utils";
-import { DashboardRounded, Groups2, HelpCenterRounded } from "@mui/icons-material";
+import { DashboardRounded, Groups2, HelpCenterRounded, Description as DescriptionIcon, RateReview as RateReviewIcon, ForwardToInbox as ForwardToInboxIcon, Upload as UploadIcon, Calculate as CalculateIcon, ThumbUpAlt as ThumbUpAltIcon, FactCheck as FactCheckIcon } from "@mui/icons-material";
 import { TextField } from "@mui/material";
 
 export const user_Id = sessionStorage.getItem('userId');
@@ -314,59 +314,66 @@ export const PAYMENT_PROJECTIONS = [
 
 export const PAYMENT_AGGREGATOR_WORKFLOW = (applicationStatus) => [
   {
-    role: 'BO',
+    role: 'BO / RO / ZO / CO',
     label: 'Application Submission',
     description: 'Branch submits application and documents.',
-    icon: applicationSubmission,
+    icon: <DescriptionIcon />,
     status: applicationStatus?.isApplicationSubmittedBR,
   },
   {
-    role: 'RO / ZO',
+    role: 'BO / RO / ZO / CO',
     label: 'RO / ZO Review',
     description: 'RO / ZO reviews and uploads RH / ZH Recommendation.',
-    icon: review,
+    icon: <RateReviewIcon />,
     status: applicationStatus?.isReviewByRO,
   },
   // {
-  //   role: 'ZO',
+  //   role: 'BO / RO / ZO / CO',
   //   label: 'ZO Review',
   //   description: 'ZO reviews and uploads ZH Recommendation.',
-  //   icon: review,
+  //   icon: <RateReviewIcon />,
   //   status: applicationStatus?.isReviewByZO,
   // },
   {
-    role: 'CO',
-    label: 'CO Review & Forward',
+    role: 'BO / RO / ZO / CO',
+    label: 'CO Review',
     description: 'CO reviews and forwards details to Aggregator.',
-    icon: coforward,
+    icon: <ForwardToInboxIcon />,
+    status: applicationStatus?.isReviewByCO,
+  },
+  {
+    role: 'CO',
+    label: 'CO Review',
+    description: 'Forwards details to Aggregator for quote submission.',
+    icon: <ForwardToInboxIcon />,
     status: applicationStatus?.isReviewByCO,
   },
   {
     role: 'AEPA',
     label: 'Quote Submission',
     description: 'Aggregator submits quotes.',
-    icon: quoteSubmission,
+    icon: <UploadIcon />,
     status: applicationStatus?.isQuoteAddedPA,
   },
   {
     role: 'CO',
     label: 'Quote Analysis',
     description: 'CO selects suitable quote and applies mark-up .',
-    icon: quoteEvaluation,
+    icon: <CalculateIcon />,
     status: applicationStatus?.isQuoteReviewCO || applicationStatus?.isMarkUpAddedCO,
   },
   {
-    role: 'RO',
+    role: 'RO / CO',
     label: 'Customer Acceptance',
     description: 'Customer accepts terms.',
-    icon: customerAcceptance,
+    icon: <ThumbUpAltIcon />,
     status: applicationStatus?.isQuoteAcceptRO,
   },
   {
-    role: 'CO',
+    role: 'BO / RO / ZO / CO',
     label: 'Final Approval',
     description: 'CO verifies and issues PO.',
-    icon: finalApproval,
+    icon: <FactCheckIcon />,
     status: applicationStatus?.isFinalApproved,
   },
 ];

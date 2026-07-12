@@ -3,7 +3,9 @@ import { TableRow, TableCell, Typography, Box, IconButton, Tooltip, Menu, MenuIt
 import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownRounded';
 import KeyboardArrowUpRoundedIcon from '@mui/icons-material/KeyboardArrowUpRounded';
 import MoreVertRoundedIcon from '@mui/icons-material/MoreVertRounded';
-import { MessageOutlined } from "@mui/icons-material";
+import { MessageOutlined, Timeline } from "@mui/icons-material";
+import { useDispatch } from "react-redux";
+import { openWorkflowDialog } from "&src/store/applicationFlowSlice";
 
 import EndAlignedCell from '&src/components/EndAlignedCell';
 import CenterAlign from '&src/components/CenterAlign';
@@ -31,6 +33,7 @@ const ApplicationRow = memo(
         onFinalApproval,
         onDownloadPO
     }) => {
+        const dispatch = useDispatch();
         const [anchorEl, setAnchorEl] = useState(null);
 
         const handleMenuClick = useCallback((event) => {
@@ -85,6 +88,13 @@ const ApplicationRow = memo(
                             <IconButton size="small" onClick={() => onToggle(application.applicationId)}>
                                 {isExpanded ? <KeyboardArrowUpRoundedIcon /> : <KeyboardArrowDownRoundedIcon />}
                             </IconButton>
+                            {userRole === 'CO' && application?.isReviewByRO === true && (
+                                <Tooltip title="Approval Flow" placement="top" arrow>
+                                    <IconButton color="secondary" size="small" onClick={() => dispatch(openWorkflowDialog(application))}>
+                                        <Timeline fontSize="small" />
+                                    </IconButton>
+                                </Tooltip>
+                            )}
                             <IconButton size="small" onClick={handleMenuClick}>
                                 <MoreVertRoundedIcon />
                             </IconButton>
@@ -137,101 +147,9 @@ const ApplicationRow = memo(
                 {/* Expanded Details */}
                 {isExpanded && (
                     <TableRow sx={{ p: 0, backgroundColor: '#fcfcfc' }}>
-                        <TableCell colSpan={10} sx={{ py: 0 }}>
-                            <Box sx={{ pl: 5, pr: 2, py: 2 }}>
-                                {application.isAggregatorAdded ? (
-                                    <QuoteReview
-                                        application={application}
-                                        userRole={userRole}
-                                        onAcceptQuote={onAcceptQuote}
-                                        onFinalApproval={onFinalApproval}
-                                    />
-                                ) : (
-                                    <>
-                                        <RoleBasedStepper steps={PAYMENT_AGGREGATOR_WORKFLOW(application)} statusChip />
-                                        
-                                        {/* RO PENDING ACTIONS */}
-                                        {userRole === 'RO' && application?.isReviewByRO === null && (
-                                            <Box mt={3} p={2} sx={{ border: (theme) => `1px dashed ${theme.palette.primary.main}`, borderRadius: 2, backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.05) }}>
-                                                <Typography variant="subtitle1" color="primary" fontWeight={700} gutterBottom>
-                                                    Pending Actions
-                                                </Typography>
-                                                <Box display="flex" alignItems="center" gap={2}>
-                                                    <Typography variant="body2" flex={1}>
-                                                        You need to verify and approve the application details.
-                                                    </Typography>
-                                                    <Button variant="contained" size="small" onClick={() => onVerify(application)}>
-                                                        Verify Application
-                                                    </Button>
-                                                </Box>
-                                            </Box>
-                                        )}
-
-                                        {/* ZO PENDING ACTIONS */}
-                                        {userRole === 'ZO' && application?.isReviewByZO === null && (
-                                            <Box mt={3} p={2} sx={{ border: (theme) => `1px dashed ${theme.palette.primary.main}`, borderRadius: 2, backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.05) }}>
-                                                <Typography variant="subtitle1" color="primary" fontWeight={700} gutterBottom>
-                                                    Pending Actions
-                                                </Typography>
-                                                <Box display="flex" alignItems="center" gap={2}>
-                                                    <Typography variant="body2" flex={1}>
-                                                        You need to verify and approve the application details.
-                                                    </Typography>
-                                                    <Button variant="contained" size="small" onClick={() => onVerify(application)}>
-                                                        Verify Application
-                                                    </Button>
-                                                </Box>
-                                            </Box>
-                                        )}
-                                        
-                                        {/* CO PENDING ACTIONS */}
-                                        {userRole === 'CO' && !application?.isFinalApproved && (
-                                            <Box mt={3} p={2} sx={{ border: (theme) => `1px dashed ${theme.palette.primary.main}`, borderRadius: 2, backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.05) }}>
-                                                <Typography variant="subtitle1" color="primary" fontWeight={700} gutterBottom>
-                                                    Pending Actions
-                                                </Typography>
-                                                
-                                                {application?.isReviewByCO === null && (
-                                                    <Box display="flex" alignItems="center" gap={2}>
-                                                        <Typography variant="body2" flex={1}>
-                                                            <b>Step 1:</b> Verify and approve the application details.
-                                                        </Typography>
-                                                        <Button variant="contained" size="small" onClick={() => onVerify(application)}>
-                                                            Verify Application
-                                                        </Button>
-                                                    </Box>
-                                                )}
-
-                                                {application?.isReviewByCO === true && !application?.isProjectionAdded && (
-                                                    <Box display="flex" alignItems="center" gap={2}>
-                                                        <Typography variant="body2" flex={1}>
-                                                            <b>Step 2:</b> Application is approved. Next, you need to add or update the projections.
-                                                        </Typography>
-                                                        <Button variant="contained" size="small" onClick={() => onEditProjections(application)}>
-                                                            Update Projections
-                                                        </Button>
-                                                    </Box>
-                                                )}
-
-                                                {application?.isReviewByCO === true && application?.isProjectionAdded && !application?.isAggregatorAdded && (
-                                                    <Box display="flex" alignItems="center" gap={2}>
-                                                        <Typography variant="body2" flex={1}>
-                                                            <b>Step 3:</b> Projections updated successfully. Please select the aggregators below to send for quotes.
-                                                        </Typography>
-                                                    </Box>
-                                                )}
-                                            </Box>
-                                        )}
-
-                                        {application.isReviewByCO && application.isProjectionAdded && (
-                                            <AggregatorSelection
-                                                application={application}
-                                                userRole={userRole}
-                                                onAddAggregator={onAddAggregator}
-                                            />
-                                        )}
-                                    </>
-                                )}
+                        <TableCell colSpan={10} sx={{ py: 2 }}>
+                            <Box sx={{ pl: 5, pr: 2 }}>
+                                <RoleBasedStepper steps={PAYMENT_AGGREGATOR_WORKFLOW(application)} statusChip />
                             </Box>
                         </TableCell>
                     </TableRow>

@@ -89,6 +89,8 @@ class Applications(BaseModel):
     isReviewByRO : Optional[bool] = None
     isReviewByZO : Optional[bool] = None
     isReviewByCO : Optional[bool] = None
+    isProjectionAdded: Optional[bool] = None
+    isSendForQuoteAccpcetance : Optional[bool] = None
     isAggregatorAdded : Optional[bool] = None
     isQuoteAddedPA : Optional[bool] = None
     isQuoteReviewCO : Optional[bool] = None
@@ -146,6 +148,7 @@ class ApplicationsUpdate(BaseModel):
     isReviewByRO: Optional[bool] = None
     isReviewByZO: Optional[bool] = None
     isReviewByCO: Optional[bool] = None
+    isProjectionAdded: Optional[bool] = None
     isAggregatorAdded: Optional[bool] = None    
     isQuoteAddedPA: Optional[bool] = None
     isQuoteReviewCO: Optional[bool] = None

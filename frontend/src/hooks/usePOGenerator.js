@@ -4,11 +4,14 @@ import applicationServices from "&src/services/applications";
 import { poFormSchema } from "&src/utils/validationSchemas";
 import { useFormik } from "formik";
 import { useEffect, useState } from "react";
+import { useDispatch } from "react-redux";
+import { closeWorkflowDialog } from "&src/store/applicationFlowSlice";
 
 const usePOGenerator = (applicationDetails, setOpenPOModal, openPOModal) => {
   console.log(applicationDetails, 'applicationDetails')
   const { successNotification, errorNotification } = useStatusWiseAlert();
   const [poLoading, setLoading] = useState(false);
+  const dispatch = useDispatch();
 
   const poFormDetails = useFormik({
     initialValues: PO_FORM_VALUES,
@@ -18,37 +21,40 @@ const usePOGenerator = (applicationDetails, setOpenPOModal, openPOModal) => {
     onSubmit: async (values) => {
       // ✅ Validate before calling API
       console.log('values', values)
-      await poFormDetails.validateForm(values);
-      if (Object.keys(poFormDetails.errors)?.length > 0) {
-        errorNotification("Please fix the errors before submitting.");
-        return;
-      }
-      await generatePO();
-    },
+      generatePO({
+        applicationId: applicationDetails?.applicationId,
+        aggregatorId: applicationDetails?.finalizedAggregatorId,
+        customerName: applicationDetails?.customerName,
+        isFinalApproved: applicationDetails?.isFinalApproved,
+        poDetails: values
+      })
+    }
   });
   const { values } = poFormDetails;
 
-  const generatePO = async ({ applicationId, aggregatorId, customerName, isFinalApproved }) => {
+  const generatePO = async ({ applicationId, aggregatorId, customerName, isFinalApproved, poDetails }) => {
+    setLoading(true);
     try {
-      const currentFinalApproved = (applicationDetails?.isFinalApproved || isFinalApproved) === true
-      setLoading(true);
+      const currentFinalApproved = applicationDetails?.isFinalApproved || isFinalApproved;
 
-      // Step 1: Update Application Flow
-      const updatePayload = {
-        ...values,
-        isQuoteAcceptReviewByCO: true,
-        isFinalApproved: true,
-        status: 'completed'
-      };
-
-      // if (!currentFinalApproved) {
+      if (!currentFinalApproved && poDetails) {
+        const updatePayload = {
+          ...poDetails,
+          isQuoteAcceptReviewByCO: true,
+          isFinalApproved: true,
+          status: 'completed'
+        };
         await applicationServices.updateApplication(applicationId, updatePayload);
-      // }
+      }
 
-      // Step 2: Generate PO PDF
-      const res = await applicationServices.generatePO(applicationId, aggregatorId, {
-        responseType: "blob",
-      });
+      const res = await applicationServices.generatePO(
+        applicationId,
+        aggregatorId,
+        poDetails,
+        {
+          responseType: "blob",
+        }
+      );
       setOpenPOModal && setOpenPOModal(false)
 
       const blob =  new Blob([res?.data],{
@@ -67,7 +73,8 @@ const usePOGenerator = (applicationDetails, setOpenPOModal, openPOModal) => {
       link.remove();
       setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
       successNotification(`Purchase Order downloaded successfully`);
-      window.location.reload();
+      // Removed refresh of application details to prevent calling get-single-applications API
+      dispatch(closeWorkflowDialog());
     } catch (err) {
       console.error("❌ Error generating PO:", err);
       errorNotification("Failed to generate Purchase Order. Please try again.");

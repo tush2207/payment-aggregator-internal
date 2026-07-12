@@ -1,8 +1,17 @@
 import axios from 'axios';
+import { getCookie } from '&src/utils/cookies';
 
 // Ensure you replace the base URL or rely on your axios instance interceptors
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:1212/api',
+});
+
+apiClient.interceptors.request.use((config) => {
+  const token = getCookie('accessToken');
+  if (token) {
+    config.headers['Authorization'] = `Bearer ${token}`;
+  }
+  return config;
 });
 
 // Create generic endpoints for the application flow

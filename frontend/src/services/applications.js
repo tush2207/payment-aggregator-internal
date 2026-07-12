@@ -7,7 +7,29 @@ const applicationServices = {
     console.log('getAllApplicationsprops', zoneId, page, search, status, category,createdAt,)
 
     try {
-      return await getMethod(ApiUrls.GET_ALL_APPLICATIONS(zoneId, page, search, status, category,createdAt,), config);
+      const response = await getMethod(ApiUrls.GET_ALL_APPLICATIONS(zoneId, page, search, status, category,createdAt,), config);
+      if (response && response.data) {
+        const mapApp = (app) => {
+          if (!app) return app;
+          return {
+            ...app,
+            isProjectionAdded: Boolean(app.isProjectionAdded) || 
+                               app.status === "projectionadded" || 
+                               app.isAggregatorAdded !== null ||
+                               app.isQuoteAddedPA !== null ||
+                               app.isMarkUpAddedCO !== null ||
+                               app.isQuoteAcceptRO !== null ||
+                               app.isFinalApproved !== null
+          };
+        };
+
+        if (Array.isArray(response.data.data)) {
+          response.data.data = response.data.data.map(mapApp);
+        } else if (Array.isArray(response.data)) {
+          response.data = response.data.map(mapApp);
+        }
+      }
+      return response;
     } catch (error) {
       console.error(`Error in ${ApiUrls.GET_ALL_APPLICATIONS}:`, error);
       throw error;
@@ -17,7 +39,29 @@ const applicationServices = {
   // 🔹 Get application by ID
   getApplicationById: async (applicationId, config) => {
     try {
-      return await getMethod(ApiUrls.GET_APPLICATION_BY_ID(applicationId), config);
+      const response = await getMethod(ApiUrls.GET_APPLICATION_BY_ID(applicationId), config);
+      if (response && response.data) {
+        const mapApp = (app) => {
+          if (!app) return app;
+          return {
+            ...app,
+            isProjectionAdded: Boolean(app.isProjectionAdded) || 
+                               app.status === "projectionadded" || 
+                               app.isAggregatorAdded !== null ||
+                               app.isQuoteAddedPA !== null ||
+                               app.isMarkUpAddedCO !== null ||
+                               app.isQuoteAcceptRO !== null ||
+                               app.isFinalApproved !== null
+          };
+        };
+
+        if (response.data.data) {
+          response.data.data = mapApp(response.data.data);
+        } else {
+          response.data = mapApp(response.data);
+        }
+      }
+      return response;
     } catch (error) {
       console.error(`Error in ${ApiUrls.GET_APPLICATION_BY_ID(applicationId)}:`, error);
       throw error;
