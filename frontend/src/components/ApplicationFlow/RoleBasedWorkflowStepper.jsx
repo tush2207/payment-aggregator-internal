@@ -8,7 +8,7 @@ import {
   Typography,
   Paper,
 } from "@mui/material";
-import { styled } from "@mui/material/styles";
+import { styled, keyframes } from "@mui/material/styles";
 import DescriptionIcon from "@mui/icons-material/Description";
 import HubIcon from "@mui/icons-material/Hub";
 import PercentIcon from "@mui/icons-material/Percent";
@@ -23,69 +23,72 @@ import { formatDateAndTime } from "&src/utils";
 // CBI Premium Custom Stepper Connector
 import StepConnector, { stepConnectorClasses } from "@mui/material/StepConnector";
 
+const pulseGlow = keyframes`
+  0% {
+    box-shadow: 0 0 6px rgba(255, 152, 0, 0.3);
+    transform: scale(0.92);
+  }
+  50% {
+    box-shadow: 0 0 14px rgba(255, 152, 0, 0.65);
+    transform: scale(1.04);
+  }
+  100% {
+    box-shadow: 0 0 6px rgba(255, 152, 0, 0.3);
+    transform: scale(0.92);
+  }
+`;
+
+const flowingLine = keyframes`
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+`;
+
 const WorkflowConnector = styled(StepConnector)(({ theme }) => ({
   [`&.${stepConnectorClasses.alternativeLabel}`]: {
-    top: 15,
+    top: 24, // Pull connector OUTSIDE the box
+    position: 'relative',
   },
   [`& .${stepConnectorClasses.line}`]: {
     height: 3,
     border: 0,
     borderRadius: 8,
-    background: "#e0e0e0",
-    transition: "0.4s ease",
+    margin: '0px',
+    background: 'linear-gradient(90deg, #003A8C, #005FCC)',
+    backgroundSize: '200% 200%',
+    opacity: 0.4,
+    transition: '0.4s ease',
+    boxShadow: '0 0 8px rgba(0, 90, 255, 0.25)',
   },
   [`&.${stepConnectorClasses.active} .${stepConnectorClasses.line}`]: {
-    background: "linear-gradient(90deg, #1976d2, #ff9800)",
+    opacity: 1,
+    background: 'linear-gradient(270deg, #003A8C, #D32F2F, #003A8C)',
+    backgroundSize: '200% 200%',
+    animation: `${flowingLine} 3s ease infinite`,
+    boxShadow: '0 0 10px rgba(0, 70, 200, 0.4)',
   },
   [`&.${stepConnectorClasses.completed} .${stepConnectorClasses.line}`]: {
-    background: "linear-gradient(90deg, #1976d2, #4caf50)",
+    opacity: 1,
+    background: 'linear-gradient(270deg, #003A8C, #4CAF50, #003A8C)',
+    backgroundSize: '200% 200%',
+    animation: `${flowingLine} 3s ease infinite`,
+    boxShadow: '0 0 12px rgba(0, 200, 100, 0.4)',
   },
-}));
-
-const CustomStepIconRoot = styled("div")(({ ownerState }) => ({
-  color: "#b0bec5",
-  display: "flex",
-  height: 30,
-  width: 30,
-  borderRadius: "50%",
-  border: "2px solid #b0bec5",
-  backgroundColor: "#fff",
-  justifyContent: "center",
-  alignItems: "center",
-  zIndex: 1,
-  transition: "0.3s ease",
-  ...(ownerState.active && {
-    color: "#ff9800",
-    borderColor: "#ff9800",
-    transform: "scale(1.1)",
-    boxShadow: "0 0 8px rgba(255, 152, 0, 0.4)",
-  }),
-  ...(ownerState.completed && {
-    color: "#4caf50",
-    borderColor: "#4caf50",
-    backgroundColor: "rgba(76, 175, 80, 0.05)",
-  }),
 }));
 
 const ICONS_MAP = {
-  0: <DescriptionIcon sx={{ fontSize: 16 }} />,
-  1: <HubIcon sx={{ fontSize: 16 }} />,
-  2: <PercentIcon sx={{ fontSize: 16 }} />,
-  3: <ThumbsUpDownIcon sx={{ fontSize: 16 }} />,
-  4: <AssignmentTurnedInIcon sx={{ fontSize: 16 }} />,
+  0: <DescriptionIcon />,
+  1: <HubIcon />,
+  2: <PercentIcon />,
+  3: <ThumbsUpDownIcon />,
+  4: <AssignmentTurnedInIcon />,
 };
-
-function CustomStepIcon(props) {
-  const { active, completed, className, icon } = props;
-  const stepIndex = icon - 1;
-  const StepIcon = ICONS_MAP[stepIndex] || <DescriptionIcon sx={{ fontSize: 16 }} />;
-
-  return (
-    <CustomStepIconRoot ownerState={{ active, completed }} className={className}>
-      {StepIcon}
-    </CustomStepIconRoot>
-  );
-}
 
 export default function RoleBasedWorkflowStepper() {
   const currentStep = useSelector(selectCurrentStep);
@@ -127,7 +130,45 @@ export default function RoleBasedWorkflowStepper() {
 
           return (
             <Step key={step.name} completed={isCompleted}>
-              <StepLabel StepIconComponent={CustomStepIcon}>
+              <StepLabel
+                StepIconComponent={() => {
+                  const StepIcon = ICONS_MAP[index] || <DescriptionIcon />;
+                  return (
+                    <Box
+                      sx={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: "12px",
+                        background: "#fff",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        boxShadow: isCompleted
+                          ? "0 0 12px rgba(0, 120, 255, 0.40)"
+                          : isActive
+                            ? "0 0 14px rgba(255, 152, 0, 0.60)"
+                            : "0 0 8px rgba(0,0,0,0.15)",
+                        transform: isCompleted ? "scale(1.05)" : "scale(0.92)",
+                        transition: "0.35s ease",
+                        animation: isActive ? `${pulseGlow} 2s infinite ease-in-out` : "none",
+                        color: isCompleted ? "#003A8C" : isActive ? "#ff9800" : "#777",
+                        "&:hover": {
+                          transform: "scale(1.1)",
+                          boxShadow: "0 0 16px rgba(0, 100, 255, 0.45), 0 4px 8px rgba(0,0,0,0.1)",
+                        },
+                      }}
+                    >
+                      {React.cloneElement(StepIcon, {
+                        sx: {
+                          fontSize: 22,
+                          color: "inherit",
+                          transition: "0.3s ease",
+                        }
+                      })}
+                    </Box>
+                  );
+                }}
+              >
                 <Box sx={{ textAlign: "center" }}>
                   <Typography
                     variant="subtitle2"
@@ -138,14 +179,7 @@ export default function RoleBasedWorkflowStepper() {
                     {step.name}
                   </Typography>
 
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    display="block"
-                    sx={{ mt: 0.2, fontWeight: 500, fontSize: "9px" }}
-                  >
-                    Role: <b>{step.role}</b>
-                  </Typography>
+
 
                   <Typography
                     variant="caption"

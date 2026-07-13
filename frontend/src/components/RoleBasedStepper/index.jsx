@@ -213,7 +213,7 @@ export default function RoleBasedStepper({
                     objectFit: "contain",
                     filter: isCompleted
                       ? "none"
-                      : isActive
+                      : isCurrentStep
                         ? "none"
                         : "grayscale(100%) opacity(0.6)",
                     transition: "0.3s ease",

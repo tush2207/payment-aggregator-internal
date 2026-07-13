@@ -377,7 +377,7 @@ export default function ApplicationFlowTable({
                         <Stack direction="row" spacing={1} alignItems="center">
                           {(() => {
                             const { isVerificationPending, isInitialApproved, isViewMode } = getActionButtons(customer);
-                            const showQuoteEvaluationBtn = customer?.isMarkUpAddedCO === true && !customer?.isSendForQuoteAccpcetance;
+                            const showQuoteEvaluationBtn = customer?.isQuoteAddedPA === true && customer?.isMarkUpAddedCO === true && !customer?.isQuoteAcceptRO && !customer?.isFinalApproved;
                             // const showQuoteEvaluationBtn = customer?.isQuoteAddedPA === true && customer?.isMarkUpAddedCO === true && !customer?.isCustomerAccptance;
                             const showCostBenefitBtn = customer?.isFinalApproved === true;
                             const showDownloadPOBtn = customer?.isFinalApproved === true && isCO;
