@@ -37,22 +37,54 @@ def get_single_application(applicationId: int, db: Session = Depends(get_db), cu
     return application
 
 @router.get('/api/get-all-applications/{zoneId}')
-def get_all_application(zoneId: str = None, status: Optional[str] = None, search: Optional[str] = None, createdAt: Optional[str] = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_all_application(
+    zoneId: str = None, 
+    status: Optional[str] = None, 
+    search: Optional[str] = None, 
+    createdAt: Optional[str] = None, 
+    financialYear: Optional[str] = None, 
+    month: Optional[str] = None, 
+    startDate: Optional[str] = None, 
+    endDate: Optional[str] = None, 
+    page: Optional[int] = None,
+    pageSize: Optional[int] = None,
+    branchId: Optional[str] = None,
+    regionId: Optional[str] = None,
+    export: Optional[str] = None,
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
     new_applications = []
     today = date.today()
     current_date = today.strftime("%Y-%m-%d")
 
-    if zoneId == "00000":
-        applications = db.query(ApplicationsInDB).filter(ApplicationsInDB.isDeleted == False).order_by(ApplicationsInDB.createdAt.desc()).all()
-    else:
-        applications = db.query(ApplicationsInDB).filter(and_(ApplicationsInDB.isDeleted == False, ApplicationsInDB.zoneId == zoneId)).order_by(ApplicationsInDB.createdAt.desc()).all()
-    
-    if (status == 'all') and (search is None) and (createdAt is None):
-        return applications
+    query = db.query(ApplicationsInDB).filter(ApplicationsInDB.isDeleted == False)
+
+    # Apply role-based ID filters
+    if branchId and branchId != "all" and branchId.strip():
+        try:
+            query = query.filter(ApplicationsInDB.branchId == int(branchId))
+        except ValueError:
+            pass
+    elif regionId and regionId != "all" and regionId.strip():
+        try:
+            query = query.filter(ApplicationsInDB.regionId == int(regionId))
+        except ValueError:
+            pass
+    elif zoneId and zoneId != "00000" and zoneId != "all" and zoneId.strip():
+        try:
+            query = query.filter(ApplicationsInDB.zoneId == int(zoneId))
+        except ValueError:
+            pass
+
+    applications = query.order_by(ApplicationsInDB.createdAt.desc()).all()
 
     for app in applications:
+        # 1. status filter
         if status and status != "all" and app.status != status:
             continue
+
+        # 2. search filter
         if search and search.strip():
             s = str(search.strip()).lower()
             if not(
@@ -61,13 +93,155 @@ def get_all_application(zoneId: str = None, status: Optional[str] = None, search
                 or s in str(app.accountNo).lower()
             ):
                 continue
+
+        # 3. createdAt filter
         if createdAt and createdAt.strip():
             s = createdAt
-            if not(
-                s in app.createdAt.strftime("%Y-%m-%d")
-            ):
+            if not(s in app.createdAt.strftime("%Y-%m-%d")):
                 continue        
+
+        # 4. financialYear filter (e.g. "FY 2026-27" or "FY 2026-2027")
+        if financialYear and financialYear != "all":
+            fy = financialYear.replace("FY ", "").strip()
+            if "-" in fy:
+                try:
+                    fy_start, fy_end = fy.split("-")
+                    start_year = int(fy_start)
+                    # Handle both 2-digit and 4-digit end years (e.g., "27" vs "2027")
+                    end_year = int(fy_end)
+                    if end_year < 100:
+                        end_year = (start_year // 100) * 100 + end_year
+                    
+                    app_date = app.createdAt.date() if isinstance(app.createdAt, datetime) else app.createdAt
+                    if app_date < date(start_year, 4, 1) or app_date > date(end_year, 3, 31):
+                        continue
+                except Exception as e:
+                    print(f"Error parsing financial year: {e}")
+
+        # 5. month filter (0-indexed to match JS)
+        if month and month != "all":
+            try:
+                m_val = int(month)
+                app_month = app.createdAt.month - 1
+                if app_month != m_val:
+                    continue
+            except Exception as e:
+                print(f"Error parsing month: {e}")
+
+        # 6. date range filters
+        if startDate:
+            try:
+                start_d = datetime.strptime(startDate, "%Y-%m-%d").date()
+                app_date = app.createdAt.date() if isinstance(app.createdAt, datetime) else app.createdAt
+                if app_date < start_d:
+                    continue
+            except Exception as e:
+                print(f"Error parsing startDate: {e}")
+
+        if endDate:
+            try:
+                end_d = datetime.strptime(endDate, "%Y-%m-%d").date()
+                app_date = app.createdAt.date() if isinstance(app.createdAt, datetime) else app.createdAt
+                if app_date > end_d:
+                    continue
+            except Exception as e:
+                print(f"Error parsing endDate: {e}")
+
         new_applications.append(app)
+
+    total_records = len(new_applications)
+
+    if export == "excel":
+        headers = [
+            "Sr No.", "Zone ID", "Region ID", "Region Name", "Branch ID", "Branch Name",
+            "Application ID", "User Type", "Customer Name", "Category", "Email", "Mobile No",
+            "Address", "Integrate With", "Status", "Average Balance", "Avg Transaction Yearly",
+            "Avg Transaction Size", "Account Balance Today", "Account No", "Total Annual Transaction",
+            "Total Bank Collection", "Aggregate Deposit Amt", "Projection", "Finalized Aggregator Name",
+            "Authorised Person Name", "Authorised Person Designation", "RCC Contact Person Name",
+            "RCC Mobile No", "RCC Mail ID", "Reason of Rejection", "Approved (RO)",
+            "Approved (ZO)", "Approved (CO)", "Final PO Status", "Created Date"
+        ]
+        
+        rows = []
+        for idx, app in enumerate(new_applications, 1):
+            created_dt = app.createdAt.strftime("%Y-%m-%d %H:%M:%S") if isinstance(app.createdAt, datetime) else str(app.createdAt)
+            rows.append([
+                idx,
+                app.zoneId if app.zoneId is not None else "N/A",
+                app.regionId if app.regionId is not None else "N/A",
+                app.regionName or "N/A",
+                app.branchId if app.branchId is not None else "N/A",
+                app.branchName or "N/A",
+                app.applicationId,
+                app.userType or "N/A",
+                app.customerName or "N/A",
+                app.category or "N/A",
+                app.email or "N/A",
+                app.mobileNo if app.mobileNo is not None else "N/A",
+                app.address or "N/A",
+                app.integrateWith or "N/A",
+                app.status or "N/A",
+                app.averageBalance if app.averageBalance is not None else 0.0,
+                app.avgTransactionYearly if app.avgTransactionYearly is not None else 0.0,
+                app.avgTransactionSize if app.avgTransactionSize is not None else 0.0,
+                app.accountBalanceToday if app.accountBalanceToday is not None else 0.0,
+                app.accountNo if app.accountNo is not None else "N/A",
+                app.totalAnnualTransaction if app.totalAnnualTransaction is not None else 0.0,
+                app.totalBankCollection if app.totalBankCollection is not None else 0.0,
+                app.aggregateDepositAmt if app.aggregateDepositAmt is not None else 0.0,
+                app.projection or "N/A",
+                app.finalizedAggregatorName or "N/A",
+                app.authorisedPersonName or "N/A",
+                app.authorisedPersonDesignation or "N/A",
+                app.rccContactPersonName or "N/A",
+                app.rccMobileNo if app.rccMobileNo is not None else "N/A",
+                app.rccMailId or "N/A",
+                app.reasonOfRejection or "N/A",
+                "Yes" if app.isReviewByRO else "No",
+                "Yes" if app.isReviewByZO else "No",
+                "Yes" if app.isReviewByCO else "No",
+                "Frozen" if app.isFinalApproved else "Pending",
+                created_dt
+            ])
+            
+        from fastapi.responses import StreamingResponse
+        from app.utils.excel import generate_excel_workbook
+        
+        filters_dict = {
+            "status": status,
+            "search": search,
+            "financialYear": financialYear,
+            "month": month,
+            "startDate": startDate,
+            "endDate": endDate,
+            "branchId": branchId,
+            "regionId": regionId,
+            "zoneId": zoneId if zoneId != "00000" else None
+        }
+        
+        excel_file = generate_excel_workbook(
+            headers, 
+            rows, 
+            sheet_name="Applications Report",
+            title="Customer Applications Report",
+            filters=filters_dict
+        )
+        response = StreamingResponse(
+            excel_file,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        response.headers["Content-Disposition"] = "attachment; filename=applications_report.xlsx"
+        return response
+
+    if page is not None and pageSize is not None:
+        start = (page - 1) * pageSize
+        end = start + pageSize
+        sliced_applications = new_applications[start:end]
+        return {
+            "totalRecords": total_records,
+            "data": sliced_applications
+        }
     return new_applications
 
 @router.delete('/api/applications/{id}')

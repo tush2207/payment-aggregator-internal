@@ -62,6 +62,7 @@ export default function ApplicationFlowDialog() {
         sx={{
           background: (theme) => theme.palette.gradients?.accent || "linear-gradient(90deg, #003A8C, #005FCC)",
           boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+          borderRadius: 0,
         }}
       >
         <Toolbar>
@@ -76,7 +77,7 @@ export default function ApplicationFlowDialog() {
               backgroundColor: "rgba(255,255,255,0.15)",
               px: 1.5,
               py: 0.5,
-              borderRadius: "6px",
+              borderRadius: 0,
               fontWeight: 600,
               fontSize: "12px",
             }}

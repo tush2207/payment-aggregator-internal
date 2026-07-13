@@ -5,7 +5,22 @@ const ApiUrls = {
   GET_USER_DETAILS: (userId) => `/get-user-details/${userId}`,
 
   // ---------------- Applications ----------------
-  GET_ALL_APPLICATIONS: (zoneId, page, search, status, category, createdAt) => `/get-all-applications/${zoneId}?status=${status}&search=${search}&createdAt=${createdAt}`,
+  GET_ALL_APPLICATIONS: (zoneId, page, search, status, category, createdAt, financialYear, month, startDate, endDate, pageSize, branchId, regionId, exportType) => {
+    const params = new URLSearchParams();
+    if (status) params.append('status', status);
+    if (search) params.append('search', search);
+    if (createdAt) params.append('createdAt', createdAt);
+    if (financialYear) params.append('financialYear', financialYear);
+    if (month) params.append('month', month);
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    if (page) params.append('page', page);
+    if (pageSize) params.append('pageSize', pageSize);
+    if (branchId) params.append('branchId', branchId);
+    if (regionId) params.append('regionId', regionId);
+    if (exportType) params.append('export', exportType);
+    return `/get-all-applications/${zoneId}?${params.toString()}`;
+  },
 
   // GET_ALL_APPLICATIONS: (zoneId, page, search, status, category) => `/get-all-applications/${zoneId}/?page=${page}&search=${search}&status=${status}&category=${category}`,
   GET_APPLICATION_BY_ID: (applicationId) => `/get-single-applications/${applicationId}`,

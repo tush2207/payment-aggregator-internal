@@ -82,9 +82,15 @@ const AggregatorDetails = ({ customerDetails }) => {
   const [viewMode, setViewMode] = useState("all");
   const [allProjections, setAllProjections] = useState({});
   const [projectionsLoading, setProjectionsLoading] = useState(false);
+  const [finalApprovedTab, setFinalApprovedTab] = useState("finalized");
 
   const { applicationId, aggregateDepositAmt, avgTransactionYearly, isAggregatorAdded, isQuoteAcceptRO, finalizedAggregatorId, category, avgTransactionSize } =
     customerDetails || {};
+
+  const isQuoteAcceptedAndFinalized = Boolean(
+    customerDetails?.isFinalApproved || 
+    (customerDetails?.isQuoteAcceptReviewByCO && customerDetails?.isQuoteAcceptRO)
+  );
 
   const fetchAllProjections = useCallback(async () => {
     if (!applicationId || !selectedAggregatorsDetails?.length) return;
@@ -326,7 +332,7 @@ const AggregatorDetails = ({ customerDetails }) => {
         <Box sx={{ mt: 2 }}>
           <Box display='flex' justifyContent='space-between' m={2} alignItems="center">
             <Box display="flex" alignItems="center" gap={2}>
-              {!customerDetails?.isFinalApproved && (
+              {!isQuoteAcceptedAndFinalized && (
                 <Tabs
                   value={viewMode}
                   onChange={(e, val) => setViewMode(val)}
@@ -348,7 +354,7 @@ const AggregatorDetails = ({ customerDetails }) => {
               )}
             </Box>
             <Box>
-              {!customerDetails?.isFinalApproved &&
+              {!isQuoteAcceptedAndFinalized && !customerDetails?.isQuoteAcceptRO &&
                 <>
                   <Button startIcon={<CurrencyRupee />} variant="outlined" onClick={() => setOpenModal(!openModal)}>
                     Add Charges
@@ -363,7 +369,48 @@ const AggregatorDetails = ({ customerDetails }) => {
             </Box>
           </Box>
 
-          {customerDetails?.isFinalApproved || viewMode === "all" ? (
+          {isQuoteAcceptedAndFinalized && (
+            <Tabs
+              value={finalApprovedTab}
+              onChange={(e, val) => setFinalApprovedTab(val)}
+              variant="fullWidth"
+              sx={{
+                mb: 2,
+                backgroundColor: "#f1f5f9",
+                borderRadius: 2,
+                p: 0.5,
+                ".MuiTab-root": {
+                  textTransform: "none",
+                  fontWeight: 700,
+                  fontSize: "13px",
+                  borderRadius: 1,
+                  minHeight: "40px",
+                  "&.Mui-selected": {
+                    backgroundColor: finalApprovedTab === "finalized" ? "rgba(22, 163, 74, 0.15)" : "rgba(220, 38, 38, 0.15)",
+                    color: finalApprovedTab === "finalized" ? "#16a34a" : "#dc2626",
+                    border: finalApprovedTab === "finalized" ? "1px solid #16a34a" : "1px solid #dc2626",
+                  }
+                }
+              }}
+            >
+              <Tab value="finalized" label="Finalized Aggregator Cost Benefit Analysis" />
+              <Tab value="all" label="View All Aggregators" />
+            </Tabs>
+          )}
+
+          {isQuoteAcceptedAndFinalized ? (
+            <CompareAggregatorsTable
+              filteredAggregators={
+                finalApprovedTab === "finalized"
+                  ? sortAggregator(selectedAggregatorsDetails.filter(agg => Number(agg.aggregatorId) === Number(finalizedAggregatorId)))
+                  : sortAggregator(selectedAggregatorsDetails)
+              }
+              allProjections={allProjections}
+              projectionsLoading={projectionsLoading}
+              finalizedAggregatorId={finalizedAggregatorId}
+              customerDetails={customerDetails}
+            />
+          ) : viewMode === "all" ? (
             <CompareAggregatorsTable
               filteredAggregators={sortAggregator(selectedAggregatorsDetails)}
               allProjections={allProjections}
@@ -712,14 +759,14 @@ const CompareAggregatorsTable = ({ filteredAggregators, allProjections, projecti
     fontSize: "9px",
     py: "4px !important",
     px: "3px !important",
-    color: "#475569",
-    bgcolor: "#f1f5f9",
+    color: "#ffffff",
+    bgcolor: "#334155",
     whiteSpace: "normal !important",
     wordBreak: "break-word",
     lineHeight: 1.1,
     verticalAlign: "top",
     textTransform: "none !important",
-    border: "1px solid #cbd5e1"
+    border: "1px solid #475569"
   };
 
   const cellSx = {
@@ -822,13 +869,13 @@ const CompareAggregatorsTable = ({ filteredAggregators, allProjections, projecti
                 {activeAggs.map((agg) => {
                   const isFinalized = finalizedAggregatorId && Number(agg.aggregatorId) === Number(finalizedAggregatorId);
                   const subHeaderBg = isAccepted 
-                    ? (isFinalized ? "#dcfce7" : "#fee2e2") 
-                    : "#ccfbf1";
+                    ? (isFinalized ? "#15803d" : "#b91c1c") 
+                    : "#0f766e";
                   return (
                     <React.Fragment key={agg.aggregatorId}>
-                      <TableCell sx={{ ...subHeaderCellSx, bgcolor: subHeaderBg, minWidth: "80px" }}>Rate</TableCell>
-                      <TableCell sx={{ ...subHeaderCellSx, bgcolor: subHeaderBg, minWidth: "90px" }}>Vendor Share (Rs)</TableCell>
-                      <TableCell sx={{ ...subHeaderCellSx, bgcolor: subHeaderBg, minWidth: "100px" }}>Expected Revenue (Rs)</TableCell>
+                      <TableCell sx={{ ...subHeaderCellSx, bgcolor: subHeaderBg, border: `1px solid ${subHeaderBg}`, minWidth: "80px" }}>Rate</TableCell>
+                      <TableCell sx={{ ...subHeaderCellSx, bgcolor: subHeaderBg, border: `1px solid ${subHeaderBg}`, minWidth: "90px" }}>Vendor Share (Rs)</TableCell>
+                      <TableCell sx={{ ...subHeaderCellSx, bgcolor: subHeaderBg, border: `1px solid ${subHeaderBg}`, minWidth: "100px" }}>Expected Revenue (Rs)</TableCell>
                     </React.Fragment>
                   );
                 })}

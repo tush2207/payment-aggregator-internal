@@ -233,7 +233,7 @@ export default function ProjectionQuoteTable({
                             <Tooltip title="Update" placement="top" arrow>
                               <Button
                                 size="small"
-                                sx={{ height: "25px", mt: 1 }}
+                                sx={{ height: "28px" }}
                                 variant="outlined"
                                 onClick={() => onVerify(customer)}
                               >

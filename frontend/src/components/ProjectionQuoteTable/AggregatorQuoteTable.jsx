@@ -257,7 +257,7 @@ const AggregatorDetails = ({ customerDetails }) => {
               All Aggregetors Details
             </Typography>
             <Box>
-              {!customerDetails?.isFinalApproved &&
+              {!customerDetails?.isFinalApproved && !customerDetails?.isQuoteAcceptRO &&
                 <>
                   <Button startIcon={<CurrencyRupee />} variant="outlined" onClick={() => setOpenModal(!openModal)}>
                     Add Charges

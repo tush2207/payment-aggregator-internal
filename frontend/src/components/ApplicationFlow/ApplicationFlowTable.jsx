@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Paper, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, IconButton, Tooltip, Stack, Pagination,
@@ -29,6 +29,14 @@ const getCurrentFinancialYear = () => {
   }
 };
 
+const getTodayLocalDateString = () => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const getFinancialYearsList = () => {
   const list = ['all'];
   const today = new Date();
@@ -47,17 +55,26 @@ const getFinancialYearsList = () => {
 
 export default function ApplicationFlowTable({
   applicationDetails = [],
+  totalRecords = 0,
   onView,
   onEdit,
   onDelete,
   onVerify,
-  onRefresh
+  onRefresh,
+  onFilterChange,
+  onExport
 }) {
   const dispatch = useDispatch();
   const userRole = useSelector(selectUserRole) || sessionStorage.getItem('role') || 'CO';
   const [expandedRow, setExpandedRow] = useState(null);
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const { generatePO } = usePOGenerator();
+
+  const todayStr = getTodayLocalDateString();
+
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   const shouldShowBtn = (check) => {
     if (!check) return false;
@@ -84,10 +101,42 @@ export default function ApplicationFlowTable({
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth().toString());
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
-  // Pagination state
-  const [page, setPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  // 400ms search debounce
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [search]);
+
+  // Sync filters back to parent component
+  useEffect(() => {
+    console.log("ApplicationFlowTable sync filters called", {
+      financialYear,
+      selectedMonth,
+      startDate,
+      endDate,
+      search: debouncedSearch,
+      page,
+      rowsPerPage,
+    });
+    if (onFilterChange) {
+      onFilterChange({
+        financialYear,
+        selectedMonth,
+        startDate,
+        endDate,
+        search: debouncedSearch,
+        page,
+        rowsPerPage,
+      });
+    }
+  }, [financialYear, selectedMonth, startDate, endDate, debouncedSearch, page, rowsPerPage, onFilterChange]);
+
+
 
   // Financial Years list
   const financialYears = getFinancialYearsList();
@@ -109,80 +158,22 @@ export default function ApplicationFlowTable({
     { value: '11', label: 'December' },
   ];
 
-  // Filtering Logic
-  const filteredData = useMemo(() => {
-    return applicationDetails.filter(customer => {
-      // 1. Financial Year
-      if (financialYear !== 'all') {
-        const d = new Date(customer.createdAt);
-        const [fyStartStr, fyEndStr] = financialYear.replace('FY ', '').split('-');
-        const fyStartYear = parseInt(fyStartStr);
-        const fyEndYear = parseInt(fyEndStr);
-
-        const start = new Date(`${fyStartYear}-04-01T00:00:00`);
-        const end = new Date(`${fyEndYear}-03-31T23:59:59`);
-        if (d < start || d > end) return false;
-      }
-
-      // 2. Month
-      if (selectedMonth !== 'all') {
-        const d = new Date(customer.createdAt);
-        if (d.getMonth() !== parseInt(selectedMonth)) return false;
-      }
-
-      // 3. Date Range
-      if (startDate) {
-        const start = new Date(startDate);
-        start.setHours(0, 0, 0, 0);
-        if (new Date(customer.createdAt) < start) return false;
-      }
-      if (endDate) {
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
-        if (new Date(customer.createdAt) > end) return false;
-      }
-
-      return true;
-    });
-  }, [applicationDetails, financialYear, selectedMonth, startDate, endDate]);
+  // Filtering is now handled on the server side
+  const filteredData = applicationDetails || [];
 
   const handleClearFilters = () => {
     setFinancialYear(getCurrentFinancialYear());
     setSelectedMonth(new Date().getMonth().toString());
     setStartDate('');
     setEndDate('');
+    setSearch('');
     setPage(1);
   };
 
   const handleExportExcel = () => {
-    const filename = 'payment_aggregator_applications.xlsx';
-    const exportRows = filteredData.map((customer, idx) => ({
-      'S.No': idx + 1,
-      'Date & Time': formatDateAndTime(customer.createdAt),
-      'Application ID': customer.applicationId,
-      'Customer Name': customer.customerName,
-      'Branch Name': customer.branchName || 'N/A',
-      'Region Name': customer.regionName || 'N/A',
-      'Zone Name': customer.zoneName || 'N/A',
-      'Account No': customer.accountNo,
-      'Category': customer.category,
-      'Status': customer.status || 'N/A',
-      'Approved (RO)': customer.isReviewByRO ? 'Yes' : 'No',
-      'Approved (ZO)': customer.isReviewByZO ? 'Yes' : 'No',
-      'Approved (CO)': customer.isReviewByCO ? 'Yes' : 'No',
-      'Final PO Status': customer.isFinalApproved ? 'Frozen' : 'Pending',
-    }));
-
-    const worksheet = XLSX.utils.json_to_sheet(exportRows);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Data');
-
-    const maxKeys = Object.keys(exportRows[0] || {});
-    worksheet['!cols'] = maxKeys.map(k => ({ wch: Math.max(k.length + 3, 15) }));
-
-    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-    const fileData = new Blob([excelBuffer], { type: 'application/octet-stream' });
-    saveAs(fileData, filename);
+    if (onExport) {
+      onExport();
+    }
   };
 
   const handleSort = (key) => {
@@ -207,14 +198,17 @@ export default function ApplicationFlowTable({
   }, [filteredData, sortConfig]);
 
   const paginatedData = useMemo(() => {
+    if (sortedData.length <= rowsPerPage) {
+      return sortedData;
+    }
     const start = (page - 1) * rowsPerPage;
     return sortedData.slice(start, start + rowsPerPage);
   }, [sortedData, page, rowsPerPage]);
 
-  const totalPages = Math.ceil(sortedData.length / rowsPerPage) || 1;
+  const totalPages = Math.ceil(totalRecords / rowsPerPage) || 1;
 
   const SortHeader = ({ label, columnKey }) => (
-    <TableCell onClick={() => handleSort(columnKey)} sx={{ cursor: 'pointer', fontWeight: 600 }}>
+    <TableCell onClick={() => handleSort(columnKey)} sx={{ cursor: 'pointer' }}>
       {label}
       {sortConfig.key === columnKey && (
         <span style={{ fontSize: '12px', marginLeft: '4px' }}>
@@ -229,7 +223,7 @@ export default function ApplicationFlowTable({
       {/* 🔹 FILTER TOGGLE ACTION BAR */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
         <Typography variant="subtitle1" fontWeight={700}>
-          Applications List ({filteredData.length} records)
+          Applications List ({totalRecords} records)
         </Typography>
         <Stack direction="row" spacing={1}>
           <Button
@@ -249,9 +243,21 @@ export default function ApplicationFlowTable({
       {/* 🔹 COLLAPSIBLE PERIOD FILTERS PANEL */}
       <Collapse in={filtersExpanded}>
         <Paper variant="outlined" sx={{ p: 2, mb: 3, borderRadius: 2, borderColor: 'grey.300', bgcolor: '#fafafa' }}>
-          <Grid container spacing={2} alignItems="center">
+          <Grid container spacing={1.5} alignItems="center">
+            {/* Search Query */}
+            <Grid item xs={12} sm={6} md={2}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Search"
+                placeholder="Search ID, name, account..."
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              />
+            </Grid>
+
             {/* Financial Year */}
-            <Grid item xs={12} sm={6} md={2.5}>
+            <Grid item xs={12} sm={6} md={2}>
               <TextField
                 select
                 fullWidth
@@ -269,7 +275,7 @@ export default function ApplicationFlowTable({
             </Grid>
 
             {/* Month */}
-            <Grid item xs={12} sm={6} md={2.5}>
+            <Grid item xs={12} sm={6} md={2}>
               <TextField
                 select
                 fullWidth
@@ -287,33 +293,35 @@ export default function ApplicationFlowTable({
             </Grid>
 
             {/* Start Date */}
-            <Grid item xs={12} sm={6} md={2.5}>
+            <Grid item xs={12} sm={6} md={2}>
               <TextField
                 type="date"
                 fullWidth
                 size="small"
                 label="From Date"
                 InputLabelProps={{ shrink: true }}
+                inputProps={{ max: endDate || todayStr }}
                 value={startDate}
                 onChange={(e) => { setStartDate(e.target.value); setPage(1); }}
               />
             </Grid>
 
             {/* End Date */}
-            <Grid item xs={12} sm={6} md={2.5}>
+            <Grid item xs={12} sm={6} md={2}>
               <TextField
                 type="date"
                 fullWidth
                 size="small"
                 label="To Date"
                 InputLabelProps={{ shrink: true }}
+                inputProps={{ min: startDate || undefined, max: todayStr }}
                 value={endDate}
                 onChange={(e) => { setEndDate(e.target.value); setPage(1); }}
               />
             </Grid>
 
             {/* Reset Button */}
-            <Grid item xs={12} sm={12} md={2} sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <Grid item xs={12} sm={12} md={2}>
               <Button
                 fullWidth
                 size="small"
@@ -332,17 +340,17 @@ export default function ApplicationFlowTable({
       {/* 🔹 DATA TABLE */}
       <TableContainer component={Paper} elevation={1} sx={{ borderRadius: 2, border: '1px solid', borderColor: 'grey.200' }}>
         <Table>
-          <TableHead sx={{ bgcolor: 'grey.50' }}>
+          <TableHead>
             <TableRow>
-              <TableCell sx={{ fontWeight: 600 }}>#</TableCell>
+              <TableCell>#</TableCell>
               <SortHeader label="Date & Time" columnKey="createdAt" />
               <SortHeader label="App ID" columnKey="applicationId" />
               <SortHeader label="Customer Name" columnKey="customerName" />
-              <TableCell sx={{ fontWeight: 600 }}>Branch Details</TableCell>
+              <TableCell>Branch Details</TableCell>
               <SortHeader label="Account No" columnKey="accountNo" />
               <SortHeader label="Category" columnKey="category" />
-              <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-              <TableCell sx={{ fontWeight: 600 }}>Actions</TableCell>
+              <TableCell>Status</TableCell>
+              <TableCell>Actions</TableCell>
               <TableCell />
             </TableRow>
           </TableHead>

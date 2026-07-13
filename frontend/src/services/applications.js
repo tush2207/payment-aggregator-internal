@@ -3,11 +3,11 @@ import { getMethod, postMethod, putMethod, deleteMethod } from "./axiosConfig";
 
 const applicationServices = {
   // 🔹 Get all applications
-  getAllApplications: async ({ zoneId, page, search, status, category,createdAt, config }) => {
-    console.log('getAllApplicationsprops', zoneId, page, search, status, category,createdAt,)
+  getAllApplications: async ({ zoneId, page, search, status, category, createdAt, financialYear, month, startDate, endDate, pageSize, branchId, regionId, exportType, config } = {}) => {
+    console.log('getAllApplicationsprops', zoneId, page, search, status, category, createdAt, financialYear, month, startDate, endDate, pageSize, branchId, regionId, exportType)
 
     try {
-      const response = await getMethod(ApiUrls.GET_ALL_APPLICATIONS(zoneId, page, search, status, category,createdAt,), config);
+      const response = await getMethod(ApiUrls.GET_ALL_APPLICATIONS(zoneId, page, search, status, category, createdAt, financialYear, month, startDate, endDate, pageSize, branchId, regionId, exportType), config);
       if (response && response.data) {
         const mapApp = (app) => {
           if (!app) return app;

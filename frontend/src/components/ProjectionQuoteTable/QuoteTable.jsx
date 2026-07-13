@@ -232,7 +232,7 @@ const QuoteTable = ({ applicationDetails, aggregatorId, aggregatorName, isRateAd
   const RoleBasedActions = () => (
     <Box display="flex" gap={1}>
       {
-        !isRateAdded &&
+        !isRateAdded && !isQuoteAcceptRO &&
         <Box>
           <Button startIcon={<CurrencyRupee />} variant="outlined" onClick={() => setOpenModal(!openModal)}>
             Add Rates

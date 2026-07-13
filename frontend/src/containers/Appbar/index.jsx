@@ -74,6 +74,7 @@ const Navbar = () => {
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',
           boxShadow: '0 8px 25px rgba(0,0,0,0.25)',
+          borderRadius: 0,
         }}
       >
         <Toolbar sx={{ justifyContent: 'space-between', minHeight: 70 }}>
@@ -85,7 +86,7 @@ const Navbar = () => {
               display: 'flex',
               alignItems: 'center',
               p: 1,
-              borderRadius: 2,
+              borderRadius: 0,
               cursor: 'pointer',
               '&:hover': { transform: 'scale(1.05)', transition: '0.3s' },
             }}
@@ -124,7 +125,7 @@ const Navbar = () => {
                         width: isActive ? '100%' : 0,
                         height: '2px',
                         bgcolor: '#fff',
-                        borderRadius: 1,
+                        borderRadius: 0,
                         transition: '0.35s',
                       },
                       '&:hover:after': { width: '100%' },
@@ -145,14 +146,14 @@ const Navbar = () => {
                 gap: 1.4,
                 px: 1.8,
                 py: 0.9,
-                borderRadius: '40px',
+                borderRadius: 0,
                 cursor: 'pointer',
-                background: 'rgba(255,255,255,0.18)',
-                border: '1px solid rgba(255,255,255,0.25)',
-                boxShadow: '0 4px 15px rgba(0,0,0,0.25)',
+                // background: 'rgba(255,255,255,0.18)',
+                // border: '1px solid rgba(255,255,255,0.25)',
+                // boxShadow: '0 4px 15px rgba(0,0,0,0.25)',
                 transition: '0.3s',
                 '&:hover': {
-                  background: 'rgba(255,255,255,0.28)',
+                  // background: 'rgba(255,255,255,0.28)',
                   transform: 'translateY(-2px)',
                 },
               }}
@@ -189,7 +190,7 @@ const Navbar = () => {
             mt: 1,
             ml: 2,
             width: 260,
-            borderRadius: 3,
+            borderRadius: 0,
             overflow: 'hidden',
             boxShadow: '0 10px 35px rgba(0,0,0,0.25)',
           },
