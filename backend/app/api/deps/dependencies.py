@@ -10,11 +10,18 @@ from app.core import config
 from app.services.auth_service import ldap_authenticate
 
 def get_mssql_db():
-    db = MSSQLSessionLocal()
+    if getattr(config, "DEV_MODE", False):
+        yield None
+        return
     try:
-        yield db
-    finally:
-        db.close()
+        db = MSSQLSessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+    except Exception as e:
+        print(f"Warning: MSSQL connection failed: {e}")
+        yield None
 
 def get_db():
     db = SessionLocal()

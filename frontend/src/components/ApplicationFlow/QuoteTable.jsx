@@ -65,10 +65,8 @@ const QuoteTable = ({ applicationDetails, aggregatorId, aggregatorName, isRateAd
         applicationId,
         aggregatorId,
       );
-      console.log('calculateAll', response?.data)
 
-      const calculateAll = calculateAllQuoteRows(mergedData)
-      console.log('calculateAll', calculateAll, response?.data)
+      const calculateAll = calculateAllQuoteRows(response?.data);
       if (Array.isArray(response?.data)) setQuoteDetails(calculateAll);
     } catch (err) {
       console.error("[ERROR] Failed to fetch projections:", err);

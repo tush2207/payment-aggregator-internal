@@ -20,15 +20,27 @@ router = APIRouter()
 
 @router.post('/api/applications', status_code=status.HTTP_201_CREATED)
 def create_application(application: Applications, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    new_application = ApplicationsInDB(**application.dict())
-    db.add(new_application)
-    db.commit()
-    db.refresh(new_application)
-    response_dict = {
-        "applicationId": new_application.applicationId,
-        "status": "Submitted"
-    }
-    return JSONResponse(content=response_dict, media_type="application/json")
+    try:
+        app_data = application.dict()
+        valid_keys = {c.key for c in ApplicationsInDB.__table__.columns}
+        filtered_data = {k: v for k, v in app_data.items() if k in valid_keys}
+
+        new_application = ApplicationsInDB(**filtered_data)
+        db.add(new_application)
+        db.commit()
+        db.refresh(new_application)
+        response_dict = {
+            "applicationId": new_application.applicationId,
+            "status": "Submitted"
+        }
+        return JSONResponse(content=response_dict, media_type="application/json")
+    except Exception as e:
+        db.rollback()
+        print(f"[ERROR] Exception in create_application: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error creating application: {str(e)}"
+        )
 
 @router.get('/api/get-single-applications/{applicationId}')
 def get_single_application(applicationId: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):

@@ -66,7 +66,7 @@ import { fetchApplicationDetails } from "&src/store/applicationFlowSlice";
 // ✅ Conditional hook wrapper
 function useConditionalAggregatorDetails(condition) {
   const details = useAggregatorDetails();
-  return condition ? details : { aggregatorDetails: [], fetchAllAggregators: () => {} };
+  return condition ? details : { aggregatorDetails: [], fetchAllAggregators: () => { } };
 }
 
 const AggregatorDetails = ({ customerDetails }) => {
@@ -88,7 +88,7 @@ const AggregatorDetails = ({ customerDetails }) => {
     customerDetails || {};
 
   const isQuoteAcceptedAndFinalized = Boolean(
-    customerDetails?.isFinalApproved || 
+    customerDetails?.isFinalApproved ||
     (customerDetails?.isQuoteAcceptReviewByCO && customerDetails?.isQuoteAcceptRO)
   );
 
@@ -357,7 +357,7 @@ const AggregatorDetails = ({ customerDetails }) => {
               {!isQuoteAcceptedAndFinalized && !customerDetails?.isQuoteAcceptRO &&
                 <>
                   <Button startIcon={<CurrencyRupee />} variant="outlined" onClick={() => setOpenModal(!openModal)}>
-                    Add Charges
+                    Add Charges New
                   </Button>
                   <Tooltip title="Add Charges as per projection details" placement="top" arrow>
                     <IconButton size="small">
@@ -412,8 +412,11 @@ const AggregatorDetails = ({ customerDetails }) => {
             />
           ) : viewMode === "all" ? (
             <CompareAggregatorsTable
-              filteredAggregators={sortAggregator(selectedAggregatorsDetails)}
-              allProjections={allProjections}
+              filteredAggregators={
+                finalApprovedTab === "all"
+                  ? sortAggregator(selectedAggregatorsDetails.filter(agg => Number(agg.aggregatorId) === Number(finalizedAggregatorId)))
+                  : sortAggregator(selectedAggregatorsDetails)
+              } allProjections={allProjections}
               projectionsLoading={projectionsLoading}
               finalizedAggregatorId={finalizedAggregatorId}
               customerDetails={customerDetails}
@@ -467,120 +470,179 @@ const AggregatorDetails = ({ customerDetails }) => {
                     label="All Selected Aggregators"
                     value="selectedAggregators"
                   />
-                </                Tabs>
+                </Tabs>
               )}
 
-              <Box sx={{ width: "100%", overflow: "hidden", mt: 1 }}>
-                <Table size="small" sx={{ width: "100%", tableLayout: "auto" }}>
-                  <TableHead sx={{ bgcolor: "#f8fafc" }}>
-                    <TableRow>
-                      {AGGREGATOR_COLUMNS.map((col, idx) => (
-                        <TableCell key={idx} sx={{ fontWeight: 700, fontSize: "11px", py: "8px !important", px: "6px !important", whiteSpace: "normal !important", wordBreak: "break-word", lineHeight: 1.1, verticalAlign: "top", textTransform: "none !important" }}>{col}</TableCell>
-                      ))}
-                      <TableCell sx={{ fontWeight: 700, fontSize: "11px", py: "8px !important", px: "6px !important", whiteSpace: "normal !important", wordBreak: "break-word", lineHeight: 1.1, verticalAlign: "top", textTransform: "none !important" }}>Quote Submission</TableCell>
-                      <TableCell />
-                    </TableRow>
-                  </TableHead>
+              <Paper variant="outlined" sx={{ width: "100%", overflow: "hidden", mt: 1.5, borderRadius: "10px", borderColor: "#cbd5e1", boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.04)" }}>
+                <TableContainer>
+                  <Table size="small" sx={{ width: "100%", tableLayout: "auto" }}>
+                    <TableHead>
+                      <TableRow sx={{ bgcolor: "#0f172a" }}>
+                        {AGGREGATOR_COLUMNS.map((col, idx) => {
+                          const isRight = col.includes("Gross") || col.includes("Share") || col.includes("Revenue");
+                          const isCenter = col.includes("Status");
+                          return (
+                            <TableCell
+                              key={idx}
+                              align={isRight ? "right" : isCenter ? "center" : "left"}
+                              sx={{
+                                fontWeight: 700,
+                                fontSize: "11px",
+                                py: "10px !important",
+                                px: "8px !important",
+                                color: "#ffffff",
+                                bgcolor: "#0f172a",
+                                whiteSpace: "normal !important",
+                                wordBreak: "break-word",
+                                lineHeight: 1.2,
+                                verticalAlign: "middle",
+                                textTransform: "none !important"
+                              }}
+                            >
+                              {col}
+                            </TableCell>
+                          );
+                        })}
+                        <TableCell
+                          align="center"
+                          sx={{
+                            fontWeight: 700,
+                            fontSize: "11px",
+                            py: "10px !important",
+                            px: "8px !important",
+                            color: "#ffffff",
+                            bgcolor: "#0f172a",
+                            whiteSpace: "normal !important",
+                            wordBreak: "break-word",
+                            lineHeight: 1.2,
+                            verticalAlign: "middle",
+                            textTransform: "none !important"
+                          }}
+                        >
+                          Quote Submission
+                        </TableCell>
+                        <TableCell
+                          align="center"
+                          sx={{
+                            fontWeight: 700,
+                            fontSize: "11px",
+                            py: "10px !important",
+                            px: "8px !important",
+                            color: "#ffffff",
+                            bgcolor: "#0f172a",
+                            whiteSpace: "normal !important",
+                            wordBreak: "break-word",
+                            lineHeight: 1.2,
+                            verticalAlign: "middle",
+                            textTransform: "none !important"
+                          }}
+                        >
+                          Details
+                        </TableCell>
+                      </TableRow>
+                    </TableHead>
 
-                  <TableBody>
-                    {(() => {
-                      const submittedAggs = [...selectedAggregatorsDetails]
-                        .filter(agg => agg.status === "submitted" && Number(agg.totalVendorShare) > 0)
-                        .sort((a, b) => Number(a.totalVendorShare) - Number(b.totalVendorShare));
+                    <TableBody>
+                      {(() => {
+                        const submittedAggs = [...selectedAggregatorsDetails]
+                          .filter(agg => agg.status === "submitted" && Number(agg.totalVendorShare) > 0)
+                          .sort((a, b) => Number(a.totalVendorShare) - Number(b.totalVendorShare));
 
-                      return filteredAggregators.map((agg, idx) => {
-                        const isOpen = openRow === agg.aggregatorId;
-                        const cellSx = { fontSize: "11px", p: "6px", whiteSpace: "normal", wordBreak: "break-word" };
-                        return (
-                          <React.Fragment key={agg.aggregatorId || idx}>
-                            <TableRow sx={{ "&:hover": { bgcolor: "#f8fafc" } }}>
-                              <TableCell sx={cellSx}>{idx + 1}</TableCell>
-                              <TableCell sx={cellSx}>{`AGG000${agg.aggregatorId || idx + 1}`}</TableCell>
-                              <TableCell sx={cellSx}>
-                                <Box display="flex" alignItems="center" gap={1}>
-                                  {agg.aggregatorName}
-                                  {(() => {
-                                    const isAccepted = customerDetails?.isQuoteAcceptRO;
-                                    const isFinalized = finalizedAggregatorId && Number(agg.aggregatorId) === Number(finalizedAggregatorId);
-                                    const rankIndex = submittedAggs.findIndex(a => a.aggregatorId === agg.aggregatorId) + 1;
-                                    
-                                    if (rankIndex > 0) {
-                                      if (isAccepted) {
-                                        if (isFinalized) {
+                        return filteredAggregators.map((agg, idx) => {
+                          const isOpen = openRow === agg.aggregatorId;
+                          const cellSx = { fontSize: "11px", p: "8px", whiteSpace: "normal", wordBreak: "break-word", color: "#334155", borderColor: "#f1f5f9" };
+                          return (
+                            <React.Fragment key={agg.aggregatorId || idx}>
+                              <TableRow sx={{ "&:hover": { bgcolor: "#f8fafc" }, bgcolor: isOpen ? "#f1f5f9" : "transparent", transition: "background-color 0.2s" }}>
+                                <TableCell sx={cellSx}>{idx + 1}</TableCell>
+                                <TableCell sx={{ ...cellSx, fontWeight: 600 }}>{`AGG000${agg.aggregatorId || idx + 1}`}</TableCell>
+                                <TableCell sx={cellSx}>
+                                  <Box display="flex" alignItems="center" gap={1}>
+                                    <Typography sx={{ fontWeight: 600, fontSize: "11px", color: "#0f172a" }}>{agg.aggregatorName}</Typography>
+                                    {(() => {
+                                      const isAccepted = customerDetails?.isQuoteAcceptRO;
+                                      const isFinalized = finalizedAggregatorId && Number(agg.aggregatorId) === Number(finalizedAggregatorId);
+                                      const rankIndex = submittedAggs.findIndex(a => a.aggregatorId === agg.aggregatorId) + 1;
+
+                                      if (rankIndex > 0) {
+                                        if (isAccepted) {
+                                          if (isFinalized) {
+                                            return (
+                                              <span style={{ fontSize: "9px", backgroundColor: "#dcfce7", color: "#15803d", padding: "2px 6px", borderRadius: "4px", fontWeight: 700, border: "1px solid #bbf7d0" }}>
+                                                Finalized
+                                              </span>
+                                            );
+                                          }
+                                        } else {
                                           return (
-                                            <span style={{ fontSize: "9px", backgroundColor: "#dcfce7", color: "#15803d", padding: "2px 6px", borderRadius: "4px", fontWeight: 700, border: "1px solid #bbf7d0" }}>
-                                              Finalized
+                                            <span style={{
+                                              fontSize: "9px",
+                                              backgroundColor: rankIndex === 1 ? "#dcfce7" : "#f1f5f9",
+                                              color: rankIndex === 1 ? "#15803d" : "#475569",
+                                              padding: "2px 6px",
+                                              borderRadius: "4px",
+                                              fontWeight: 700,
+                                              border: rankIndex === 1 ? "1px solid #bbf7d0" : "1px solid #cbd5e1"
+                                            }}>
+                                              {rankIndex === 1 ? "Lowest Quote (L1)" : `L${rankIndex}`}
                                             </span>
                                           );
                                         }
-                                      } else {
-                                        return (
-                                          <span style={{ 
-                                            fontSize: "9px", 
-                                            backgroundColor: rankIndex === 1 ? "#dcfce7" : "#f1f5f9", 
-                                            color: rankIndex === 1 ? "#15803d" : "#475569", 
-                                            padding: "2px 6px", 
-                                            borderRadius: "4px", 
-                                            fontWeight: 700, 
-                                            border: rankIndex === 1 ? "1px solid #bbf7d0" : "1px solid #cbd5e1" 
-                                          }}>
-                                            {rankIndex === 1 ? "Lowest Quote (L1)" : `L${rankIndex}`}
-                                          </span>
-                                        );
                                       }
-                                    }
-                                    return null;
-                                  })()}
-                                </Box>
-                              </TableCell>
-                            <EndAlignedCell sx={cellSx}>{agg.totalGrossAmount}</EndAlignedCell>
-                            <EndAlignedCell sx={cellSx}>{agg.totalVendorShare}</EndAlignedCell>
-                            <EndAlignedCell sx={cellSx}>{agg.totalExpectedRevenue}</EndAlignedCell>
-                            <TableCell sx={cellSx}>
-                              <CenterAlign>
-                                <StatusChipOrSelect value={agg.quoteStatus} type="status" />
-                              </CenterAlign>
-                            </TableCell>
-                            <TableCell sx={cellSx}>
-                              <CenterAlign>
-                                <StatusChipOrSelect value={agg.status} type="status" />
-                              </CenterAlign>
-                            </TableCell>
-                            <TableCell align="center" sx={{ p: "4px" }}>
-                              <IconButton
-                                size="small"
-                                onClick={() => setOpenRow(isOpen ? null : agg.aggregatorId)}
-                              >
-                                {isOpen ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
-                              </IconButton>
-                            </TableCell>
-                          </TableRow>
+                                      return null;
+                                    })()}
+                                  </Box>
+                                </TableCell>
+                                <EndAlignedCell sx={cellSx}>{formatNumber(agg.totalGrossAmount)}</EndAlignedCell>
+                                <EndAlignedCell sx={cellSx}>{formatNumber(agg.totalVendorShare)}</EndAlignedCell>
+                                <EndAlignedCell sx={cellSx}>{formatNumber(agg.totalExpectedRevenue)}</EndAlignedCell>
+                                <TableCell sx={cellSx}>
+                                  <CenterAlign>
+                                    <StatusChipOrSelect value={agg.quoteStatus} type="status" />
+                                  </CenterAlign>
+                                </TableCell>
+                                <TableCell sx={cellSx}>
+                                  <CenterAlign>
+                                    <StatusChipOrSelect value={agg.status} type="status" />
+                                  </CenterAlign>
+                                </TableCell>
+                                <TableCell align="center" sx={{ p: "4px" }}>
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => setOpenRow(isOpen ? null : agg.aggregatorId)}
+                                    sx={{ color: isOpen ? "#0f766e" : "#64748b" }}
+                                  >
+                                    {isOpen ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
+                                  </IconButton>
+                                </TableCell>
+                              </TableRow>
 
-                          <TableRow>
-                            <TableCell
-                              colSpan={AGGREGATOR_COLUMNS?.length + (customerDetails?.isFinalApproved ? 6 : 3)}
-                              sx={{ p: 0, maxWidth: "100%", overflow: "hidden" }}
-                            >
-                              <Collapse in={isOpen} timeout="auto" unmountOnExit>
-                                <Box sx={{ width: "100%", overflow: "hidden", p: 1, bgcolor: "#f8fafc" }}>
-                                  <QuoteTable
-                                    applicationDetails={customerDetails}
-                                    aggregatorId={agg.aggregatorId}
-                                    aggregatorName={agg.aggregatorName}
-                                    isRateAdded={Boolean(agg.sumOfRate)}
-                                    onSaveSuccess={handleRefresh}
-                                  />
-                                </Box>
-                              </Collapse>
-                            </TableCell>
-                          </TableRow>
-                        </React.Fragment>
-                      );
-                    });
-                  })()}
-                  </TableBody>
-                </Table>
-              </Box>
+                              <TableRow>
+                                <TableCell
+                                  colSpan={9}
+                                  sx={{ p: 0, maxWidth: "100%", overflow: "hidden", borderBottom: isOpen ? "1px solid #cbd5e1" : "none" }}
+                                >
+                                  <Collapse in={isOpen} timeout="auto" unmountOnExit>
+                                    <Box sx={{ width: "100%", overflow: "hidden", p: 1.5, bgcolor: "#f8fafc", borderLeft: "4px solid #0f766e" }}>
+                                      <QuoteTable
+                                        applicationDetails={customerDetails}
+                                        aggregatorId={agg.aggregatorId}
+                                        aggregatorName={agg.aggregatorName}
+                                        isRateAdded={Boolean(agg.sumOfRate)}
+                                        onSaveSuccess={handleRefresh}
+                                      />
+                                    </Box>
+                                  </Collapse>
+                                </TableCell>
+                              </TableRow>
+                            </React.Fragment>
+                          );
+                        });
+                      })()}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Paper>
             </>
           )}
         </Box>
@@ -629,11 +691,11 @@ const CompareAggregatorsTable = ({ filteredAggregators, allProjections, projecti
 
   const handleExportExcel = () => {
     const data = [];
-    
+
     // Title
     data.push([`Cost Benefit Analysis for ${customerDetails?.customerName || "Customer"}`]);
     data.push([]);
-    
+
     // Headers
     const headers = [
       "% Share Txn Count",
@@ -644,19 +706,19 @@ const CompareAggregatorsTable = ({ filteredAggregators, allProjections, projecti
       "Charges proposed",
       "Gross Amount Received (Rs)"
     ];
-    
+
     activeAggs.forEach(agg => {
       const isAccepted = customerDetails?.isQuoteAcceptRO;
-      const label = finalizedAggregatorId 
+      const label = finalizedAggregatorId
         ? ((Number(agg.aggregatorId) === Number(finalizedAggregatorId) && isAccepted) ? `${agg.aggregatorName} (FINALIZED)` : `${agg.aggregatorName} (REJECTED)`)
         : agg.aggregatorName;
       headers.push(`${label} - Rate`);
       headers.push(`${label} - Vendor Share (Rs)`);
       headers.push(`${label} - Expected Revenue (Rs)`);
     });
-    
+
     data.push(headers);
-    
+
     // Data Rows
     baseRows.forEach(row => {
       const rowData = [
@@ -668,7 +730,7 @@ const CompareAggregatorsTable = ({ filteredAggregators, allProjections, projecti
         row.chargesProposed || 0,
         row.grossAmount || 0
       ];
-      
+
       activeAggs.forEach(agg => {
         const aggProjList = allProjections[agg.aggregatorId] || [];
         const aggRow = aggProjList.find(r => r.transactionType === row.transactionType) || {};
@@ -676,10 +738,10 @@ const CompareAggregatorsTable = ({ filteredAggregators, allProjections, projecti
         rowData.push(aggRow.vendorShare || 0);
         rowData.push(aggRow.expectedRevenue || 0);
       });
-      
+
       data.push(rowData);
     });
-    
+
     // Totals
     const totalsRow = [
       "",
@@ -690,21 +752,21 @@ const CompareAggregatorsTable = ({ filteredAggregators, allProjections, projecti
       "",
       baseTotals.totalGrossAmount
     ];
-    
+
     activeAggs.forEach(agg => {
       const totals = aggregatorTotals[agg.aggregatorId] || {};
       totalsRow.push("");
       totalsRow.push(totals.totalVendorShare || 0);
       totalsRow.push(totals.totalExpectedRevenue || 0);
     });
-    
+
     data.push(totalsRow);
-    
+
     // Create Excel
     const ws = XLSX.utils.aoa_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Cost Benefit Analysis");
-    
+
     const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
     const blob = new Blob([excelBuffer], { type: "application/octet-stream" });
     saveAs(blob, `Cost_Benefit_Analysis_${customerDetails?.customerName || "Customer"}.xlsx`);
@@ -716,22 +778,22 @@ const CompareAggregatorsTable = ({ filteredAggregators, allProjections, projecti
       const element = cbaTableRef.current;
       const oldBg = element.style.background;
       element.style.background = "#ffffff";
-      
+
       const canvas = await html2canvas(element, {
         scale: 2,
         useCORS: true,
         backgroundColor: "#ffffff",
       });
-      
+
       element.style.background = oldBg;
-      
+
       const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF("l", "mm", "a4");
       const pageWidth = pdf.internal.pageSize.getWidth();
-      
+
       const pdfWidth = pageWidth - 20;
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-      
+
       pdf.addImage(imgData, "PNG", 10, 10, pdfWidth, pdfHeight);
       pdf.save(`Cost_Benefit_Analysis_${customerDetails?.customerName || "Customer"}.pdf`);
     } catch (err) {
@@ -838,7 +900,7 @@ const CompareAggregatorsTable = ({ filteredAggregators, allProjections, projecti
                 {activeAggs.map((agg) => {
                   const isFinalized = finalizedAggregatorId && Number(agg.aggregatorId) === Number(finalizedAggregatorId);
                   const headerBg = isAccepted
-                    ? (isFinalized ? "#16a34a" : "#dc2626") 
+                    ? (isFinalized ? "#16a34a" : "#dc2626")
                     : "#0f766e";
                   const rankIndex = sortedActiveAggs.findIndex(a => a.aggregatorId === agg.aggregatorId) + 1;
                   const rankLabel = rankIndex > 0 ? `L${rankIndex}${rankIndex === 1 ? " - Lowest" : ""}` : "";
@@ -847,7 +909,7 @@ const CompareAggregatorsTable = ({ filteredAggregators, allProjections, projecti
                       <Box>
                         <Typography sx={{ fontWeight: 700, fontSize: "10px" }}>{agg.aggregatorName}</Typography>
                         <Typography sx={{ fontSize: "9px", opacity: 0.95, fontWeight: 600 }}>
-                          {isAccepted 
+                          {isAccepted
                             ? (isFinalized ? "(Selected)" : "(Rejected)")
                             : `(${rankLabel})`
                           }
@@ -868,8 +930,8 @@ const CompareAggregatorsTable = ({ filteredAggregators, allProjections, projecti
                 <TableCell sx={{ ...subHeaderCellSx, minWidth: "140px" }}>Gross Amount Received from Charges (Rs)</TableCell>
                 {activeAggs.map((agg) => {
                   const isFinalized = finalizedAggregatorId && Number(agg.aggregatorId) === Number(finalizedAggregatorId);
-                  const subHeaderBg = isAccepted 
-                    ? (isFinalized ? "#15803d" : "#b91c1c") 
+                  const subHeaderBg = isAccepted
+                    ? (isFinalized ? "#15803d" : "#b91c1c")
                     : "#0f766e";
                   return (
                     <React.Fragment key={agg.aggregatorId}>
@@ -880,105 +942,105 @@ const CompareAggregatorsTable = ({ filteredAggregators, allProjections, projecti
                   );
                 })}
               </TableRow>
-        </TableHead>
-        <TableBody>
-          {baseRows.map((row, idx) => {
-            const isSubBank = row.isIB;
-            if (!isSubBank) serialNo += 1;
+            </TableHead>
+            <TableBody>
+              {baseRows.map((row, idx) => {
+                const isSubBank = row.isIB;
+                if (!isSubBank) serialNo += 1;
 
-            return (
-              <TableRow key={idx} sx={{ "&:hover": { bgcolor: "#f8fafc" }, bgcolor: isSubBank ? "#fdfdfd" : "transparent" }}>
-                {/* Count % */}
-                <TableCell sx={cellSx} align="right">
-                  {isSubBank ? "" : (row.transactionCount ? `${row.transactionCount}%` : "")}
-                </TableCell>
-                {/* Value % */}
-                <TableCell sx={cellSx} align="right">
-                  {isSubBank ? "" : (row.transactionValue ? `${row.transactionValue}%` : "")}
-                </TableCell>
-                {/* Type of Transaction */}
-                <TableCell sx={{ ...cellSx, pl: isSubBank ? 3 : 1, fontStyle: isSubBank ? "italic" : "normal", color: isSubBank ? "#64748b" : "inherit" }}>
-                  {row.transactionType}
-                  {row.transactionTypePercent && isSubBank ? ` (${row.transactionTypePercent})` : ""}
-                </TableCell>
-                {/* Estimated Txns */}
-                <TableCell sx={cellSx} align="right">
-                  {Math.round(row.estimatedTransactions) || "0"}
-                </TableCell>
-                {/* Aggregate Amount */}
-                <TableCell sx={cellSx} align="right">
-                  {formatNumber(row.aggregateAmount)}
-                </TableCell>
-                {/* Charges Proposed */}
-                <TableCell sx={cellSx} align="right">
-                  {row.allow ? (row.unit === PERCENTAGE ? `${row.chargesProposed}${PERCENTAGE}` : `${row.chargesProposed}`) : ""}
-                </TableCell>
-                {/* Gross Amount Received */}
-                <TableCell sx={cellSx} align="right">
-                  {row.allow ? formatNumber(row.grossAmount) : ""}
-                </TableCell>
+                return (
+                  <TableRow key={idx} sx={{ "&:hover": { bgcolor: "#f8fafc" }, bgcolor: isSubBank ? "#fdfdfd" : "transparent" }}>
+                    {/* Count % */}
+                    <TableCell sx={cellSx} align="right">
+                      {isSubBank ? "" : (row.transactionCount ? `${row.transactionCount}%` : "")}
+                    </TableCell>
+                    {/* Value % */}
+                    <TableCell sx={cellSx} align="right">
+                      {isSubBank ? "" : (row.transactionValue ? `${row.transactionValue}%` : "")}
+                    </TableCell>
+                    {/* Type of Transaction */}
+                    <TableCell sx={{ ...cellSx, pl: isSubBank ? 3 : 1, fontStyle: isSubBank ? "italic" : "normal", color: isSubBank ? "#64748b" : "inherit" }}>
+                      {row.transactionType}
+                      {row.transactionTypePercent && isSubBank ? ` (${row.transactionTypePercent})` : ""}
+                    </TableCell>
+                    {/* Estimated Txns */}
+                    <TableCell sx={cellSx} align="right">
+                      {Math.round(row.estimatedTransactions) || "0"}
+                    </TableCell>
+                    {/* Aggregate Amount */}
+                    <TableCell sx={cellSx} align="right">
+                      {formatNumber(row.aggregateAmount)}
+                    </TableCell>
+                    {/* Charges Proposed */}
+                    <TableCell sx={cellSx} align="right">
+                      {row.allow ? (row.unit === PERCENTAGE ? `${row.chargesProposed}${PERCENTAGE}` : `${row.chargesProposed}`) : ""}
+                    </TableCell>
+                    {/* Gross Amount Received */}
+                    <TableCell sx={cellSx} align="right">
+                      {row.allow ? formatNumber(row.grossAmount) : ""}
+                    </TableCell>
 
-                {/* Aggregators Data */}
+                    {/* Aggregators Data */}
+                    {activeAggs.map((agg) => {
+                      const aggProjList = allProjections[agg.aggregatorId] || [];
+                      const aggRow = aggProjList.find(r => r.transactionType === row.transactionType) || {};
+                      const isFinalized = finalizedAggregatorId && Number(agg.aggregatorId) === Number(finalizedAggregatorId);
+                      const columnBg = finalizedAggregatorId
+                        ? (isFinalized ? "#f0fdf4" : "#f0fdfa")
+                        : "#f0fdfa";
+                      return (
+                        <React.Fragment key={agg.aggregatorId}>
+                          <TableCell sx={{ ...cellSx, bgcolor: columnBg }} align="right">
+                            {aggRow.allow && aggRow.rate !== undefined ? (aggRow.unit === PERCENTAGE ? `${aggRow.rate}${PERCENTAGE}` : `${aggRow.rate}`) : ""}
+                          </TableCell>
+                          <TableCell sx={{ ...cellSx, bgcolor: columnBg }} align="right">
+                            {aggRow.allow ? formatNumber(aggRow.vendorShare) : ""}
+                          </TableCell>
+                          <TableCell sx={{ ...cellSx, bgcolor: columnBg }} align="right">
+                            {aggRow.allow ? formatNumber(aggRow.expectedRevenue) : ""}
+                          </TableCell>
+                        </React.Fragment>
+                      );
+                    })}
+                  </TableRow>
+                );
+              })}
+
+              {/* Totals Row */}
+              <TableRow>
+                <TableCell colSpan={3} sx={{ ...totalCellSx }} align="center">TOTAL</TableCell>
+                <TableCell sx={totalCellSx} align="right">
+                  {baseTotals.totalEstimatedTransactions}
+                </TableCell>
+                <TableCell sx={totalCellSx} align="right">
+                  {formatNumber(baseTotals.totalAggregateAmount)}
+                </TableCell>
+                <TableCell sx={totalCellSx}></TableCell>
+                <TableCell sx={totalCellSx} align="right">
+                  {formatNumber(baseTotals.totalGrossAmount)}
+                </TableCell>
                 {activeAggs.map((agg) => {
-                  const aggProjList = allProjections[agg.aggregatorId] || [];
-                  const aggRow = aggProjList.find(r => r.transactionType === row.transactionType) || {};
+                  const totals = aggregatorTotals[agg.aggregatorId] || {};
                   const isFinalized = finalizedAggregatorId && Number(agg.aggregatorId) === Number(finalizedAggregatorId);
-                  const columnBg = finalizedAggregatorId
-                    ? (isFinalized ? "#f0fdf4" : "#f0fdfa") 
-                    : "#f0fdfa";
+                  const totalsBg = finalizedAggregatorId
+                    ? (isFinalized ? "#dcfce7" : "#e6f4f1")
+                    : "#e6f4f1";
                   return (
                     <React.Fragment key={agg.aggregatorId}>
-                      <TableCell sx={{ ...cellSx, bgcolor: columnBg }} align="right">
-                        {aggRow.allow && aggRow.rate !== undefined ? (aggRow.unit === PERCENTAGE ? `${aggRow.rate}${PERCENTAGE}` : `${aggRow.rate}`) : ""}
+                      <TableCell sx={{ ...totalCellSx, bgcolor: totalsBg }}></TableCell>
+                      <TableCell sx={{ ...totalCellSx, bgcolor: totalsBg }} align="right">
+                        {formatNumber(totals.totalVendorShare)}
                       </TableCell>
-                      <TableCell sx={{ ...cellSx, bgcolor: columnBg }} align="right">
-                        {aggRow.allow ? formatNumber(aggRow.vendorShare) : ""}
-                      </TableCell>
-                      <TableCell sx={{ ...cellSx, bgcolor: columnBg }} align="right">
-                        {aggRow.allow ? formatNumber(aggRow.expectedRevenue) : ""}
+                      <TableCell sx={{ ...totalCellSx, bgcolor: totalsBg }} align="right">
+                        {formatNumber(totals.totalExpectedRevenue)}
                       </TableCell>
                     </React.Fragment>
                   );
                 })}
               </TableRow>
-            );
-          })}
-
-          {/* Totals Row */}
-          <TableRow>
-            <TableCell colSpan={3} sx={{ ...totalCellSx }} align="center">TOTAL</TableCell>
-            <TableCell sx={totalCellSx} align="right">
-              {baseTotals.totalEstimatedTransactions}
-            </TableCell>
-            <TableCell sx={totalCellSx} align="right">
-              {formatNumber(baseTotals.totalAggregateAmount)}
-            </TableCell>
-            <TableCell sx={totalCellSx}></TableCell>
-            <TableCell sx={totalCellSx} align="right">
-              {formatNumber(baseTotals.totalGrossAmount)}
-            </TableCell>
-            {activeAggs.map((agg) => {
-              const totals = aggregatorTotals[agg.aggregatorId] || {};
-              const isFinalized = finalizedAggregatorId && Number(agg.aggregatorId) === Number(finalizedAggregatorId);
-              const totalsBg = finalizedAggregatorId
-                ? (isFinalized ? "#dcfce7" : "#e6f4f1") 
-                : "#e6f4f1";
-              return (
-                <React.Fragment key={agg.aggregatorId}>
-                  <TableCell sx={{ ...totalCellSx, bgcolor: totalsBg }}></TableCell>
-                  <TableCell sx={{ ...totalCellSx, bgcolor: totalsBg }} align="right">
-                    {formatNumber(totals.totalVendorShare)}
-                  </TableCell>
-                  <TableCell sx={{ ...totalCellSx, bgcolor: totalsBg }} align="right">
-                    {formatNumber(totals.totalExpectedRevenue)}
-                  </TableCell>
-                </React.Fragment>
-              );
-            })}
-          </TableRow>
-        </TableBody>
-      </Table>
-      </TableContainer>
+            </TableBody>
+          </Table>
+        </TableContainer>
       </Box>
     </Box>
   );

@@ -66,83 +66,84 @@ class ManageAggregatorUpdate(BaseModel):
     isDeleted : Optional[bool] = False
     
 class Applications(BaseModel):
-    userType: str
-    customerName: str
-    accountNo: int
-    averageBalance : int
-    email: str
-    mobileNo : int
-    address : str
-    integrateWith : str
-    category : str
-    avgTransactionYearly : int
-    avgTransactionSize : int 
-    accountBalanceToday : int
-    projection : str = None
-    customerApplicationFile : Optional[Any] = None
-    status : str
-    rhRecommendationFile : Optional[Any] = None
-    zhRecommendationFile : Optional[Any] = None
-    customerAcceptanceFile : Optional[Any] = None
-    kycFile : Optional[Any] = None
-    isApplicationSubmittedBR : Optional[bool] = None
-    isReviewByRO : Optional[bool] = None
-    isReviewByZO : Optional[bool] = None
-    isReviewByCO : Optional[bool] = None
-    isProjectionAdded: Optional[bool] = None
-    isSendForQuoteAccpcetance : Optional[bool] = None
-    isAggregatorAdded : Optional[bool] = None
-    isQuoteAddedPA : Optional[bool] = None
-    isQuoteReviewCO : Optional[bool] = None
-    isMarkUpAddedCO : Optional[bool] = None
-    isQuoteAcceptRO : Optional[bool] = None
-    isQuoteAcceptReviewByCO : Optional[bool] = None
-    isFinalApproved : Optional[bool] = None
-    isDeleted : Optional[bool] = None
-    totalAnnualTransaction : int = None
-    totalBankCollection:int = None
-    aggregateDepositAmt:int = None
-    finalizedAggregatorId:  Optional[Any] = None
-    finalizedAggregatorName :  Optional[str] = None
-    purchaseOrderId : Optional[Any] = None
-    createdByBRId : Optional[Any] = None
-    approvedByROId : Optional[Any] = None
-    approvedByZOId : Optional[Any] = None
-    approvedByCOId : Optional[Any] = None
-    approvedByQuoteId : Optional[Any] = None
-    selectedAggregatorId : Optional[Any] = None
-    selectedAggregatorName : Optional[str] = None
-    reasonOfRejection: Optional[str] = None
-    regionId :  Optional[Any] = None
-    branchId :  Optional[Any] = None
-    zoneId :  Optional[Any] = None
-    rccMailId: Optional[str] = None
-    rccMobileNo: Optional[int] = None
-    rccContactPersonName: Optional[str] = None
-    authorisedPersonName: Optional[str] = None
-    authorisedPersonDesignation: Optional[str] = None
-    branchName:  Optional[str] = None
-    regionName:  Optional[str] = None
-
-class ApplicationsUpdate(BaseModel):
     userType: Optional[str] = None
     customerName: Optional[str] = None
-    accountNo: Optional[int] = None
-    averageBalance: Optional[int] = None
+    accountNo: Optional[Any] = None
+    averageBalance: Optional[Any] = None
     email: Optional[str] = None
-    mobileNo: Optional[int] = None
+    mobileNo: Optional[Any] = None
     address: Optional[str] = None
     integrateWith: Optional[str] = None
     category: Optional[str] = None
-    avgTransactionYearly: Optional[int] = None
-    avgTransactionSize: Optional[int] = None
-    accountBalanceToday: Optional[int] = None
+    avgTransactionYearly: Optional[Any] = None
+    avgTransactionSize: Optional[Any] = None 
+    accountBalanceToday: Optional[Any] = None
     projection: Optional[str] = None
     customerApplicationFile: Optional[Any] = None
     status: Optional[str] = None
     rhRecommendationFile: Optional[Any] = None
     zhRecommendationFile: Optional[Any] = None
-    customerAcceptanceFile : Optional[Any] = None
+    customerAcceptanceFile: Optional[Any] = None
+    kycFile: Optional[Any] = None
+    isApplicationSubmittedBR: Optional[bool] = None
+    isReviewByRO: Optional[bool] = None
+    isReviewByZO: Optional[bool] = None
+    isReviewByCO: Optional[bool] = None
+    isProjectionAdded: Optional[bool] = None
+    isSendForQuoteAccpcetance: Optional[bool] = None
+    isAggregatorAdded: Optional[bool] = None
+    isQuoteAddedPA: Optional[bool] = None
+    isQuoteReviewCO: Optional[bool] = None
+    isMarkUpAddedCO: Optional[bool] = None
+    isQuoteAcceptRO: Optional[bool] = None
+    isQuoteAcceptReviewByCO: Optional[bool] = None
+    isFinalApproved: Optional[bool] = None
+    isDeleted: Optional[bool] = None
+    totalAnnualTransaction: Optional[Any] = None
+    totalBankCollection: Optional[Any] = None
+    aggregateDepositAmt: Optional[Any] = None
+    finalizedAggregatorId: Optional[Any] = None
+    finalizedAggregatorName: Optional[str] = None
+    purchaseOrderId: Optional[Any] = None
+    createdByBRId: Optional[Any] = None
+    approvedByROId: Optional[Any] = None
+    approvedByZOId: Optional[Any] = None
+    approvedByCOId: Optional[Any] = None
+    approvedByQuoteId: Optional[Any] = None
+    approvedByBRId: Optional[Any] = None
+    selectedAggregatorId: Optional[Any] = None
+    selectedAggregatorName: Optional[str] = None
+    reasonOfRejection: Optional[str] = None
+    regionId: Optional[Any] = None
+    branchId: Optional[Any] = None
+    zoneId: Optional[Any] = None
+    rccMailId: Optional[str] = None
+    rccMobileNo: Optional[Any] = None
+    rccContactPersonName: Optional[str] = None
+    authorisedPersonName: Optional[str] = None
+    authorisedPersonDesignation: Optional[str] = None
+    branchName: Optional[str] = None
+    regionName: Optional[str] = None
+
+class ApplicationsUpdate(BaseModel):
+    userType: Optional[str] = None
+    customerName: Optional[str] = None
+    accountNo: Optional[Any] = None
+    averageBalance: Optional[Any] = None
+    email: Optional[str] = None
+    mobileNo: Optional[Any] = None
+    address: Optional[str] = None
+    integrateWith: Optional[str] = None
+    category: Optional[str] = None
+    avgTransactionYearly: Optional[Any] = None
+    avgTransactionSize: Optional[Any] = None
+    accountBalanceToday: Optional[Any] = None
+    projection: Optional[str] = None
+    customerApplicationFile: Optional[Any] = None
+    status: Optional[str] = None
+    rhRecommendationFile: Optional[Any] = None
+    zhRecommendationFile: Optional[Any] = None
+    customerAcceptanceFile: Optional[Any] = None
     kycFile: Optional[Any] = None
     isApplicationSubmittedBR: Optional[bool] = None
     isReviewByRO: Optional[bool] = None
@@ -157,30 +158,31 @@ class ApplicationsUpdate(BaseModel):
     isQuoteAcceptReviewByCO: Optional[bool] = None
     isFinalApproved: Optional[bool] = None
     isDeleted: Optional[bool] = None
-    totalAnnualTransaction: Optional[int] = None
-    totalBankCollection: Optional[int] = None
-    aggregateDepositAmt: Optional[int] = None
+    totalAnnualTransaction: Optional[Any] = None
+    totalBankCollection: Optional[Any] = None
+    aggregateDepositAmt: Optional[Any] = None
     finalizedAggregatorId: Optional[Any] = None
     finalizedAggregatorName: Optional[str] = None
     purchaseOrderId: Optional[Any] = None
-    createdByBRId : Optional[Any] = None
-    approvedByROId : Optional[Any] = None
-    approvedByZOId : Optional[Any] = None
-    approvedByCOId : Optional[Any] = None
-    approvedByQuoteId : Optional[Any] = None
-    selectedAggregatorId : Optional[Any] = None
-    selectedAggregatorName : Optional[str] = None
+    createdByBRId: Optional[Any] = None
+    approvedByROId: Optional[Any] = None
+    approvedByZOId: Optional[Any] = None
+    approvedByCOId: Optional[Any] = None
+    approvedByQuoteId: Optional[Any] = None
+    approvedByBRId: Optional[Any] = None
+    selectedAggregatorId: Optional[Any] = None
+    selectedAggregatorName: Optional[str] = None
     reasonOfRejection: Optional[str] = None
-    regionId :  Optional[Any] = None
-    branchId :  Optional[Any] = None
-    zoneId :  Optional[Any] = None
+    regionId: Optional[Any] = None
+    branchId: Optional[Any] = None
+    zoneId: Optional[Any] = None
     rccMailId: Optional[str] = None
-    rccMobileNo: Optional[int] = None
+    rccMobileNo: Optional[Any] = None
     rccContactPersonName: Optional[str] = None
     authorisedPersonName: Optional[str] = None
     authorisedPersonDesignation: Optional[str] = None
-    branchName:  Optional[str] = None
-    regionName:  Optional[str] = None
+    branchName: Optional[str] = None
+    regionName: Optional[str] = None
 
 class ProjectionDetails(BaseModel):
     transactionCount : Any
