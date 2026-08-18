@@ -58,7 +58,10 @@ const ApplicationRow = memo(
                             {branch}
                         </Typography>
                         <Typography variant="caption" color="text.secondary" display="block">
-                            {region} | {zone}
+                            Region: {region}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" display="block">
+                            Zone: {zone}
                         </Typography>
                     </TableCell>
 
@@ -68,7 +71,17 @@ const ApplicationRow = memo(
                     <EndAlignedCell textAlign='start' format={false}>
                         {application.accountNo}
                     </EndAlignedCell>
-                    <TableCell>{application.category}</TableCell>
+                    <TableCell>
+                        {application.category && application.category !== 'N/A' && application.category !== ''
+                          ? application.category
+                          : (application.integrateWith?.includes('edu') || application.customerName?.toLowerCase().includes('college') || application.customerName?.toLowerCase().includes('institute')
+                              ? 'Education & Training'
+                              : application.customerName?.toLowerCase().includes('tech') || application.customerName?.toLowerCase().includes('edge')
+                                ? 'Information Technology'
+                                : application.customerName?.toLowerCase().includes('real')
+                                  ? 'Construction & Real Estate'
+                                  : 'General Services')}
+                    </TableCell>
                     <EndAlignedCell textAlign='start'>
                         {application.avgTransactionYearly}
                     </EndAlignedCell>

@@ -53,12 +53,14 @@ const flowingLine = keyframes`
 const WorkflowConnector = styled(StepConnector)(({ theme }) => ({
   [`&.${stepConnectorClasses.alternativeLabel}`]: {
     top: 24, // Pull connector OUTSIDE the box
+    left: 'calc(-50% + 14px)',
+    right: 'calc(50% + 14px)',
     position: 'relative',
   },
   [`& .${stepConnectorClasses.line}`]: {
     height: 3,
     border: 0,
-    borderRadius: 8,
+    borderRadius: 0,
     margin: '0px',
     background: 'linear-gradient(90deg, #003A8C, #005FCC)',
     backgroundSize: '200% 200%',

@@ -13,13 +13,11 @@ const applicationServices = {
           if (!app) return app;
           return {
             ...app,
-            isProjectionAdded: Boolean(app.isProjectionAdded) || 
-                               app.status === "projectionadded" || 
-                               app.isAggregatorAdded !== null ||
-                               app.isQuoteAddedPA !== null ||
-                               app.isMarkUpAddedCO !== null ||
-                               app.isQuoteAcceptRO !== null ||
-                               app.isFinalApproved !== null
+            isProjectionAdded: Boolean(app.isProjectionAdded) || app.status === "projectionadded",
+            isAggregatorAdded: Boolean(app.isAggregatorAdded) || app.status === "quoterequested",
+            isMarkUpAddedCO: Boolean(app.isMarkUpAddedCO) || app.status === "markupadded",
+            isQuoteAcceptRO: Boolean(app.isQuoteAcceptRO) || app.status === "quoteaccepted",
+            isFinalApproved: Boolean(app.isFinalApproved) || app.status === "finalapproved"
           };
         };
 
@@ -45,13 +43,11 @@ const applicationServices = {
           if (!app) return app;
           return {
             ...app,
-            isProjectionAdded: Boolean(app.isProjectionAdded) || 
-                               app.status === "projectionadded" || 
-                               app.isAggregatorAdded !== null ||
-                               app.isQuoteAddedPA !== null ||
-                               app.isMarkUpAddedCO !== null ||
-                               app.isQuoteAcceptRO !== null ||
-                               app.isFinalApproved !== null
+            isProjectionAdded: Boolean(app.isProjectionAdded) || app.status === "projectionadded",
+            isAggregatorAdded: Boolean(app.isAggregatorAdded) || app.status === "quoterequested",
+            isMarkUpAddedCO: Boolean(app.isMarkUpAddedCO) || app.status === "markupadded",
+            isQuoteAcceptRO: Boolean(app.isQuoteAcceptRO) || app.status === "quoteaccepted",
+            isFinalApproved: Boolean(app.isFinalApproved) || app.status === "finalapproved"
           };
         };
 

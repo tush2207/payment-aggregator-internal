@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Dialog, DialogTitle, DialogContent, DialogActions, 
-  Button, Typography, IconButton, Box, Checkbox, TextField,
+  Button, Typography, Box, Checkbox, TextField,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper 
 } from '@mui/material';
-import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
+import GroupsIcon from '@mui/icons-material/Groups';
+import DialogWithHeader from '&src/components/Dialog/DialogWithHeader';
 
 // Mock aggregators for UI demonstration
 const INITIAL_MOCK_AGGREGATORS = [
@@ -51,7 +51,7 @@ export default function AggregatorSelectionModal({ open, onClose, applicationDat
       services: newAggServices || 'Various'
     };
     setAggregators(prev => [...prev, newAgg]);
-    setSelectedIds(prev => [...prev, newAgg.id]); // auto-select the new one
+    setSelectedIds(prev => [...prev, newAgg.id]);
     setNewAggName('');
     setNewAggServices('');
     setShowAddNew(false);
@@ -66,101 +66,98 @@ export default function AggregatorSelectionModal({ open, onClose, applicationDat
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="h6">Select Aggregators for Quotation</Typography>
-        <IconButton onClick={onClose} size="small">
-          <CloseIcon />
-        </IconButton>
-      </DialogTitle>
-      
-      <DialogContent dividers>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Select the aggregators you want to invite for quoting on this application.
-        </Typography>
-        
-        <TableContainer component={Paper} variant="outlined">
-          <Table size="small">
-            <TableHead sx={{ bgcolor: 'grey.100' }}>
-              <TableRow>
-                <TableCell padding="checkbox">
-                  <Checkbox 
-                    indeterminate={selectedIds.length > 0 && selectedIds.length < aggregators.length}
-                    checked={selectedIds.length === aggregators.length && aggregators.length > 0}
-                    onChange={handleSelectAll}
-                  />
-                </TableCell>
-                <TableCell>Aggregator Name</TableCell>
-                <TableCell>Supported Services</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {aggregators.map((agg) => (
-                <TableRow key={agg.id} hover onClick={() => handleToggle(agg.id)} sx={{ cursor: 'pointer' }}>
-                  <TableCell padding="checkbox">
-                    <Checkbox checked={selectedIds.includes(agg.id)} onChange={() => handleToggle(agg.id)} />
-                  </TableCell>
-                  <TableCell fontWeight={500}>{agg.name}</TableCell>
-                  <TableCell>{agg.services}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-
-        {showAddNew ? (
-          <Box sx={{ mt: 2, p: 2, border: '1px dashed grey', borderRadius: 1 }}>
-            <Typography variant="subtitle2" mb={1}>Add New Aggregator</Typography>
-            <Box display="flex" gap={2} alignItems="center">
-              <TextField 
-                size="small" 
-                label="Aggregator Name" 
-                value={newAggName}
-                onChange={(e) => setNewAggName(e.target.value)}
-              />
-              <TextField 
-                size="small" 
-                label="Services (Optional)" 
-                value={newAggServices}
-                onChange={(e) => setNewAggServices(e.target.value)}
-              />
-              <Button variant="contained" onClick={handleAddNew} disabled={!newAggName.trim()}>
-                Add
-              </Button>
-              <Button variant="text" color="inherit" onClick={() => setShowAddNew(false)}>
-                Cancel
-              </Button>
-            </Box>
+    <DialogWithHeader
+      open={open}
+      onClose={onClose}
+      maxWidth="md"
+      headerText="Select Aggregators for Quotation"
+      subHeaderText="Choose the payment aggregators to invite for quote submission."
+      icon={GroupsIcon}
+      actions={
+        <Box display="flex" justifyContent="space-between" width="100%" alignItems="center">
+          <Typography variant="body2" color="text.secondary" fontWeight={500}>
+            {selectedIds.length} aggregator(s) selected
+          </Typography>
+          <Box display="flex" gap={1.5}>
+            <Button onClick={onClose} variant="outlined" color="inherit" disabled={isSubmitting}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSubmit} 
+              variant="contained" 
+              color="primary" 
+              disabled={isSubmitting || selectedIds.length === 0}
+              sx={{ px: 3, fontWeight: 700 }}
+            >
+              {isSubmitting ? 'Sending...' : 'Send for Quote'}
+            </Button>
           </Box>
-        ) : (
-          <Button 
-            startIcon={<AddIcon />} 
-            onClick={() => setShowAddNew(true)} 
-            sx={{ mt: 1 }}
-          >
-            Add New Aggregator
-          </Button>
-        )}
-      </DialogContent>
-      
-      <DialogActions sx={{ p: 2, display: 'flex', justifyContent: 'space-between' }}>
-        <Typography variant="body2" color="text.secondary">
-          {selectedIds.length} aggregator(s) selected
-        </Typography>
-        <Box>
-          <Button onClick={onClose} variant="outlined" color="inherit" disabled={isSubmitting} sx={{ mr: 1 }}>
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleSubmit} 
-            variant="contained" 
-            color="primary" 
-            disabled={isSubmitting || selectedIds.length === 0}
-          >
-            {isSubmitting ? 'Sending...' : 'Send for Quote'}
-          </Button>
         </Box>
-      </DialogActions>
-    </Dialog>
+      }
+    >
+      <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: '10px', borderColor: '#cbd5e1', overflow: 'hidden' }}>
+        <Table size="small">
+          <TableHead>
+            <TableRow sx={{ bgcolor: '#0f172a' }}>
+              <TableCell padding="checkbox">
+                <Checkbox 
+                  indeterminate={selectedIds.length > 0 && selectedIds.length < aggregators.length}
+                  checked={selectedIds.length === aggregators.length && aggregators.length > 0}
+                  onChange={handleSelectAll}
+                  sx={{ color: '#ffffff', '&.Mui-checked': { color: '#f6d365' } }}
+                />
+              </TableCell>
+              <TableCell sx={{ color: '#ffffff', fontWeight: 700, fontSize: '11px' }}>Aggregator Name</TableCell>
+              <TableCell sx={{ color: '#ffffff', fontWeight: 700, fontSize: '11px' }}>Supported Services</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {aggregators.map((agg) => (
+              <TableRow key={agg.id} hover onClick={() => handleToggle(agg.id)} sx={{ cursor: 'pointer', '&:hover': { bgcolor: '#f8fafc' } }}>
+                <TableCell padding="checkbox">
+                  <Checkbox checked={selectedIds.includes(agg.id)} onChange={() => handleToggle(agg.id)} />
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: '11px', color: '#0f172a' }}>{agg.name}</TableCell>
+                <TableCell sx={{ fontSize: '11px', color: '#475569' }}>{agg.services}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {showAddNew ? (
+        <Box sx={{ mt: 2, p: 2, border: '1px dashed #cbd5e1', borderRadius: 2, bgcolor: '#f8fafc' }}>
+          <Typography variant="subtitle2" fontWeight={700} mb={1} color="#0f172a">Add New Aggregator</Typography>
+          <Box display="flex" gap={2} alignItems="center">
+            <TextField 
+              size="small" 
+              label="Aggregator Name" 
+              value={newAggName}
+              onChange={(e) => setNewAggName(e.target.value)}
+            />
+            <TextField 
+              size="small" 
+              label="Services (Optional)" 
+              value={newAggServices}
+              onChange={(e) => setNewAggServices(e.target.value)}
+            />
+            <Button variant="contained" onClick={handleAddNew} disabled={!newAggName.trim()}>
+              Add
+            </Button>
+            <Button variant="text" color="inherit" onClick={() => setShowAddNew(false)}>
+              Cancel
+            </Button>
+          </Box>
+        </Box>
+      ) : (
+        <Button 
+          startIcon={<AddIcon />} 
+          onClick={() => setShowAddNew(true)} 
+          sx={{ mt: 2, textTransform: 'none', fontWeight: 600 }}
+        >
+          Add New Aggregator
+        </Button>
+      )}
+    </DialogWithHeader>
   );
 }

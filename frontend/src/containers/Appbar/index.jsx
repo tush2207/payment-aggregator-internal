@@ -68,12 +68,11 @@ const Navbar = () => {
       <AppBar
         position="fixed"
         sx={{
-          background: 'rgba(25, 118, 210, 0.75)',
-          backgroundImage:
-            'linear-gradient(90deg, rgba(25,118,210,0.85), rgba(211,47,47,0.85))',
+          background: 'linear-gradient(135deg, #0a2342 0%, #0d3b6e 60%, #071830 100%)',
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',
-          boxShadow: '0 8px 25px rgba(0,0,0,0.25)',
+          boxShadow: '0 8px 25px rgba(10, 35, 66, 0.3)',
+          borderBottom: '2px solid rgba(246, 211, 101, 0.4)',
           borderRadius: 0,
         }}
       >

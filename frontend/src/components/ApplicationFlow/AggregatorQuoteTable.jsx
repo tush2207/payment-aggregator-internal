@@ -61,7 +61,7 @@ import QuoteTable from "./QuoteTable";
 import ManageAggregatorForm from "&src/modules/ManageAggregrator/ManageAggregatorForm";
 
 import { useDispatch } from "react-redux";
-import { fetchApplicationDetails } from "&src/store/applicationFlowSlice";
+import { fetchApplicationDetails, updateApplicationWorkflow } from "&src/store/applicationFlowSlice";
 
 // ✅ Conditional hook wrapper
 function useConditionalAggregatorDetails(condition) {
@@ -122,8 +122,8 @@ const AggregatorDetails = ({ customerDetails }) => {
     }
   }, [applicationId, selectedAggregatorsDetails, fetchAllProjections]);
 
-  const condition = isAggregatorAdded === null && isCO;
-  const { aggregatorDetails, fetchAllAggregators } = useConditionalAggregatorDetails(condition);
+  const showAddAggregatorSection = !customerDetails?.isAggregatorAdded;
+  const { aggregatorDetails, fetchAllAggregators } = useAggregatorDetails();
   const [openAddModal, setOpenAddModal] = useState(false);
 
   // 🔹 Manage Tabs
@@ -224,21 +224,17 @@ const AggregatorDetails = ({ customerDetails }) => {
         throw new Error("Failed to add projections.");
       }
 
-      const appResponse = await applicationServices.updateApplication(applicationId, {
-        isAggregatorAdded: true,
-        isReviewByCO: true,
-        status: "quoterequested",
-      });
-      if (!(appResponse?.status === 200 || appResponse?.status === 201)) {
-        errorNotification("Failed to update application status.");
-        throw new Error("Failed to update application status.");
-      }
+      await dispatch(updateApplicationWorkflow({
+        applicationId,
+        payload: {
+          isAggregatorAdded: true,
+          isReviewByCO: true,
+          status: "quoterequested",
+        }
+      })).unwrap();
 
       successNotification("Aggregators & Projections added successfully");
       fetchSelectedAggregatorDetails();
-      if (applicationId) {
-        dispatch(fetchApplicationDetails(applicationId));
-      }
     } catch (err) {
       setLoading(false);
       errorNotification(err?.response?.data?.message || err.message || "Something went wrong.");
@@ -269,7 +265,7 @@ const AggregatorDetails = ({ customerDetails }) => {
       {loading && <FullScreenLoader />}
 
       {/* ➤ Add Aggregator Section */}
-      {condition && (
+      {showAddAggregatorSection && (
         <Box>
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
             <Typography variant="h6" fontWeight="bold">
@@ -328,7 +324,7 @@ const AggregatorDetails = ({ customerDetails }) => {
       </DialogWithHeader>
 
       {/* ➤ Added Aggregators Section */}
-      {customerDetails?.isAggregatorAdded && isCO && (
+      {!showAddAggregatorSection && (
         <Box sx={{ mt: 2 }}>
           <Box display='flex' justifyContent='space-between' m={2} alignItems="center">
             <Box display="flex" alignItems="center" gap={2}>
@@ -852,41 +848,39 @@ const CompareAggregatorsTable = ({ filteredAggregators, allProjections, projecti
   return (
     <Box sx={{ width: "100%", mt: 2, p: 2 }}>
       {/* Downloader & Legend Bar */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ mb: 2, bgcolor: "#f8fafc", p: 1.5, borderRadius: "8px", border: "1px solid #e2e8f0" }}>
-        <Typography variant="body2" color="text.secondary" fontWeight={500}>
-          {isAccepted && finalizedAggregatorId ? (
-            <span>
-              ℹ️ Color Legend: <strong style={{ color: "#16a34a" }}>Green columns</strong> represent the Finalized Aggregator. <strong style={{ color: "#dc2626" }}>Red columns</strong> represent other rejected aggregators.
-            </span>
-          ) : (
-            <span>
-              ℹ️ Quote Rank Legend: L1 represents the lowest quote based on vendor share, followed by L2, L3. Color highlighting applies once customer acceptance is completed.
-            </span>
-          )}
-        </Typography>
-        <Stack direction="row" spacing={1}>
-          <Button
-            variant="outlined"
-            color="primary"
-            size="small"
-            startIcon={<Download />}
-            onClick={handleExportExcel}
-            sx={{ textTransform: "none", fontWeight: 700 }}
-          >
-            Download Excel
-          </Button>
-          <Button
-            variant="outlined"
-            color="primary"
-            size="small"
-            startIcon={<Download />}
-            onClick={handleExportPDF}
-            sx={{ textTransform: "none", fontWeight: 700 }}
-          >
-            Download PDF
-          </Button>
-        </Stack>
-      </Box>
+      {isAccepted && (
+        <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ mb: 2, bgcolor: "#f8fafc", p: 1.5, borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+          <Typography variant="body2" color="text.secondary" fontWeight={500}>
+            {finalizedAggregatorId && (
+              <span>
+                ℹ️ Color Legend: <strong style={{ color: "#16a34a" }}>Green columns</strong> represent the Finalized Aggregator. <strong style={{ color: "#dc2626" }}>Red columns</strong> represent other rejected aggregators.
+              </span>
+            )}
+          </Typography>
+          <Stack direction="row" spacing={1}>
+            <Button
+              variant="outlined"
+              color="primary"
+              size="small"
+              startIcon={<Download />}
+              onClick={handleExportExcel}
+              sx={{ textTransform: "none", fontWeight: 700 }}
+            >
+              Download Excel
+            </Button>
+            <Button
+              variant="outlined"
+              color="primary"
+              size="small"
+              startIcon={<Download />}
+              onClick={handleExportPDF}
+              sx={{ textTransform: "none", fontWeight: 700 }}
+            >
+              Download PDF
+            </Button>
+          </Stack>
+        </Box>
+      )}
 
       <Box ref={cbaTableRef} sx={{ p: 1, bgcolor: "#ffffff" }}>
         <TableContainer sx={{ overflowX: "auto", maxWidth: "100%" }}>

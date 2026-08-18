@@ -12,7 +12,7 @@ import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import { Download, InfoOutlined } from "@mui/icons-material";
 import { useDispatch } from "react-redux";
-import { fetchApplicationDetails } from "&src/store/applicationFlowSlice";
+import { fetchApplicationDetails, closeWorkflowDialog } from "&src/store/applicationFlowSlice";
 import {
   Box,
   Button,
@@ -227,6 +227,7 @@ const AcceptedQuoteTable = ({ customer, applicationId }) => {
       customerAcceptanceFile: customerAcceptanceFile,
       rhRecommendationFile: rhRecommendationFile
     });
+    dispatch(closeWorkflowDialog());
   };
 
   const handleReject = () => {

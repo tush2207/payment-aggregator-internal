@@ -51,12 +51,14 @@ const flowingLine = keyframes`
 const CBIConnector = styled(StepConnector)(({ theme }) => ({
   [`&.${stepConnectorClasses.alternativeLabel}`]: {
     top: 24, // Pull connector OUTSIDE the box
+    left: 'calc(-50% + 14px)',
+    right: 'calc(50% + 14px)',
     position: 'relative',
   },
   [`& .${stepConnectorClasses.line}`]: {
     height: 3,
     border: 0,
-    borderRadius: 8,
+    borderRadius: 0,
     margin: '0px',
     background: 'linear-gradient(90deg, #003A8C, #005FCC)',
     backgroundSize: '200% 200%',
@@ -247,9 +249,27 @@ export default function RoleBasedStepper({
           {showDescription && step.description && (
             <Typography
               variant="caption"
-              sx={{ color: "#555", fontSize: "9px", transition: "0.3s", "&:hover": { color: "#003A8C" } }}
+              sx={{ color: "#555", fontSize: "9px", transition: "0.3s", "&:hover": { color: "#003A8C" }, display: 'block' }}
             >
               {step.description}
+            </Typography>
+          )}
+
+          {isCompleted && step.date && (
+            <Typography
+              variant="caption"
+              sx={{ color: "#2e7d32", fontSize: "9px", fontWeight: 600, display: 'block', mt: 0.2 }}
+            >
+              {step.date}
+            </Typography>
+          )}
+
+          {isCompleted && step.approvedBy && (
+            <Typography
+              variant="caption"
+              sx={{ color: "#003A8C", fontSize: "9px", fontWeight: 700, display: 'block' }}
+            >
+              By: {step.approvedBy}
             </Typography>
           )}
 
@@ -265,28 +285,38 @@ export default function RoleBasedStepper({
       </Box>
     );
 
+    const tooltipTitle = (
+      <Box>
+        <Typography variant="caption" display="block" fontWeight={700}>{step.label}</Typography>
+        {step.description && <Typography variant="caption" display="block">{step.description}</Typography>}
+        {step.date && <Typography variant="caption" display="block" color="#81c784">Date: {step.date}</Typography>}
+        {step.approvedBy && <Typography variant="caption" display="block" color="#64b5f6">Approved By: {step.approvedBy}</Typography>}
+      </Box>
+    );
 
-    if (!showTooltip) return labelContent;
+    if (!showTooltip) {
+      return <Box key={index}>{labelContent}</Box>;
+    }
 
     return (
       <Tooltip
-        title={step.description || ''}
+        title={tooltipTitle}
         arrow
         componentsProps={{
           tooltip: {
             sx: {
-              background: '#fff',
-              color: '#003A8C',
+              background: '#0a2342',
+              color: '#fff',
               border: '1px solid #003A8C',
               fontSize: '11px',
               p: 1,
               boxShadow: '0 0 8px rgba(0, 60, 150, 0.25)',
             },
           },
-          arrow: { sx: { color: '#003A8C' } },
+          arrow: { sx: { color: '#0a2342' } },
         }}
       >
-        <Box>{labelContent}</Box>
+        <Box key={index}>{labelContent}</Box>
       </Tooltip>
     );
   };

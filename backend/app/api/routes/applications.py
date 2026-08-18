@@ -15,6 +15,7 @@ from app.model.models import (ApplicationsInDB, ProjectionDetailsInDB, PaymentAg
 from app.schemas.schemas import (Applications, ApplicationsUpdate, ProjectionDetails, 
                                  ProjectionDetailsUpdate)
 from app.services.generate_po_service import PurchaseOrderService
+from app.api.routes.audit import create_audit_entry
 
 router = APIRouter()
 
@@ -274,12 +275,31 @@ def update_applications(id: int, new_application: ApplicationsUpdate, db: Sessio
     if not existing_Applications:
         raise HTTPException(status_code=404, detail="Applications not found")
 
+    valid_keys = {c.key for c in ApplicationsInDB.__table__.columns}
     for key, value in new_application.__dict__.items():
-        if value is not None:
+        if value is not None and key in valid_keys:
             setattr(existing_Applications, key, value)
 
     db.commit()
     db.refresh(existing_Applications)
+
+    # Automatic Audit Trail Logging
+    try:
+        user_name = str(getattr(current_user, "username", "User") or "User")
+        if new_application.isProjectionAdded is True:
+            create_audit_entry(db, action="UPDATE_PROJECTION", applicationId=id, stage="Update Projection", performedBy=user_name, details="Projections updated or skipped")
+        if new_application.isAggregatorAdded is True:
+            create_audit_entry(db, action="ADD_AGGREGATOR", applicationId=id, stage="Add Aggregator", performedBy=user_name, details="Aggregators selected and requested for quote")
+        if new_application.isMarkUpAddedCO is True or new_application.isQuoteReviewCO is True:
+            create_audit_entry(db, action="ADD_MARKUP", applicationId=id, stage="Add Markup", performedBy=user_name, details="Markup applied by CO")
+        if new_application.isQuoteAcceptRO is True:
+            create_audit_entry(db, action="ACCEPT_QUOTE", applicationId=id, stage="Customer Acceptance", performedBy=user_name, details="Quote accepted by customer/RO")
+        if new_application.isFinalApproved is True:
+            create_audit_entry(db, action="FINALIZE_PO", applicationId=id, stage="PO Details", performedBy=user_name, details="Purchase Order finalized")
+        if new_application.status == "rejected":
+            create_audit_entry(db, action="REJECT_APPLICATION", applicationId=id, stage="CO Rejection", performedBy=user_name, details=f"Rejection reason: {new_application.reasonOfRejection or 'N/A'}")
+    except Exception as audit_err:
+        print(f"[AUDIT LOG WARNING] {audit_err}")
 
     application = db.query(ApplicationsInDB).filter( 
         and_(ApplicationsInDB.isDeleted == False, ApplicationsInDB.applicationId == id)).first()

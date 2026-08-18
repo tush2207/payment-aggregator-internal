@@ -19,7 +19,7 @@ export default function ProjectDetailsTable({ application }) {
     { label: "Application ID", value: application.applicationId },
     { label: "Customer / Institution Name", value: application.customerName },
     { label: "Account Number", value: application.accountNo },
-    { label: "Business Category", value: application.category },
+    { label: "Business Category", value: application.category && application.category !== 'N/A' ? application.category : (application.integrateWith?.includes('edu') || application.customerName?.toLowerCase().includes('college') ? 'Education & Training' : 'General Services') },
     { label: "Email Address", value: application.email },
     { label: "Mobile Number", value: application.mobileNo },
     { label: "Address", value: application.address },

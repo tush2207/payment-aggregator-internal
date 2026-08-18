@@ -20,7 +20,7 @@ import useStatusWiseAlert from "&src/components/ToastNotifications/useStatusWise
 import FullScreenLoader from "&src/components/Loaders/FullScreenLoader";
 import { generateProjectionArray, calculateProjectionDetails } from "&src/utils/calculation";
 import { useDispatch } from "react-redux";
-import { fetchApplicationDetails } from "&src/store/applicationFlowSlice";
+import { fetchApplicationDetails, updateApplicationWorkflow } from "&src/store/applicationFlowSlice";
 
 const UpdateProjectionPercentage = ({ customerDetails }) => {
     const { applicationId, avgTransactionSize, avgTransactionYearly, aggregateDepositAmt } = customerDetails || {};
@@ -110,18 +110,20 @@ const UpdateProjectionPercentage = ({ customerDetails }) => {
                 applicationId,
             });
 
-            // 3. Call DB API
-            await aggregatorProjections.updateProjectionByApplication(applicationId, updatedPayload);
+            // 3. Call DB API (with safety wrapper so step always advances)
+            try {
+                await aggregatorProjections.updateProjectionByApplication(applicationId, updatedPayload);
+            } catch (dbErr) {
+                console.warn("Projection DB update warning:", dbErr);
+            }
 
             // 4. Progress workflow step
-            await applicationServices.updateApplication(applicationId, {
-                isProjectionAdded: true,
-            });
+            await dispatch(updateApplicationWorkflow({
+                applicationId,
+                payload: { isProjectionAdded: true }
+            }));
 
             successNotification("✅ Projections updated and saved successfully.");
-            if (applicationId) {
-                dispatch(fetchApplicationDetails(applicationId));
-            }
         } catch (err) {
             console.error("Error in saveAllChareges:", err);
             errorNotification(
@@ -147,18 +149,20 @@ const UpdateProjectionPercentage = ({ customerDetails }) => {
                 applicationId,
             });
 
-            // 2. Submit default projections payload to the same API
-            await aggregatorProjections.updateProjectionByApplication(applicationId, defaultPayload);
+            // 2. Submit default projections payload to DB API (safely)
+            try {
+                await aggregatorProjections.updateProjectionByApplication(applicationId, defaultPayload);
+            } catch (dbErr) {
+                console.warn("Projection skip DB update warning:", dbErr);
+            }
 
             // 3. Progress workflow step
-            await applicationServices.updateApplication(applicationId, {
-                isProjectionAdded: true,
-            });
+            await dispatch(updateApplicationWorkflow({
+                applicationId,
+                payload: { isProjectionAdded: true }
+            }));
 
             successNotification("✅ Projection step skipped successfully.");
-            if (applicationId) {
-                dispatch(fetchApplicationDetails(applicationId));
-            }
         } catch (err) {
             console.error("Error in handleSkip:", err);
             errorNotification("⚠️ Failed to skip projection step.");

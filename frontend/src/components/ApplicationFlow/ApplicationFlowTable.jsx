@@ -2,10 +2,9 @@ import React, { useState, useMemo, useEffect } from 'react';
 import {
   Paper, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, IconButton, Tooltip, Stack, Pagination,
-  Typography, Box, TextField, MenuItem, Grid, Collapse
+  Typography, Box, TextField, MenuItem, Grid, Collapse, Dialog, DialogTitle, DialogContent, DialogActions, Button
 } from '@mui/material';
-import { KeyboardArrowDown, KeyboardArrowUp, Visibility, Edit, Delete, Timeline, FilterList, Download } from '@mui/icons-material';
-import { Button } from '@mui/material';
+import { KeyboardArrowDown, KeyboardArrowUp, Visibility, Edit, Delete, Timeline, FilterList, Download, CancelOutlined } from '@mui/icons-material';
 import { useDispatch, useSelector } from 'react-redux';
 import { openWorkflowDialog, selectUserRole } from '&src/store/applicationFlowSlice';
 import usePOGenerator from '&src/hooks/usePOGenerator';
@@ -14,6 +13,8 @@ import CenterAlign from '&src/components/CenterAlign';
 import StatusChipOrSelect from '&src/components/StatusChipOrSelect';
 import RoleBasedStepper from '&src/components/RoleBasedStepper';
 import { isCO, isRO, PAYMENT_AGGREGATOR_WORKFLOW } from '&src/constants/PaymentAggregratorConstant';
+import applicationServices from '&src/services/applications';
+import useStatusWiseAlert from '&src/components/ToastNotifications/useStatusWiseAlert';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 
@@ -69,6 +70,44 @@ export default function ApplicationFlowTable({
   const [expandedRow, setExpandedRow] = useState(null);
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const { generatePO } = usePOGenerator();
+
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [selectedRejectApp, setSelectedRejectApp] = useState(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejectLoading, setRejectLoading] = useState(false);
+  const { successNotification, errorNotification } = useStatusWiseAlert();
+
+  const handleOpenRejectModal = (customer) => {
+    setSelectedRejectApp(customer);
+    setRejectReason('');
+    setRejectDialogOpen(true);
+  };
+
+  const handleConfirmReject = async () => {
+    if (!selectedRejectApp) return;
+    if (!rejectReason.trim()) {
+      errorNotification("Please enter a reason for rejection.");
+      return;
+    }
+    setRejectLoading(true);
+    try {
+      const userDetails = JSON.parse(sessionStorage.getItem('userDetails') || '{}');
+      const approverId = userDetails.pfNumber || userDetails.employeeId || 'CO User';
+      await applicationServices.updateApplication(selectedRejectApp.applicationId, {
+        status: "rejected",
+        reasonOfRejection: rejectReason,
+        approvedByCOId: approverId
+      });
+      successNotification("Application rejected successfully");
+      setRejectDialogOpen(false);
+      setSelectedRejectApp(null);
+      if (onRefresh) onRefresh();
+    } catch (err) {
+      errorNotification(err?.response?.data?.message || "Failed to reject application");
+    } finally {
+      setRejectLoading(false);
+    }
+  };
 
   const todayStr = getTodayLocalDateString();
 
@@ -369,13 +408,28 @@ export default function ApplicationFlowTable({
                       <TableCell>{customer.applicationId}</TableCell>
                       <TableCell fontWeight={500}>{customer.customerName}</TableCell>
                       <TableCell>
-                        <Typography variant="body2" fontWeight={500}>{customer.branchName || 'N/A'}</Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {customer.regionName || 'N/A'}, {customer.zoneName || 'N/A'}
+                        <Typography variant="body2" fontWeight={600} color="text.primary">
+                          {customer.branchName || 'N/A'}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" display="block">
+                          Region: {customer.regionName || 'N/A'}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" display="block">
+                          Zone: {customer.zoneName || 'N/A'}
                         </Typography>
                       </TableCell>
                       <TableCell>{customer.accountNo}</TableCell>
-                      <TableCell>{customer.category}</TableCell>
+                      <TableCell>
+                        {customer.category && customer.category !== 'N/A' && customer.category !== ''
+                          ? customer.category
+                          : (customer.integrateWith?.includes('edu') || customer.customerName?.toLowerCase().includes('college') || customer.customerName?.toLowerCase().includes('institute')
+                              ? 'Education & Training'
+                              : customer.customerName?.toLowerCase().includes('tech') || customer.customerName?.toLowerCase().includes('edge')
+                                ? 'Information Technology'
+                                : customer.customerName?.toLowerCase().includes('real')
+                                  ? 'Construction & Real Estate'
+                                  : 'General Services')}
+                      </TableCell>
                       <TableCell>
                         <CenterAlign>
                           <StatusChipOrSelect value={customer.status} type="workflow" />
@@ -386,11 +440,11 @@ export default function ApplicationFlowTable({
                           {(() => {
                             const { isVerificationPending, isInitialApproved, isViewMode } = getActionButtons(customer);
                             const showQuoteEvaluationBtn = customer?.isQuoteAddedPA === true && customer?.isMarkUpAddedCO === true && !customer?.isQuoteAcceptRO && !customer?.isFinalApproved;
-                            // const showQuoteEvaluationBtn = customer?.isQuoteAddedPA === true && customer?.isMarkUpAddedCO === true && !customer?.isCustomerAccptance;
                             const showCostBenefitBtn = customer?.isFinalApproved === true;
                             const showDownloadPOBtn = customer?.isFinalApproved === true && isCO;
                             const showCOVerifyBtn = isCO && customer?.isReviewByRO === true && !customer?.isReviewByCO;
                             const showProcessFlowBtn = isCO && customer?.isReviewByRO === true && customer?.isReviewByCO === true;
+                            const canCOReject = isCO && customer?.status !== 'rejected' && !customer?.isFinalApproved;
 
                             return (
                               <>
@@ -501,6 +555,21 @@ export default function ApplicationFlowTable({
                                         </Tooltip>
                                       )
                                     )}
+
+                                {canCOReject && (
+                                  <Tooltip title="CO can reject application at any stage in the flow" arrow placement="top">
+                                    <Button
+                                      size="small"
+                                      variant="outlined"
+                                      color="error"
+                                      startIcon={<CancelOutlined />}
+                                      sx={{ height: "28px", textTransform: "none", fontSize: "10px", px: 1, whiteSpace: "nowrap" }}
+                                      onClick={() => handleOpenRejectModal(customer)}
+                                    >
+                                      Reject
+                                    </Button>
+                                  </Tooltip>
+                                )}
                               </>
                             );
                           })()}
@@ -576,6 +645,36 @@ export default function ApplicationFlowTable({
           variant="outlined"
         />
       </Stack>
+
+      {/* 🔹 CO REJECTION DIALOG */}
+      <Dialog open={rejectDialogOpen} onClose={() => setRejectDialogOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700, color: 'error.main', display: 'flex', alignItems: 'center', gap: 1 }}>
+          <CancelOutlined color="error" /> Reject Customer Application
+        </DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="body2" mb={2}>
+            Are you sure you want to reject application <strong>#{selectedRejectApp?.applicationId}</strong> ({selectedRejectApp?.customerName})?
+          </Typography>
+          <TextField
+            fullWidth
+            multiline
+            rows={3}
+            label="Reason for Rejection"
+            placeholder="Enter specific reason for rejecting this application..."
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            required
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setRejectDialogOpen(false)} variant="outlined" color="inherit">
+            Cancel
+          </Button>
+          <Button onClick={handleConfirmReject} variant="contained" color="error" disabled={rejectLoading}>
+            {rejectLoading ? "Rejecting..." : "Confirm Reject"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

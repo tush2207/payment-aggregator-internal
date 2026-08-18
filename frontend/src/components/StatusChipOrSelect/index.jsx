@@ -37,6 +37,7 @@ const CHIP_CONFIG = {
   sendtoaggregators: { label: "Send to Aggregators", color: "#5E5CE6" },
   rejectedbyro: { label: "Rejected by RO", color: "#FF3B30" },
   rejectedbyzo: { label: "Rejected by ZO",color: "#B00020"},
+  rejectedbyco: { label: "Rejected by CO", color: "#FF3B30" },
   quoterequested: {label: "Quote Requested",color: "#7B1FA2"},
   quotesubmitted: {label: "Quote Submitted",color: "#FF9800"},
   quoteaccepted:{label: "Quote Accepted",color: "#388E3C"},

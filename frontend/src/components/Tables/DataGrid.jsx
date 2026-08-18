@@ -77,31 +77,45 @@ export default function DataGridTable(props) {
         getRowId={getRowId}
         hideFooter={filteredRows?.length < 1}
         sx={{
-          border: 'none',
+          border: '1px solid #cbd5e1',
+          borderRadius: 2,
           fontFamily: "'Inter', sans-serif",
           minHeight: tableHeight,
-          '& .MuiDataGrid-columnHeaders': {
-            bgcolor: 'linear-gradient(90deg, #4e65a7, #1b2851)',
-            fontWeight: 600,
-            fontSize: 14,
+          '& .MuiDataGrid-columnHeaders, & .MuiDataGrid-columnHeader, & .MuiDataGrid-columnHeaderRow': {
+            background: 'linear-gradient(135deg, #0a2342 0%, #0d3b6e 100%) !important',
+            backgroundColor: '#0a2342 !important',
+            color: '#ffffff !important',
+            borderBottom: '2px solid #071830',
+          },
+          '& .MuiDataGrid-columnHeaderTitle': {
+            color: '#ffffff !important',
+            fontWeight: 700,
+            fontSize: '12px',
+            letterSpacing: '0.4px',
+            textTransform: 'uppercase',
+          },
+          '& .MuiDataGrid-sortIcon, & .MuiDataGrid-menuIconButton, & .MuiDataGrid-iconButtonContainer': {
+            color: '#ffffff !important',
           },
           '& .MuiDataGrid-row': {
             borderRadius: 1,
-            transition: 'all 0.3s ease',
+            transition: 'all 0.2s ease',
             '&:hover': {
-              bgcolor: 'rgba(78,101,167,0.1)',
-              transform: 'scale(1.01)',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+              bgcolor: '#f1f5f9',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
             },
           },
           '& .MuiDataGrid-row:nth-of-type(odd)': {
-            bgcolor: 'rgba(78,101,167,0.03)',
+            bgcolor: '#f8fafc',
           },
           '& .MuiDataGrid-cell': {
-            fontSize: 13,
+            fontSize: 12,
+            fontWeight: 500,
+            color: '#1e293b',
           },
           '& .MuiDataGrid-footerContainer': {
-            borderTop: '1px solid #e0e0e0',
+            borderTop: '1px solid #cbd5e1',
+            bgcolor: '#f8fafc',
           },
           '& .MuiDataGrid-virtualScroller': {
             scrollbarWidth: 'thin',

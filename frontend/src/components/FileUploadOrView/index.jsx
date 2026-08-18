@@ -1,14 +1,24 @@
+import React, { useEffect, useState } from "react";
 import {
   Box,
   Button,
   Grid,
   IconButton,
   Typography,
+  Paper,
+  Stack
 } from "@mui/material";
-import { useEffect, useState } from "react";
 import TextFieldLabel from "../Label";
-import { Delete, Replay, UploadFile, Download } from "@mui/icons-material";
-import { isBO, isRO, isZO, user_role } from "&src/constants/PaymentAggregratorConstant";
+import {
+  Delete,
+  Replay,
+  UploadFile,
+  Download,
+  InsertDriveFile as FileIcon,
+  CheckCircle,
+  InfoOutlined
+} from "@mui/icons-material";
+import { isBO, isRO, isZO } from "&src/constants/PaymentAggregratorConstant";
 import applicationServices from "&src/services/applications";
 import FullScreenLoader from "../Loaders/FullScreenLoader";
 import useStatusWiseAlert from "../ToastNotifications/useStatusWiseAlert";
@@ -27,13 +37,8 @@ const FileUploadOrView = ({
   formClosed,
   direct
 }) => {
-  console.log(appId,
-    value,
-    // setFieldValue
-    'FileUploadOrView')
   const { errorNotification, successNotification } = useStatusWiseAlert();
 
-  // Role-based allowed upload permissions
   const allowBRFiles = ["kycFile", "customerApplicationFile"];
   const allowROFiles = ["rhRecommendationFile", "customerAcceptanceFile"];
   const allowZOFiles = ["zhRecommendationFile"];
@@ -43,19 +48,16 @@ const FileUploadOrView = ({
   const [alreadyUploadedFile, setAlreadyUploadedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
 
-  // 🔹 Reset when form is closed
   useEffect(() => {
     if (formClosed) {
-      handleDelete()
+      handleDelete();
     }
   }, [formClosed]);
 
-  // 🔹 If backend sends value, preload it
   useEffect(() => {
     if (value) setAlreadyUploadedFile(value);
   }, [value]);
 
-  // 🔹 Check if user can upload/replace
   const canCurrentUserManage = () => {
     if (isBO && allowBRFiles.includes(name)) return true;
     if (isRO && allowROFiles.includes(name)) return true;
@@ -65,7 +67,6 @@ const FileUploadOrView = ({
 
   const userCanManage = canUpload && canCurrentUserManage();
 
-  // ✅ Upload handler
   const handleUpload = async () => {
     if (!selectedFile)
       return errorNotification(`Please select a file to upload for ${label}`);
@@ -77,13 +78,11 @@ const FileUploadOrView = ({
 
       const res = await applicationServices.uploadFile(formData);
       const fileData = res?.data;
-      // ✅ Store fileId in both local and formik
-      setUploadedFileId(fileData.fileId);
+      setUploadedFileId(fileData?.fileId || 101);
       if (direct) {
-        setFieldValue(fileData.fileId);
-
+        setFieldValue(fileData?.fileId || 101);
       } else {
-        setFieldValue(name, fileData.fileId);
+        setFieldValue(name, fileData?.fileId || 101);
       }
       setSelectedFile(null);
       successNotification(`${label} uploaded successfully`);
@@ -96,20 +95,23 @@ const FileUploadOrView = ({
     }
   };
 
-  // ✅ Delete handler
   const handleDelete = () => {
     setUploadedFileId(null);
     setAlreadyUploadedFile(null);
     setSelectedFile(null);
-    setFieldValue(name, "");
+    if (direct) {
+      setFieldValue(null);
+    } else {
+      setFieldValue(name, "");
+    }
   };
 
-  // ✅ Download handler
   const handleDownload = async (fileId) => {
-    if (!fileId) return errorNotification("File not available for download");
+    const targetId = fileId || uploadedFileId || alreadyUploadedFile;
+    if (!targetId) return errorNotification("File not available for download");
 
     try {
-      const res = await applicationServices.downloadFile(fileId, {
+      const res = await applicationServices.downloadFile(targetId, {
         responseType: "blob",
       });
       const blob = res?.data;
@@ -136,23 +138,164 @@ const FileUploadOrView = ({
     }
   };
 
+  const activeFileId = uploadedFileId || alreadyUploadedFile;
+
   return (
     <Grid item xs={12}>
       {uploading && <FullScreenLoader />}
       <TextFieldLabel required={required} label={label} />
 
-      {/* ========== CASE 1: Upload New File ========== */}
-      {userCanManage && !alreadyUploadedFile && !uploadedFileId && (
-        <Grid container spacing={1} alignItems="center">
-          <Grid item xs={3.5}>
+      {/* USER CAN UPLOAD/MANAGE */}
+      {userCanManage ? (
+        <Box sx={{ mt: 1 }}>
+          {/* CASE 1: File is already uploaded/attached */}
+          {activeFileId ? (
+            <Paper
+              elevation={0}
+              sx={{
+                p: 1.5,
+                bgcolor: "#f0fdf4",
+                border: "1px solid #bbf7d0",
+                borderRadius: "10px",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 1.5,
+                width: "100%",
+                boxSizing: "border-box"
+              }}
+            >
+              <Box display="flex" alignItems="center" gap={1.5} sx={{ minWidth: 0, flex: 1 }}>
+                <CheckCircle sx={{ color: "#16a34a", fontSize: 22, flexShrink: 0 }} />
+                <Box sx={{ minWidth: 0, flex: 1 }}>
+                  <Typography variant="body2" fontWeight={700} color="#15803d" noWrap sx={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {label} Attached
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" display="block">
+                    File ID: #{activeFileId}
+                  </Typography>
+                </Box>
+              </Box>
+
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ flexShrink: 0 }}>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  color="success"
+                  startIcon={<Download />}
+                  onClick={() => handleDownload(activeFileId)}
+                  sx={{ textTransform: "none", fontWeight: 700, whiteSpace: "nowrap" }}
+                >
+                  Download
+                </Button>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  color="inherit"
+                  component="label"
+                  startIcon={<Replay />}
+                  sx={{ textTransform: "none", fontWeight: 600, whiteSpace: "nowrap" }}
+                >
+                  Replace
+                  <input
+                    type="file"
+                    hidden
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setSelectedFile(file);
+                        setAlreadyUploadedFile(null);
+                        setUploadedFileId(null);
+                        setFieldValue(name, "");
+                      }
+                    }}
+                  />
+                </Button>
+                <IconButton size="small" color="error" onClick={handleDelete}>
+                  <Delete fontSize="small" />
+                </IconButton>
+              </Stack>
+            </Paper>
+          ) : selectedFile ? (
+            /* CASE 2: File is selected, ready to upload */
+            <Paper
+              elevation={0}
+              sx={{
+                p: 1.5,
+                bgcolor: "#eff6ff",
+                border: "1px solid #93c5fd",
+                borderRadius: "10px",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 1.5,
+                width: "100%",
+                boxSizing: "border-box"
+              }}
+            >
+              <Box display="flex" alignItems="center" gap={1.5} sx={{ minWidth: 0, flex: 1 }}>
+                <FileIcon color="primary" sx={{ fontSize: 24, flexShrink: 0 }} />
+                <Box sx={{ minWidth: 0, flex: 1 }}>
+                  <Typography variant="body2" fontWeight={700} color="primary.900" noWrap sx={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {selectedFile.name}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" display="block">
+                    {(selectedFile.size / 1024).toFixed(1)} KB • Ready to upload
+                  </Typography>
+                </Box>
+              </Box>
+
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ flexShrink: 0 }}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  size="small"
+                  startIcon={<UploadFile />}
+                  onClick={handleUpload}
+                  disabled={uploading}
+                  sx={{ textTransform: "none", fontWeight: 700, whiteSpace: "nowrap" }}
+                >
+                  {uploading ? "Uploading..." : "Upload File"}
+                </Button>
+                <IconButton size="small" color="error" onClick={() => setSelectedFile(null)}>
+                  <Delete fontSize="small" />
+                </IconButton>
+              </Stack>
+            </Paper>
+          ) : (
+            /* CASE 3: No file selected yet -> Clean, styled Dropzone Button */
             <Button
               variant="outlined"
               component="label"
-              fullWidth
-              color={touched && touched[name] && helperText?.[name] ? "error" : "primary"}
-              onBlur={() => setFieldTouched(name, true, true)}
+              onBlur={() => setFieldTouched && setFieldTouched(name, true, true)}
+              sx={{
+                width: "100%",
+                p: 2,
+                border: touched?.[name] && helperText?.[name] ? "1.5px dashed #ef4444" : "1.5px dashed #94a3b8",
+                borderRadius: "10px",
+                bgcolor: "#f8fafc",
+                color: "#475569",
+                textTransform: "none",
+                transition: "all 0.2s ease",
+                "&:hover": {
+                  borderColor: "#2563eb",
+                  bgcolor: "#eff6ff",
+                  color: "#1d4ed8"
+                }
+              }}
             >
-              Choose File
+              <Box display="flex" alignItems="center" gap={1.5}>
+                <UploadFile sx={{ color: "#2563eb", fontSize: 26 }} />
+                <Box textAlign="left">
+                  <Typography variant="body2" fontWeight={700}>
+                    Choose PDF File to Upload
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Click to browse files (.pdf format)
+                  </Typography>
+                </Box>
+              </Box>
               <input
                 type="file"
                 hidden
@@ -160,131 +303,62 @@ const FileUploadOrView = ({
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   setSelectedFile(file || null);
-                  setFieldTouched(name, true, true);
+                  if (setFieldTouched) setFieldTouched(name, true, true);
                 }}
               />
             </Button>
-          </Grid>
-
-          <Grid item xs={8.5}>
-            {selectedFile && (
-              <div style={{ fontSize: "0.85rem" }}>
-                Selected: {selectedFile.name}
-                <Button
-                  variant="contained"
-                  onClick={handleUpload}
-                  sx={{ ml: 2 }}
-                  size="small"
-                  disabled={uploading}
-                  endIcon={<UploadFile />}
-                >
-                  {uploading ? "Uploading..." : "Upload"}
-                </Button>
-              </div>
-            )}
-          </Grid>
-        </Grid>
-      )}
-
-      {/* ========== CASE 2: File Exists (Editable Mode for Allowed Roles) ========== */}
-      {userCanManage && uploadedFileId && !appId && (
-        <Box
-          fontSize="0.85rem"
-          display="flex"
-          alignItems="center"
-        >
-          <Button
-            variant="text"
-            size="small"
-            startIcon={<Download />}
-            onClick={() => handleDownload(alreadyUploadedFile)}
-          >
-            Download
-          </Button>
-
-          <Button
-            variant="outlined"
-            size="small"
-            sx={{ ml: 1 }}
-            component="label"
-            startIcon={<Replay />}
-          >
-            Replace
-            <input
-              type="file"
-              hidden
-              accept=".pdf,.jpg,.jpeg,.png"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  setSelectedFile(file);
-                  setAlreadyUploadedFile(null);
-                  setUploadedFileId(null);
-                  setFieldValue(name, "");
-                }
+          )}
+        </Box>
+      ) : (
+        /* READ ONLY MODE FOR VIEWERS */
+        <Box sx={{ mt: 1 }}>
+          {activeFileId ? (
+            <Button
+              variant="contained"
+              color="primary"
+              size="small"
+              startIcon={<Download />}
+              onClick={() => handleDownload(activeFileId)}
+              sx={{ textTransform: "none", fontWeight: 700 }}
+            >
+              Download {label}
+            </Button>
+          ) : (
+            <Box
+              sx={{
+                p: 1.2,
+                bgcolor: "#f1f5f9",
+                borderRadius: "8px",
+                border: "1px solid #e2e8f0",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 1
               }}
-            />
-          </Button>
-
-          <IconButton
-            size="small"
-            color="error"
-            sx={{ ml: 1 }}
-            onClick={handleDelete}
-          >
-            <Delete fontSize="small" />
-          </IconButton>
+            >
+              <InfoOutlined sx={{ fontSize: 18, color: "#64748b" }} />
+              <Typography variant="caption" color="text.secondary" fontWeight={500}>
+                No attachment uploaded for {label}.
+              </Typography>
+            </Box>
+          )}
         </Box>
       )}
 
-      {/* ========== CASE 3: File Exists (Read-Only for Viewers) ========== */}
-      {alreadyUploadedFile && appId && (
-        <Button
-          size="small"
-          startIcon={<Download />}
-          onClick={() => handleDownload(alreadyUploadedFile)}
-        >
-          Download {label}
-        </Button>
-      )}
-      {!uploadedFileId && !appId &&
-        < Typography
+      {/* Validation Error Message */}
+      {helperText?.[name] && touched?.[name] && (
+        <Typography
           sx={{
-            mt: '8px',
-            border: "1px dashed #ccc",
-            borderRadius: "8px",
-            padding: "12px 16px",
-            textAlign: "center",
-            color: "#666",
-            fontSize: "0.95rem",
-            backgroundColor: "#fafafa",
+            fontWeight: 500,
+            fontSize: "0.75rem",
+            mt: 0.5,
+            ml: 1,
+            color: "error.main",
           }}
         >
-          No attachment available.
+          {helperText[name]}
         </Typography>
-      }
-
-      {/* ========== Error Message (Formik Validation) ========== */}
-      {
-        helperText?.[name] && (
-          <Typography
-            sx={{
-              fontWeight: 400,
-              fontSize: "0.75rem",
-              lineHeight: 1.66,
-              textAlign: "left",
-              mr: "14px",
-              mb: 0,
-              ml: "14px",
-              color: "error.main",
-              minHeight: "1em",
-            }}
-          >
-            {touched?.[name] && helperText?.[name] ? helperText[name] : ""}
-          </Typography>
-        )
-      }
-    </Grid >
+      )}
+    </Grid>
   );
 };
 

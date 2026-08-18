@@ -5,7 +5,8 @@ from fastapi.responses import FileResponse
 from fastapi.openapi.docs import get_swagger_ui_html
 
 from app.database.engine import init_db
-from app.api.routes import auth, users, aggregators, applications, helpdesk
+from app.api.routes import auth, users, aggregators, applications, helpdesk, audit
+from app.middleware.audit_middleware import GlobalAuditMiddleware
 
 app = FastAPI(docs_url="/docs", redoc_url="/redoc")
 
@@ -17,6 +18,7 @@ origins = [
     "https://yourdomain.com"
 ]
 
+app.add_middleware(GlobalAuditMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -46,6 +48,7 @@ app.include_router(users.router)
 app.include_router(aggregators.router)
 app.include_router(applications.router)
 app.include_router(helpdesk.router)
+app.include_router(audit.router)
 
 
 

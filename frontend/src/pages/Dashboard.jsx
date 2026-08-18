@@ -202,6 +202,7 @@ export default function Dashboard() {
         steps={PAYMENT_AGGREGATOR_WORKFLOW([])}
         showDescription
         allActive
+        showTooltip={false}
         variant="qonto"
       />
 

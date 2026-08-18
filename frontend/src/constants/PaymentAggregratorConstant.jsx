@@ -312,55 +312,68 @@ export const PAYMENT_PROJECTIONS = [
   'Debit card'
 ];
 
+const safeFormatDate = (dateStr, isCompleted = false, fallbackBaseDate = null) => {
+  if (dateStr) {
+    const d = new Date(dateStr);
+    if (!isNaN(d.getTime())) {
+      return formatDateAndTime(dateStr);
+    }
+  }
+  if (isCompleted || fallbackBaseDate) {
+    const base = fallbackBaseDate ? new Date(fallbackBaseDate) : new Date();
+    if (!isNaN(base.getTime())) {
+      return formatDateAndTime(base);
+    }
+    return formatDateAndTime(new Date());
+  }
+  return null;
+};
+
 export const PAYMENT_AGGREGATOR_WORKFLOW = (applicationStatus) => [
   {
     role: 'BO / RO / ZO / CO',
     label: 'Application Submission',
     description: 'Branch submits application and documents.',
     icon: <DescriptionIcon />,
-    status: applicationStatus?.isApplicationSubmittedBR,
+    status: applicationStatus?.isApplicationSubmittedBR ?? true,
+    date: safeFormatDate(applicationStatus?.createdAt, true),
+    approvedBy: applicationStatus?.createdByBRId ? `ID: ${applicationStatus.createdByBRId}` : 'Branch User',
   },
   {
     role: 'BO / RO / ZO / CO',
     label: 'RO / ZO Review',
     description: 'RO / ZO reviews and uploads RH / ZH Recommendation.',
     icon: <RateReviewIcon />,
-    status: applicationStatus?.isReviewByRO,
+    status: applicationStatus?.isReviewByRO || applicationStatus?.isReviewByZO,
+    date: safeFormatDate(applicationStatus?.approvedByRODate || applicationStatus?.approvedByZODate || (applicationStatus?.isReviewByRO ? applicationStatus?.createdAt : null), applicationStatus?.isReviewByRO || applicationStatus?.isReviewByZO, applicationStatus?.createdAt),
+    approvedBy: applicationStatus?.approvedByROId ? `ID: ${applicationStatus.approvedByROId}` : applicationStatus?.approvedByZOId ? `ID: ${applicationStatus.approvedByZOId}` : 'RO User',
   },
-  // {
-  //   role: 'BO / RO / ZO / CO',
-  //   label: 'ZO Review',
-  //   description: 'ZO reviews and uploads ZH Recommendation.',
-  //   icon: <RateReviewIcon />,
-  //   status: applicationStatus?.isReviewByZO,
-  // },
   {
     role: 'BO / RO / ZO / CO',
     label: 'CO Review',
     description: 'CO reviews and forwards details to Aggregator.',
     icon: <ForwardToInboxIcon />,
     status: applicationStatus?.isReviewByCO,
-  },
-  {
-    role: 'CO',
-    label: 'CO Review',
-    description: 'Forwards details to Aggregator for quote submission.',
-    icon: <ForwardToInboxIcon />,
-    status: applicationStatus?.isReviewByCO,
+    date: safeFormatDate(applicationStatus?.approvedByCODate || (applicationStatus?.isReviewByCO ? applicationStatus?.createdAt : null), applicationStatus?.isReviewByCO, applicationStatus?.createdAt),
+    approvedBy: applicationStatus?.approvedByCOId ? `ID: ${applicationStatus.approvedByCOId}` : 'CO User',
   },
   {
     role: 'AEPA',
     label: 'Quote Submission',
     description: 'Aggregator submits quotes.',
     icon: <UploadIcon />,
-    status: applicationStatus?.isQuoteAddedPA,
+    status: applicationStatus?.isQuoteAddedPA || applicationStatus?.isAggregatorAdded,
+    date: safeFormatDate(applicationStatus?.quoteAddedPADate || ((applicationStatus?.isQuoteAddedPA || applicationStatus?.isAggregatorAdded) ? applicationStatus?.createdAt : null), (applicationStatus?.isQuoteAddedPA || applicationStatus?.isAggregatorAdded), applicationStatus?.createdAt),
+    approvedBy: applicationStatus?.finalizedAggregatorName || 'Aggregator (PA)',
   },
   {
     role: 'CO',
     label: 'Quote Analysis',
-    description: 'CO selects suitable quote and applies mark-up .',
+    description: 'CO selects suitable quote and applies mark-up.',
     icon: <CalculateIcon />,
     status: applicationStatus?.isQuoteReviewCO || applicationStatus?.isMarkUpAddedCO,
+    date: safeFormatDate(applicationStatus?.quoteReviewCODate || ((applicationStatus?.isQuoteReviewCO || applicationStatus?.isMarkUpAddedCO) ? applicationStatus?.createdAt : null), (applicationStatus?.isQuoteReviewCO || applicationStatus?.isMarkUpAddedCO), applicationStatus?.createdAt),
+    approvedBy: applicationStatus?.approvedByQuoteId ? `ID: ${applicationStatus.approvedByQuoteId}` : applicationStatus?.approvedByCOId ? `ID: ${applicationStatus.approvedByCOId}` : 'CO User',
   },
   {
     role: 'RO / CO',
@@ -368,6 +381,8 @@ export const PAYMENT_AGGREGATOR_WORKFLOW = (applicationStatus) => [
     description: 'Customer accepts terms.',
     icon: <ThumbUpAltIcon />,
     status: applicationStatus?.isQuoteAcceptRO,
+    date: safeFormatDate(applicationStatus?.quoteAcceptRODate || (applicationStatus?.isQuoteAcceptRO ? applicationStatus?.createdAt : null), applicationStatus?.isQuoteAcceptRO, applicationStatus?.createdAt),
+    approvedBy: applicationStatus?.approvedByROId ? `ID: ${applicationStatus.approvedByROId}` : 'Customer',
   },
   {
     role: 'BO / RO / ZO / CO',
@@ -375,6 +390,8 @@ export const PAYMENT_AGGREGATOR_WORKFLOW = (applicationStatus) => [
     description: 'CO verifies and issues PO.',
     icon: <FactCheckIcon />,
     status: applicationStatus?.isFinalApproved,
+    date: safeFormatDate(applicationStatus?.finalApprovedDate || (applicationStatus?.isFinalApproved ? applicationStatus?.createdAt : null), applicationStatus?.isFinalApproved, applicationStatus?.createdAt),
+    approvedBy: applicationStatus?.approvedByCOId ? `ID: ${applicationStatus.approvedByCOId}` : 'CO User',
   },
 ];
 

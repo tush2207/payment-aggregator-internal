@@ -331,14 +331,11 @@ export const getComponentsOverride = () => ({
             root: {
                 background: GRADIENTS.navy,
                 '& th': {
-                    padding: '10px 14px !important',
-                    fontSize: '12.5px',
+                    padding: '10px 14px',
+                    fontSize: '12px',
                     fontWeight: 700,
-                    color: '#ffffff',
-                    letterSpacing: '0.5px',
+                    letterSpacing: '0.4px',
                     textTransform: 'uppercase',
-                    borderBottom: '2px solid rgba(255,255,255,0.12)',
-                    textShadow: '0 1px 3px rgba(0,0,0,0.3)',
                     userSelect: 'none',
                     whiteSpace: 'nowrap',
                 },
@@ -351,21 +348,8 @@ export const getComponentsOverride = () => ({
         styleOverrides: {
             root: {
                 transition: 'all 0.2s ease',
-                '&:nth-of-type(even)': {
-                    background: alpha(NAVY[700], 0.025),
-                },
-                '&:nth-of-type(odd)': {
-                    background: alpha(NAVY[700], 0.025),
-                },
                 '&:hover': {
-                    background: `${alpha(NAVY[700], 0.05)} !important`,
-                    '& td': { color: NAVY[700] },
-                },
-                '&.Mui-selected': {
-                    background: `${alpha(RED[600], 0.06)} !important`,
-                    '&:hover': {
-                        background: `${alpha(RED[600], 0.1)} !important`,
-                    },
+                    background: alpha(NAVY[700], 0.04),
                 },
             },
         },
@@ -375,14 +359,13 @@ export const getComponentsOverride = () => ({
     MuiTableCell: {
         styleOverrides: {
             root: {
-                padding: '9px 14px !important',
+                padding: '9px 14px',
                 fontSize: '13px',
                 borderBottom: `1px solid ${alpha(NAVY[700], 0.07)}`,
                 color: GREY[700],
             },
             head: {
-                background: 'transparent',
-                color: '#ffffff !important',
+                fontWeight: 700,
             },
         },
     },
@@ -391,20 +374,28 @@ export const getComponentsOverride = () => ({
     MuiDataGrid: {
         styleOverrides: {
             root: {
-                border: 'none',
+                border: '1px solid #cbd5e1',
                 borderRadius: '16px',
                 overflow: 'hidden',
-                '& .MuiDataGrid-columnHeaders': {
-                    background: GRADIENTS.navy,
-                    borderBottom: 'none',
+                '& .MuiDataGrid-columnHeaders, & .MuiDataGrid-columnHeader, & .MuiDataGrid-columnHeaderRow': {
+                    background: 'linear-gradient(135deg, #0a2342 0%, #0d3b6e 100%) !important',
+                    backgroundColor: '#0a2342 !important',
+                    color: '#ffffff !important',
+                    borderBottom: '2px solid #071830',
                     minHeight: '48px !important',
                 },
                 '& .MuiDataGrid-columnHeaderTitle': {
-                    color: '#ffffff',
+                    color: '#ffffff !important',
                     fontWeight: 700,
-                    fontSize: '12.5px',
-                    letterSpacing: '0.5px',
+                    fontSize: '12px',
+                    letterSpacing: '0.4px',
                     textTransform: 'uppercase',
+                },
+                '& .MuiDataGrid-columnHeaderTitleContainer': {
+                    color: '#ffffff !important',
+                },
+                '& .MuiDataGrid-sortIcon, & .MuiDataGrid-menuIconButton, & .MuiDataGrid-iconButtonContainer': {
+                    color: '#ffffff !important',
                 },
                 '& .MuiDataGrid-columnSeparator': { display: 'none' },
                 '& .MuiDataGrid-row:hover': {
@@ -422,8 +413,6 @@ export const getComponentsOverride = () => ({
                     borderTop: `1px solid ${alpha(NAVY[700], 0.1)}`,
                     background: alpha(NAVY[700], 0.02),
                 },
-                '& .MuiDataGrid-sortIcon': { color: '#ffffff' },
-                '& .MuiDataGrid-menuIconButton': { color: '#ffffff' },
             },
         },
     },

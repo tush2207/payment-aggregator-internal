@@ -1,8 +1,6 @@
 import React from 'react';
-import { Stack, Typography, Divider, Button, Alert } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
+import { Stack, Typography, Button, Alert, Box } from '@mui/material';
 import { isRO, isZO } from '&src/constants/PaymentAggregratorConstant';
-import { ContactMail, People } from '@mui/icons-material';
 
 const SectionHeader = ({
   title = 'Section Title',
@@ -13,47 +11,49 @@ const SectionHeader = ({
   subComponent,
   color
 }) => {
-  const theme = useTheme();
   return (
-    <>
+    <Box sx={{ mb: 2 }}>
       <Stack
-        direction='row'
-        justifyContent='space-between'
-        alignItems='center'
-      // pb={1}
+        direction="row"
+        justifyContent="space-between"
+        alignItems="center"
       >
         <Typography
-          fontSize='20px'
-          fontWeight='700'
-          color={color}
+          fontSize="20px"
+          fontWeight="700"
+          color={color || "#0a2342"}
           sx={{
-            background: theme.custom?.gradients?.main || theme.palette.primary.main,
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: !color && 'transparent',
+            letterSpacing: "-0.2px"
           }}
         >
           {title}
         </Typography>
 
         {showButton && (
-          <Button variant='contained' onClick={onButtonClick} {...buttonProps}>
+          <Button variant="contained" onClick={onButtonClick} {...buttonProps}>
             {buttonText}
           </Button>
         )}
 
-        {!showButton && (isRO || isZO) && <Alert severity='info'>Note: Click <b>Verify</b> button review and <b>Approve or Reject</b> application. </Alert>}
-
+        {!showButton && (isRO || isZO) && (
+          <Alert severity="info" sx={{ py: 0, fontSize: "12px" }}>
+            Note: Click <b>Verify</b> button to review and <b>Approve or Reject</b> application.
+          </Alert>
+        )}
       </Stack>
       {subComponent}
-      <Divider
+      <Box
         sx={{
-          borderBottomWidth: 3,
-          marginBottom: 2,
-          marginTop: 0.5
+          height: "3px",
+          width: "100%",
+          background: "linear-gradient(90deg, #0a2342 0%, #0d3b6e 40%, #f6d365 100%)",
+          borderRadius: "2px",
+          mt: 1
         }}
       />
-    </>
+    </Box>
   );
 };
 
 export default SectionHeader;
+

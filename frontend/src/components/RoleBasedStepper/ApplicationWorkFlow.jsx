@@ -17,12 +17,14 @@ import StatusChipOrSelect from '../StatusChipOrSelect';
 const CenteredConnector = styled(StepConnector)(({ theme }) => ({
   [`&.${stepConnectorClasses.alternativeLabel}`]: {
     top: '50%',
+    left: 'calc(-50% + 14px)',
+    right: 'calc(50% + 14px)',
     transform: 'translateY(-50%)',
   },
   [`& .${stepConnectorClasses.line}`]: {
     borderColor: theme.palette.mode === 'dark' ? '#eaeaf0' : '#ccc',
     borderTopWidth: 2,
-    borderRadius: 1,
+    borderRadius: 0,
   },
 }));
 

@@ -124,6 +124,13 @@ class Applications(BaseModel):
     authorisedPersonDesignation: Optional[str] = None
     branchName: Optional[str] = None
     regionName: Optional[str] = None
+    zoneName: Optional[str] = None
+    approvedByRODate: Optional[Any] = None
+    approvedByCODate: Optional[Any] = None
+    quoteAddedPADate: Optional[Any] = None
+    quoteReviewCODate: Optional[Any] = None
+    quoteAcceptRODate: Optional[Any] = None
+    finalApprovedDate: Optional[Any] = None
 
 class ApplicationsUpdate(BaseModel):
     userType: Optional[str] = None
@@ -183,6 +190,13 @@ class ApplicationsUpdate(BaseModel):
     authorisedPersonDesignation: Optional[str] = None
     branchName: Optional[str] = None
     regionName: Optional[str] = None
+    zoneName: Optional[str] = None
+    approvedByRODate: Optional[Any] = None
+    approvedByCODate: Optional[Any] = None
+    quoteAddedPADate: Optional[Any] = None
+    quoteReviewCODate: Optional[Any] = None
+    quoteAcceptRODate: Optional[Any] = None
+    finalApprovedDate: Optional[Any] = None
 
 class ProjectionDetails(BaseModel):
     transactionCount : Any
@@ -263,5 +277,20 @@ class HelpDeskCreate(HelpDeskBase):
 
 class HelpDeskResponse(HelpDeskBase):
     id: int
+    class Config:
+        from_attributes = True
+
+class AuditLogCreate(BaseModel):
+    applicationId: Optional[int] = None
+    action: str
+    stage: Optional[str] = None
+    performedBy: Optional[str] = None
+    userRole: Optional[str] = None
+    details: Optional[str] = None
+    ipAddress: Optional[str] = None
+
+class AuditLogResponse(AuditLogCreate):
+    id: int
+    createdAt: Optional[Any] = None
     class Config:
         from_attributes = True

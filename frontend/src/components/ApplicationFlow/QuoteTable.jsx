@@ -366,10 +366,25 @@ const QuoteTable = ({ applicationDetails, aggregatorId, aggregatorName, isRateAd
       </Box>
       <Box sx={{ width: "100%", overflow: "hidden" }}>
         <Table size="small" sx={{ width: "100%", tableLayout: "auto" }}>
-          <TableHead sx={{ bgcolor: "#f1f5f9" }}>
-            <TableRow>
+          <TableHead>
+            <TableRow sx={{ bgcolor: "#0f172a" }}>
               {PROJECTION_COLUMNS_FOR_CO.map((col, idx) => (
-                <TableCell key={idx} sx={{ fontWeight: 700, fontSize: "10px", py: "6px !important", px: "4px !important", color: "#475569", whiteSpace: "normal !important", wordBreak: "break-word", lineHeight: 1.1, verticalAlign: "top", textTransform: "none !important" }}>
+                <TableCell
+                  key={idx}
+                  sx={{
+                    fontWeight: 700,
+                    fontSize: "10px",
+                    py: "8px !important",
+                    px: "6px !important",
+                    color: "#ffffff !important",
+                    bgcolor: "#0f172a !important",
+                    whiteSpace: "normal !important",
+                    wordBreak: "break-word",
+                    lineHeight: 1.15,
+                    verticalAlign: "middle",
+                    textTransform: "none !important"
+                  }}
+                >
                   {col}
                 </TableCell>
               ))}

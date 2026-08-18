@@ -157,43 +157,39 @@ const isAccepted = customerDetails?.isQuoteAcceptRO;
 return (
   <Box sx={{ width: "100%", mt: 2, p: 2 }}>
     {/* Downloader & Legend Bar */}
-    <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ mb: 2, bgcolor: "#f8fafc", p: 1.5, borderRadius: "8px", border: "1px solid #e2e8f0" }}>
-      <Typography variant="body2" color="text.secondary" fontWeight={500}>
-        {finalizedAggregatorId ? (
-          { isAccepted && finalizedAggregatorId ? (
+    {isAccepted && (
+      <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ mb: 2, bgcolor: "#f8fafc", p: 1.5, borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+        <Typography variant="body2" color="text.secondary" fontWeight={500}>
+          {finalizedAggregatorId && (
             <span>
               ℹ️ Color Legend: <strong style={{ color: "#16a34a" }}>Green columns</strong> represent the Finalized Aggregator. <strong style={{ color: "#dc2626" }}>Red columns</strong> represent other rejected aggregators.
             </span>
-          ) : (
-            <span>
-              ℹ️ Propose markup charges and select finalized aggregator in the action tabs.
-              ℹ️ Quote Rank Legend: L1 represents the lowest quote based on vendor share, followed by L2, L3. Color highlighting applies once customer acceptance is completed.
-            </span>
           )}
-      </Typography>
-      <Stack direction="row" spacing={1}>
-        <Button
-          variant="outlined"
-          color="primary"
-          size="small"
-          startIcon={<Download />}
-          onClick={handleExportExcel}
-          sx={{ textTransform: "none", fontWeight: 700 }}
-        >
-          Download Excel
-        </Button>
-        <Button
-          variant="outlined"
-          color="primary"
-          size="small"
-          startIcon={<Download />}
-          onClick={handleExportPDF}
-          sx={{ textTransform: "none", fontWeight: 700 }}
-        >
-          Download PDF
-        </Button>
-      </Stack>
-    </Box>
+        </Typography>
+        <Stack direction="row" spacing={1}>
+          <Button
+            variant="outlined"
+            color="primary"
+            size="small"
+            startIcon={<Download />}
+            onClick={handleExportExcel}
+            sx={{ textTransform: "none", fontWeight: 700 }}
+          >
+            Download Excel
+          </Button>
+          <Button
+            variant="outlined"
+            color="primary"
+            size="small"
+            startIcon={<Download />}
+            onClick={handleExportPDF}
+            sx={{ textTransform: "none", fontWeight: 700 }}
+          >
+            Download PDF
+          </Button>
+        </Stack>
+      </Box>
+    )}
     <Box ref={cbaTableRef} sx={{ p: 1, bgcolor: "#ffffff" }}>
       <TableContainer sx={{ overflowX: "auto", maxWidth: "100%" }}>
         <Table size="small" sx={{ width: "100%", tableLayout: "auto", borderCollapse: "collapse" }}>

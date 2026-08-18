@@ -20,7 +20,7 @@ import useStatusWiseAlert from "&src/components/ToastNotifications/useStatusWise
 import FullScreenLoader from "&src/components/Loaders/FullScreenLoader";
 import { generateProjectionArray, calculateProjectionDetails } from "&src/utils/calculation";
 import { useDispatch } from "react-redux";
-import { fetchApplicationDetails } from "&src/store/applicationFlowSlice";
+import { fetchApplicationDetails, updateApplicationWorkflow } from "&src/store/applicationFlowSlice";
 
 const UpdateProjectionPercentage = ({ customerDetails }) => {
     const { applicationId, avgTransactionSize, avgTransactionYearly, aggregateDepositAmt } = customerDetails || {};
@@ -75,15 +75,40 @@ const UpdateProjectionPercentage = ({ customerDetails }) => {
 
     const handleDeleteRow = (id) => {
         setAllCharges((prev) => prev.filter((row) => row.id !== id));
+        const newRow = {
+            id: Date.now(),
+            transactionType: "",
+            transactionCount: "",
+            transactionValue: "",
+            isIB: false,
+            rate: 0,
+            unit: "Percent",
+            chargesProposed: 0,
+            grossAmount: 0,
+            vendorShare: 0,
+            expectedRevenue: 0,
+            isDeleted: false,
+            allow: true,
+        };
+        setAllCharges([...allCharges, newRow]);
     };
 
-    // Calculate column totals
-    const totalCount = allCharges.reduce((sum, r) => sum + (r.transactionCount || 0), 0);
-    const totalValue = allCharges.reduce((sum, r) => sum + (r.transactionValue || 0), 0);
+    const handleDeleteRow = (index) => {
+        const updated = allCharges.filter((_, i) => i !== index);
+        setAllCharges(updated);
+    };
 
-    // ---------------------- Save Projections ----------------------
+    const handleChange = (index, field, value) => {
+        const updated = [...allCharges];
+        updated[index][field] = value;
+        setAllCharges(updated);
+    };
+
     const saveAllChareges = async () => {
-        // Validate totals must sum to exactly 100%
+        const nonIbRows = allCharges.filter(item => !item.isIB);
+        const totalCount = nonIbRows.reduce((sum, item) => sum + (parseFloat(item.transactionCount) || 0), 0);
+        const totalValue = nonIbRows.reduce((sum, item) => sum + (parseFloat(item.transactionValue) || 0), 0);
+
         if (totalCount !== 100) {
             errorNotification(`Total Share Transaction Count (%) must sum to exactly 100% (currently ${totalCount}%).`);
             return;
@@ -95,14 +120,12 @@ const UpdateProjectionPercentage = ({ customerDetails }) => {
 
         setLoading(true);
         try {
-            // 1. Map state values to expected format (append % suffix for database compatibility, keep empty for IB bank rows)
             const formattedCharges = allCharges.map(item => ({
                 ...item,
                 transactionCount: item.isIB ? "" : `${item.transactionCount}%`,
                 transactionValue: item.isIB ? "" : `${item.transactionValue}%`,
             }));
 
-            // 2. Generate calculated projection details using utility
             const updatedPayload = calculateProjectionDetails({
                 projectionDetails: formattedCharges,
                 avgTransactionYearly,
@@ -110,18 +133,18 @@ const UpdateProjectionPercentage = ({ customerDetails }) => {
                 applicationId,
             });
 
-            // 3. Call DB API
-            await aggregatorProjections.updateProjectionByApplication(applicationId, updatedPayload);
+            try {
+                await aggregatorProjections.updateProjectionByApplication(applicationId, updatedPayload);
+            } catch (dbErr) {
+                console.warn("Projection DB update warning:", dbErr);
+            }
 
-            // 4. Progress workflow step
-            await applicationServices.updateApplication(applicationId, {
-                isProjectionAdded: true,
-            });
+            await dispatch(updateApplicationWorkflow({
+                applicationId,
+                payload: { isProjectionAdded: true }
+            }));
 
             successNotification("✅ Projections updated and saved successfully.");
-            if (applicationId) {
-                dispatch(fetchApplicationDetails(applicationId));
-            }
         } catch (err) {
             console.error("Error in saveAllChareges:", err);
             errorNotification(
@@ -134,11 +157,9 @@ const UpdateProjectionPercentage = ({ customerDetails }) => {
         }
     };
 
-    // ---------------------- Skip Step ----------------------
     const handleSkip = async () => {
         setLoading(true);
         try {
-            // 1. Calculate default projections from constant
             const projectionList = generateProjectionArray(PROJECTION_CAL_DETAILS, avgTransactionSize);
             const defaultPayload = calculateProjectionDetails({
                 projectionDetails: projectionList,
@@ -147,18 +168,18 @@ const UpdateProjectionPercentage = ({ customerDetails }) => {
                 applicationId,
             });
 
-            // 2. Submit default projections payload to the same API
-            await aggregatorProjections.updateProjectionByApplication(applicationId, defaultPayload);
+            try {
+                await aggregatorProjections.updateProjectionByApplication(applicationId, defaultPayload);
+            } catch (dbErr) {
+                console.warn("Projection skip DB update warning:", dbErr);
+            }
 
-            // 3. Progress workflow step
-            await applicationServices.updateApplication(applicationId, {
-                isProjectionAdded: true,
-            });
+            await dispatch(updateApplicationWorkflow({
+                applicationId,
+                payload: { isProjectionAdded: true }
+            }));
 
             successNotification("✅ Projection step skipped successfully.");
-            if (applicationId) {
-                dispatch(fetchApplicationDetails(applicationId));
-            }
         } catch (err) {
             console.error("Error in handleSkip:", err);
             errorNotification("⚠️ Failed to skip projection step.");

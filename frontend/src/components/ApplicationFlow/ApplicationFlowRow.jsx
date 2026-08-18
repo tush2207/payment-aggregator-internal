@@ -35,11 +35,11 @@ export default function ApplicationFlowRow({ customer, onRefresh }) {
   const isPendingRO = customer?.isReviewByZO === true && customer?.isReviewByRO === null;
   const isPendingCO = customer?.isReviewByRO === true && customer?.isReviewByCO === null;
 
-  const showUpdateProjections = customer?.isReviewByCO === true && !customer?.isProjectionAdded;
-  const showAddAggregators = customer?.isProjectionAdded === true && !customer?.isAggregatorAdded;
-  const showQuoteAnalysis = customer?.isQuoteAddedPA === true && !customer?.isMarkUpAddedCO;
-  const showCustomerAcceptance = customer?.isMarkUpAddedCO === true && !customer?.isQuoteAcceptRO;
-  const showFinalApproval = customer?.isQuoteAcceptRO === true && !customer?.isFinalApproved;
+  const showUpdateProjections = !customer?.isProjectionAdded;
+  const showAddAggregators = Boolean(customer?.isProjectionAdded) && !customer?.isAggregatorAdded;
+  const showQuoteAnalysis = (Boolean(customer?.isAggregatorAdded) || Boolean(customer?.isQuoteAddedPA)) && !customer?.isMarkUpAddedCO && !customer?.isQuoteReviewCO;
+  const showCustomerAcceptance = (Boolean(customer?.isMarkUpAddedCO) || Boolean(customer?.isQuoteReviewCO)) && !customer?.isQuoteAcceptRO;
+  const showFinalApproval = Boolean(customer?.isQuoteAcceptRO) && !customer?.isFinalApproved;
 
   const handleReviewAction = async (role, status) => {
     if (role === 'ZO') await submitReviewZO(customer.applicationId, status, null);
