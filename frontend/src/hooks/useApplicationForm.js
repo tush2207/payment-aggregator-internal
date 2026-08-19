@@ -150,7 +150,7 @@ const useApplicationForm = ({
         payload.status = isApprove
           ? WORK_FLOW_OPTIONS.APPROVED_BY_CO
           : WORK_FLOW_OPTIONS.REJECTED_BY_CO;
-        payload.approvedByZOId = user_Id;
+        payload.approvedByCOId = user_Id;
         break;
       default:
         break;

@@ -11,7 +11,7 @@ import EndAlignedCell from '&src/components/EndAlignedCell';
 import CenterAlign from '&src/components/CenterAlign';
 import StatusChipOrSelect from '&src/components/StatusChipOrSelect';
 import RoleBasedStepper from '&src/components/RoleBasedStepper';
-import { isCO, isRO, isZO, PAYMENT_AGGREGATOR_WORKFLOW } from "&src/constants/PaymentAggregratorConstant";
+import { isCO, isRO, isZO, PAYMENT_AGGREGATOR_WORKFLOW, deriveApplicationStatus } from "&src/constants/PaymentAggregratorConstant";
 import { formatDateAndTime } from "&src/utils";
 
 // These will be implemented next
@@ -91,7 +91,7 @@ const ApplicationRow = memo(
 
                     <TableCell>
                         <CenterAlign>
-                            <StatusChipOrSelect value={application.status} type="workflow" />
+                            <StatusChipOrSelect value={deriveApplicationStatus(application)} type="workflow" />
                         </CenterAlign>
                     </TableCell>
 

@@ -29,21 +29,24 @@ const CHIP_CONFIG = {
   medium: { label: "Medium", color: "#FFCC00" },
   low: { label: "Low", color: "#AC8E00" },
 
-  // Workflow
+  // Workflow Stages
   applicationSubmitted: { label: "Application Submitted", color: "#0A84FF" },
   approvedbyro: { label: "Approved by RO", color: "#BF5AF2" },
   approvedbyzo: { label: "Approved by ZO", color: "#AC8E00" },
   approvedbyco: { label: "Approved by CO", color: "#5E5CE6" },
   sendtoaggregators: { label: "Send to Aggregators", color: "#5E5CE6" },
+  quoterequested: { label: "Quote Requested", color: "#7B1FA2" },
+  quotesubmitted: { label: "Quote Submitted", color: "#FF9800" },
+  reviewquote: { label: "Quote Analysis", color: "#FF5722" },
+  quoteaccepted: { label: "Customer Accepted", color: "#388E3C" },
+  finalapproval: { label: "Final Approval", color: "#30D158" },
+
+  // Rejections
   rejectedbyro: { label: "Rejected by RO", color: "#FF3B30" },
-  rejectedbyzo: { label: "Rejected by ZO",color: "#B00020"},
+  rejectedbyzo: { label: "Rejected by ZO", color: "#B00020" },
   rejectedbyco: { label: "Rejected by CO", color: "#FF3B30" },
-  quoterequested: {label: "Quote Requested",color: "#7B1FA2"},
-  quotesubmitted: {label: "Quote Submitted",color: "#FF9800"},
-  quoteaccepted:{label: "Quote Accepted",color: "#388E3C"},
-  reviewquote:{label: "Quote Evaluation",color: "#FF5722"},
-  quoterejected:{ label: "Quote Rejected", color: "#FF3B30" },
-  completed: {label: "Completed",color: "#4CAF50"},
+  quoterejected: { label: "Quote Rejected", color: "#FF3B30" },
+  completed: { label: "Completed", color: "#4CAF50" },
 };
 
 // -------------------------------------------------------------
@@ -74,13 +77,13 @@ const WORKFLOW_OPTIONS = [
   "quoterequested",
   "quotesubmitted",
 
-  "quoteaccepted",
-
   "reviewquote",
+  "quoteaccepted",
+  "finalapproval",
 
   "rejectedbyro",
   "rejectedbyzo",
-  // "rejectedbyco",
+  "rejectedbyco",
 
   "quoterejected",
   "completed",

@@ -42,7 +42,7 @@ const usePOGenerator = (applicationDetails, setOpenPOModal, openPOModal) => {
           ...poDetails,
           isQuoteAcceptReviewByCO: true,
           isFinalApproved: true,
-          status: 'completed'
+          status: 'finalapproval'
         };
         await applicationServices.updateApplication(applicationId, updatePayload);
       }

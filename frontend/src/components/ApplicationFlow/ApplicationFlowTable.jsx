@@ -12,7 +12,7 @@ import { formatDateAndTime } from '&src/utils';
 import CenterAlign from '&src/components/CenterAlign';
 import StatusChipOrSelect from '&src/components/StatusChipOrSelect';
 import RoleBasedStepper from '&src/components/RoleBasedStepper';
-import { isCO, isRO, PAYMENT_AGGREGATOR_WORKFLOW } from '&src/constants/PaymentAggregratorConstant';
+import { isCO, isRO, PAYMENT_AGGREGATOR_WORKFLOW, deriveApplicationStatus } from '&src/constants/PaymentAggregratorConstant';
 import applicationServices from '&src/services/applications';
 import useStatusWiseAlert from '&src/components/ToastNotifications/useStatusWiseAlert';
 import * as XLSX from 'xlsx';
@@ -432,7 +432,7 @@ export default function ApplicationFlowTable({
                       </TableCell>
                       <TableCell>
                         <CenterAlign>
-                          <StatusChipOrSelect value={customer.status} type="workflow" />
+                          <StatusChipOrSelect value={deriveApplicationStatus(customer)} type="workflow" />
                         </CenterAlign>
                       </TableCell>
                       <TableCell>

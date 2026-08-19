@@ -104,7 +104,7 @@ export default function useApplicationFlowAPI() {
     return handleApiCall(
       async () => {
         try {
-          await applicationServices.updateApplication(applicationId, { isMarkUpAddedCO: true, isQuoteReviewCO: true });
+          await applicationServices.updateApplication(applicationId, { isMarkUpAddedCO: true, isQuoteReviewCO: true, status: "reviewquote" });
         } catch (err) {
           console.warn("Add markup backend fallback:", err);
         }
@@ -119,7 +119,7 @@ export default function useApplicationFlowAPI() {
     return handleApiCall(
       async () => {
         try {
-          await applicationServices.updateApplication(applicationId, { isQuoteAcceptRO: true });
+          await applicationServices.updateApplication(applicationId, { isQuoteAcceptRO: true, status: "quoteaccepted" });
         } catch (err) {
           console.warn("Customer acceptance backend fallback:", err);
         }
@@ -134,7 +134,7 @@ export default function useApplicationFlowAPI() {
     return handleApiCall(
       async () => {
         try {
-          await applicationServices.updateApplication(applicationId, { isFinalApproved: true });
+          await applicationServices.updateApplication(applicationId, { isFinalApproved: true, status: "finalapproval" });
         } catch (err) {
           console.warn("Finalize PO backend fallback:", err);
         }

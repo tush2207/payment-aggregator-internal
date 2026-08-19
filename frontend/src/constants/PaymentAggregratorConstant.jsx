@@ -74,6 +74,50 @@ export const WORK_FLOW_OPTIONS = {
   REJECTED_BY_CO: 'rejectedbyco',
 };
 
+export const deriveApplicationStatus = (app) => {
+  if (!app) return "applicationSubmitted";
+
+  const statusLower = (app.status || "").toLowerCase();
+  if (statusLower === "rejected" || app.reasonOfRejection) {
+    if (statusLower.startsWith("rejectedby")) return app.status;
+    return "rejectedbyco";
+  }
+
+  if (app.isFinalApproved || statusLower === "finalapproval" || statusLower === "completed") {
+    return "finalapproval";
+  }
+
+  if (app.isQuoteAcceptRO || statusLower === "quoteaccepted") {
+    return "quoteaccepted";
+  }
+
+  if (app.isQuoteReviewCO || app.isMarkUpAddedCO || statusLower === "reviewquote") {
+    return "reviewquote";
+  }
+
+  if (app.isQuoteAddedPA || statusLower === "quotesubmitted") {
+    return "quotesubmitted";
+  }
+
+  if (app.isAggregatorAdded || statusLower === "quoterequested") {
+    return "quoterequested";
+  }
+
+  if (app.isReviewByCO || statusLower === "approvedbyco" || statusLower === "sendtoaggregators") {
+    return "approvedbyco";
+  }
+
+  if (app.isReviewByZO || statusLower === "approvedbyzo") {
+    return "approvedbyzo";
+  }
+
+  if (app.isReviewByRO || statusLower === "approvedbyro") {
+    return "approvedbyro";
+  }
+
+  return app.status || "applicationSubmitted";
+};
+
 export const CONSENT_TEXT = "I confirm that I have verified and recommend this application.";
 
 // export const CONSENT_TEXT_FOR_BR = "I confirm that the application details are correct and have been clarified with the customer.";
