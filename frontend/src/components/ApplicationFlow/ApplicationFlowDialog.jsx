@@ -110,9 +110,10 @@ export default function ApplicationFlowDialog() {
         <AppBar
           position="sticky"
           sx={{
-            background: "linear-gradient(135deg, #0a2342 0%, #0d3b6e 60%, #071830 100%)",
-            boxShadow: "0 4px 20px rgba(10,35,66,0.2)",
-            borderBottom: "2px solid rgba(246, 211, 101, 0.4)",
+            background: "linear-gradient(90deg, #176FC1 0%, #135FA6 40%, #9B0A2E 80%, #CE0F3E 100%)",
+            backgroundColor: "#176FC1",
+            boxShadow: "0 4px 20px rgba(0, 0, 0, 0.25)",
+            borderBottom: "3px solid #CE0F3E",
             borderRadius: 0,
           }}
         >
@@ -156,7 +157,7 @@ export default function ApplicationFlowDialog() {
         </AppBar>
 
         {/* Main Content Area */}
-        <Container maxWidth="xl" sx={{ mt: 2, mb: 2 }}>
+        <Container maxWidth="xl" sx={{ mt: 2, mb: 10, pb: 6 }}>
           {/* Horizontal Workflow Stepper */}
           {currentStep !== 3 && !application?.isFinalApproved && <RoleBasedWorkflowStepper />}
 

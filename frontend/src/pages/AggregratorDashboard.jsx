@@ -6,11 +6,11 @@ import StatusChipOrSelect from '&src/components/StatusChipOrSelect';
 import ExpandableTable from '&src/components/Tables/ExpandableTable';
 import TransactionRateTable from '&src/components/Tables/TransactionRateTable';
 import useStatusWiseAlert from "&src/components/ToastNotifications/useStatusWiseAlert";
-import { GET_ALL_APPLICATION_RESPONSE } from '&src/data/data';
 import useToggle from '&src/hooks/useToggle';
 import applicationServices from '&src/services/applications';
 import { RS } from '&src/utils';
 import { Box, Button, Typography } from '@mui/material';
+import { AccountBalanceWalletRounded } from '@mui/icons-material';
 import { useEffect, useState } from 'react';
 
 const AGGREGRATOR_DASHBOARD_TABLE_COLUMNS = [
@@ -74,8 +74,7 @@ const AggregratorDashboard = () => {
       successNotification('fetch application data successfully.')
     } catch (error) {
       setShowLoader(false);
-      //TODO: remove static data
-      setAllApplicationDetails(GET_ALL_APPLICATION_RESPONSE);
+      setAllApplicationDetails([]);
       console.error('[ERROR] Failed to fetch application data:', error);
       errorNotification(error?.response?.data?.message || 'Failed to fetch application data');
     };
@@ -169,8 +168,13 @@ const AggregratorDashboard = () => {
   ];
 
   return (
-    <>
-      <SectionHeader title="Payment Aggregator" />
+    <Box sx={{ width: '100%', minWidth: 0 }}>
+      {/* ── DAP-style Executive PageHeader ── */}
+      <SectionHeader
+        title="Payment Aggregator Rates & Projections"
+        description="Submit and evaluate aggregator quotation rates as per merchant channel projections."
+        icon={<AccountBalanceWalletRounded />}
+      />
 
       <ExpandableTable
         columns={AGGREGRATOR_DASHBOARD_TABLE_COLUMNS}
@@ -221,7 +225,7 @@ const AggregratorDashboard = () => {
       </DialogWithHeader>
 
       {isLoading && <FullScreenLoader />}
-    </>
+    </Box>
   );
 };
 

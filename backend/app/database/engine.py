@@ -8,20 +8,7 @@ from app.core import config
 # --- Oracle setup ---
 Base = declarative_base()
 
-oracle_engine = create_engine(config.ORACLE_CONNECTION_STRING, echo=True)
-
-try:
-    with oracle_engine.begin() as connection:
-        connection.execute(CreateSequence(Sequence("user_id_seq")))
-        connection.execute(CreateSequence(Sequence("payment_aggregator_id_seq")))
-        connection.execute(CreateSequence(Sequence("manage_aggregator_id_seq")))
-        connection.execute(CreateSequence(Sequence("applications_id_seq")))
-        connection.execute(CreateSequence(Sequence("projection_details_id_seq")))
-        connection.execute(CreateSequence(Sequence("fileStore_id_seq")))
-        connection.execute(CreateSequence(Sequence("helpdesk_details_id_seq")))
-except Exception as e:
-    print(f"Warning: Oracle DB Sequence init failed: {e}")
-
+oracle_engine = create_engine(config.ORACLE_CONNECTION_STRING, echo=False)
 SessionLocal = sessionmaker(bind=oracle_engine, autocommit=False, autoflush=False)
 
 # --- MS SQL setup ---
@@ -30,6 +17,24 @@ mssql_engine = create_engine(config.MSSQL_CONNECTION_STRING)
 MSSQLSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=mssql_engine)
 
 def init_db():
+    try:
+        with oracle_engine.begin() as connection:
+            for seq_name in [
+                "user_id_seq",
+                "payment_aggregator_id_seq",
+                "manage_aggregator_id_seq",
+                "applications_id_seq",
+                "projection_details_id_seq",
+                "fileStore_id_seq",
+                "helpdesk_details_id_seq",
+            ]:
+                try:
+                    connection.execute(CreateSequence(Sequence(seq_name)))
+                except Exception:
+                    pass
+    except Exception as e:
+        print(f"Warning: Oracle DB Sequence init failed: {e}")
+
     try:
         Base.metadata.create_all(bind=oracle_engine)
     except Exception as e:

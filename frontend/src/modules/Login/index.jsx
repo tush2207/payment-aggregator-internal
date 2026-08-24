@@ -18,8 +18,8 @@ import { DEV_ROLES, IS_DEV, useLogin } from "./useLogin";
 // ─────────────────────────────────────────────────────────────────────────────
 
 const ROLE_META = {
-  CO: { accent: "#c0392b", label: "Central Office", short: "CO" },
-  RO: { accent: "#1565c0", label: "Regional Office", short: "RO" },
+  CO: { accent: "#CE0F3E", label: "Central Office", short: "CO" },
+  RO: { accent: "#176FC1", label: "Regional Office", short: "RO" },
   ZO: { accent: "#2e7d32", label: "Zonal Office", short: "ZO" },
   BO: { accent: "#6a1b9a", label: "Branch Office", short: "BO" },
 };
@@ -41,7 +41,7 @@ const FIELD_SX = {
     },
     "&.Mui-focused": {
       background: IS_DEV ? "rgba(255,255,255,0.09)" : "#fff",
-      "& fieldset": { borderColor: "#c0392b", borderWidth: 2 },
+      "& fieldset": { borderColor: "#CE0F3E", borderWidth: 2 },
     },
     "& input::placeholder": {
       color: IS_DEV ? "rgba(255,255,255,0.28)" : undefined,
@@ -80,8 +80,8 @@ const GLOBAL_KEYFRAMES = `
     to   { opacity:1; transform:translateY(0); }
   }
   @keyframes logoFloat {
-    0%,100% { transform:translateY(0px);   filter:drop-shadow(0 4px 10px rgba(192,57,43,0.28)); }
-    50%     { transform:translateY(-5px);  filter:drop-shadow(0 10px 22px rgba(192,57,43,0.50)); }
+    0%,100% { transform:translateY(0px);   filter:drop-shadow(0 4px 10px rgba(206,15,62,0.28)); }
+    50%     { transform:translateY(-5px);  filter:drop-shadow(0 10px 22px rgba(206,15,62,0.50)); }
   }
   @keyframes shimmerBtn {
     0%   { left:-100%; }
@@ -101,9 +101,9 @@ const GLOBAL_KEYFRAMES = `
 // ─────────────────────────────────────────────────────────────────────────────
 
 const ORB_CONFIG = [
-  { size: 420, left: "8%", top: "15%", color: "rgba(192,57,43,0.10)", dur: "13s", delay: "0s" },
-  { size: 360, left: "72%", top: "8%", color: "rgba(13,59,110,0.22)", dur: "17s", delay: "4s" },
-  { size: 300, left: "58%", top: "60%", color: "rgba(192,57,43,0.07)", dur: "15s", delay: "2s" },
+  { size: 420, left: "8%", top: "15%", color: "rgba(206,15,62,0.10)", dur: "13s", delay: "0s" },
+  { size: 360, left: "72%", top: "8%", color: "rgba(23,111,193,0.22)", dur: "17s", delay: "4s" },
+  { size: 300, left: "58%", top: "60%", color: "rgba(206,15,62,0.07)", dur: "15s", delay: "2s" },
   { size: 240, left: "18%", top: "68%", color: "rgba(246,211,101,0.06)", dur: "19s", delay: "7s" },
 ];
 
@@ -254,8 +254,8 @@ const SubmitButton = ({ isLoading, devRole }) => (
       textTransform: "uppercase",
       position: "relative",
       overflow: "hidden",
-      background: "linear-gradient(135deg, #c0392b 0%, #e74c3c 100%)",
-      boxShadow: "0 4px 20px rgba(192,57,43,0.38)",
+      background: "linear-gradient(135deg, #CE0F3E 0%, #E14569 100%)",
+      boxShadow: "0 4px 20px rgba(206,15,62,0.38)",
       transition: "all 0.28s cubic-bezier(0.34,1.56,0.64,1)",
       "&::after": {
         content: '""',
@@ -268,12 +268,12 @@ const SubmitButton = ({ isLoading, devRole }) => (
         transform: "skewX(-15deg)",
       },
       "&:hover": {
-        background: "linear-gradient(135deg, #a93226 0%, #c0392b 100%)",
-        boxShadow: "0 8px 28px rgba(192,57,43,0.55)",
+        background: "linear-gradient(135deg, #9B0A2E 0%, #CE0F3E 100%)",
+        boxShadow: "0 8px 28px rgba(206,15,62,0.55)",
         transform: "translateY(-2px)",
         "&::after": { animation: "shimmerBtn 0.65s ease forwards" },
       },
-      "&:active": { transform: "translateY(0)", boxShadow: "0 2px 10px rgba(192,57,43,0.30)" },
+      "&:active": { transform: "translateY(0)", boxShadow: "0 2px 10px rgba(206,15,62,0.30)" },
       "&.Mui-disabled": {
         background: IS_DEV ? "#2a3f55" : "#d0d5df",
         color: IS_DEV ? "rgba(255,255,255,0.28)" : "rgba(0,0,0,0.28)",
@@ -433,7 +433,7 @@ const LoginModule = () => {
                   content: '""',
                   position: "absolute",
                   inset: 0,
-                  background: "radial-gradient(ellipse at top right, rgba(192,57,43,0.08) 0%, transparent 55%)",
+                  background: "radial-gradient(ellipse at top right, rgba(206,15,62,0.08) 0%, transparent 55%)",
                   pointerEvents: "none",
                 }
                 : {},
@@ -473,8 +473,8 @@ const LoginModule = () => {
                   mx: "auto",
                   mt: 0.9,
                   borderRadius: 2,
-                  background: "linear-gradient(90deg, #c0392b, #e74c3c)",
-                  boxShadow: "0 2px 8px rgba(192,57,43,0.42)",
+                  background: "linear-gradient(90deg, #CE0F3E, #E14569)",
+                  boxShadow: "0 2px 8px rgba(206,15,62,0.42)",
                 }}
               />
             </Box>

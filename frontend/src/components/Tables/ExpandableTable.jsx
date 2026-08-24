@@ -74,21 +74,35 @@ export default function ExpandableTable({
   const sortedRows = stableSort(rows, getComparator(order, orderBy));
 
   return (
-    <TableContainer component={Paper} sx={{
-      margin: '24px 0px',
-    }}>
-      <Table size="small" padding='normal'>
-        <TableHead style={{
-          backgroundColor: '#bfd9f1'
-        }}>
+    <TableContainer
+      component={Paper}
+      elevation={1}
+      sx={{
+        margin: '20px 0px',
+        borderRadius: 2,
+        border: '1px solid',
+        borderColor: 'grey.200',
+        overflowX: 'auto',
+        width: '100%',
+        ...style,
+      }}
+    >
+      <Table size="small" padding="normal" sx={{ minWidth: 700 }}>
+        <TableHead
+          sx={{
+            background: 'linear-gradient(90deg, #0E4F8D 0%, #176FC1 50%, #0E4F8D 100%)',
+          }}
+        >
           <TableRow>
             <TableCell
               sx={{
-                width: '5%',
-                padding: '8px',
+                width: '60px',
+                padding: '10px 14px',
+                color: '#ffffff',
+                fontWeight: 700,
               }}
             >
-              Sr No.
+              #
             </TableCell>
 
             {columns?.map((col) => (
@@ -96,7 +110,9 @@ export default function ExpandableTable({
                 sx={{
                   width: col.width || 'auto',
                   minWidth: col.minWidth || 'auto',
-                  padding: '8px',
+                  padding: '10px 14px',
+                  color: '#ffffff',
+                  fontWeight: 700,
                 }}
                 key={col.field}
                 sortDirection={orderBy === col.field ? order : false}
@@ -106,7 +122,14 @@ export default function ExpandableTable({
                   active={orderBy === col.field}
                   direction={orderBy === col.field ? order : 'asc'}
                   onClick={() => handleRequestSort(col.field)}
-                  sx={{ fontWeight: '500', fontSize: '15px' }}
+                  sx={{
+                    fontWeight: '700',
+                    fontSize: '13px',
+                    color: '#ffffff !important',
+                    '& .MuiTableSortLabel-icon': {
+                      color: '#ffffff !important',
+                    },
+                  }}
                 >
                   {col.headerName}
                 </TableSortLabel>
@@ -115,15 +138,17 @@ export default function ExpandableTable({
             {showActionCol && (
               <TableCell
                 sx={{
-                  padding: '8px',
-                  width: '5%',
+                  padding: '10px 14px',
+                  width: '90px',
+                  color: '#ffffff',
+                  fontWeight: 700,
+                  textAlign: 'center',
                 }}
               >
                 Actions
               </TableCell>
             )}
           </TableRow>
-
         </TableHead>
 
         <TableBody>

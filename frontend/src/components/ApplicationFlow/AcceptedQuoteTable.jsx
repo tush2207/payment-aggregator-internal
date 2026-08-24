@@ -47,8 +47,8 @@ const AcceptedQuotationTable = ({ quoteDetails }) => {
     fontSize: "12px",
     py: "10px !important",
     px: "12px !important",
-    color: "#ffffff",
-    bgcolor: "#002060",
+    color: "#ffffff !important",
+    background: "linear-gradient(90deg, #0E4F8D 0%, #176FC1 50%, #0E4F8D 100%) !important",
     border: "1px solid #cbd5e1",
     textTransform: "uppercase",
     textAlign: "center"

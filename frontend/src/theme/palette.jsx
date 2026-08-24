@@ -1,42 +1,42 @@
 import { alpha } from '@mui/material';
 
 /* ═══════════════════════════════════════════════════════════
-   CBI DESIGN TOKENS
-   Mirrors: Login page · Navbar · Category cards
- ═══════════════════════════════════════════════════════════ */
+   OFFICIAL CBI BRAND TOKENS
+   Primary Blue: #176FC1 | Secondary Red: #CE0F3E | Pure White: #FFFFFF
+  ═══════════════════════════════════════════════════════════ */
 
-/* ── Core CBI brand colours ── */
+/* ── Core CBI brand colours (Official CBI Royal Blue & Crimson Red) ── */
 export const NAVY = {
-    50: '#e8edf4',
-    100: '#c2cedf',
-    200: '#98abc8',
-    300: '#6e88b1',
-    400: '#4e6fa0',
-    500: '#2e578f',
-    600: '#0d3b6e' /* nav mid */,
-    700: '#0a2342' /* nav base / card base */,
-    800: '#071830',
-    900: '#040e1d',
-    main: '#0a2342',
-    light: '#0d3b6e',
-    dark: '#040e1d',
+    50: '#E8F3FC',
+    100: '#C5E1F8',
+    200: '#9ECBF3',
+    300: '#75B4EE',
+    400: '#54A3E9',
+    500: '#176FC1' /* Official CBI Blue */,
+    600: '#1460A7',
+    700: '#0E4F8D' /* Dark Blue */,
+    800: '#0B3D6D',
+    900: '#062545',
+    main: '#176FC1',
+    light: '#3D8CD4',
+    dark: '#0E4F8D',
     contrastText: '#ffffff',
 };
 
 export const RED = {
-    50: '#fcecea',
-    100: '#f7c5c2',
-    200: '#f09b97',
-    300: '#e8716b',
-    400: '#e05249',
-    500: '#d83329',
-    600: '#c0392b' /* CBI primary red */,
-    700: '#a93226',
-    800: '#922b21',
-    900: '#7b241c',
-    main: '#c0392b',
-    light: '#e74c3c',
-    dark: '#922b21',
+    50: '#FCE7EB',
+    100: '#F7C3CD',
+    200: '#F29BAC',
+    300: '#EC718B',
+    400: '#E75071',
+    500: '#CE0F3E' /* Official CBI Red */,
+    600: '#B60D37',
+    700: '#9B0A2E' /* Dark Red */,
+    800: '#7B0825',
+    900: '#4F0518',
+    main: '#CE0F3E',
+    light: '#E14569',
+    dark: '#9B0A2E',
     contrastText: '#ffffff',
 };
 
@@ -71,19 +71,19 @@ export const GREY = {
     900: '#161c24',
 };
 
-/* ── Semantic colours (unchanged from your original) ── */
+/* ── Semantic colours ── */
 export const INFO = {
     light: '#74caff',
-    main: '#1890ff',
-    dark: '#0c53b7',
+    main: '#176FC1',
+    dark: '#0E4F8D',
     contrastText: '#fff',
 };
 
 export const SUCCESS = {
     light: '#aaf27f',
-    main: '#54d62c',
-    dark: '#229a16',
-    contrastText: GREY[800],
+    main: '#2E7D32',
+    dark: '#1B5E20',
+    contrastText: '#fff',
 };
 
 export const WARNING = {
@@ -94,21 +94,24 @@ export const WARNING = {
 };
 
 export const ERROR = {
-    light: '#ffa48d',
-    main: '#E63A46',
-    dark: '#b72136',
+    light: '#E14569',
+    main: '#CE0F3E',
+    dark: '#9B0A2E',
     contrastText: '#fff',
 };
 
-/* ── CBI gradient presets (use in sx or custom theme) ── */
+/* ── CBI gradient presets (Official CBI Blue-to-Red Brand Gradients) ── */
 export const GRADIENTS = {
-    navy: `linear-gradient(90deg, ${NAVY[700]} 0%, ${NAVY[600]} 50%, ${NAVY[700]} 100%)`,
-    navyDark: `linear-gradient(135deg, ${NAVY[700]} 0%, ${NAVY[900]} 100%)`,
-    red: `linear-gradient(135deg, ${RED[600]} 0%, ${RED.light} 100%)`,
-    redHover: `linear-gradient(135deg, ${RED[700]} 0%, ${RED[600]} 100%)`,
-    gold: `linear-gradient(90deg, ${GOLD[500]} 0%, ${GOLD[600]} 100%)`,
-    accent: `linear-gradient(90deg, ${RED[600]}, ${RED.light}, ${GOLD[500]}, ${RED.light}, ${RED[600]})`,
-    card: `linear-gradient(160deg, ${NAVY[700]} 0%, ${NAVY[600]} 100%)`,
+    cbiHeader: 'linear-gradient(90deg, #176FC1 0%, #135FA6 40%, #9B0A2E 80%, #CE0F3E 100%)',
+    cbiTable: 'linear-gradient(90deg, #0E4F8D 0%, #176FC1 50%, #0E4F8D 100%)',
+    navy: 'linear-gradient(90deg, #0E4F8D 0%, #176FC1 50%, #0E4F8D 100%)',
+    navyDark: 'linear-gradient(90deg, #062545 0%, #0E4F8D 50%, #176FC1 100%)',
+    header: 'linear-gradient(90deg, #176FC1 0%, #135FA6 40%, #9B0A2E 80%, #CE0F3E 100%)',
+    red: 'linear-gradient(135deg, #CE0F3E 0%, #E14569 100%)',
+    redHover: 'linear-gradient(135deg, #9B0A2E 0%, #CE0F3E 100%)',
+    gold: 'linear-gradient(90deg, #f6d365 0%, #fda085 100%)',
+    accent: 'linear-gradient(90deg, #CE0F3E, #176FC1, #CE0F3E)',
+    card: 'linear-gradient(135deg, #176FC1 0%, #0E4F8D 100%)',
 };
 
 /* ── Full palette ── */
@@ -150,12 +153,12 @@ const palette = {
 
     /* graph colours — CBI themed */
     graphColors: [
-        RED[600] /* CBI red */,
-        NAVY[600] /* CBI navy */,
-        GOLD[500] /* CBI gold */,
-        '#2e7d32' /* green */,
-        '#0277bd' /* blue */,
-        '#6a1b9a' /* purple */,
+        RED.main /* #CE0F3E */,
+        NAVY.main /* #176FC1 */,
+        GOLD.main /* #f6d365 */,
+        '#2E7D32' /* green */,
+        '#0E4F8D' /* dark blue */,
+        '#E14569' /* light red */,
     ],
 
     gradients: GRADIENTS,

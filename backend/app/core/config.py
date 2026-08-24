@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-# Load variables from .env file manually to avoid python-dotenv dependency
+# Load variables from .env file dynamically
 env_path = Path(__file__).resolve().parent.parent.parent / ".env"
 if env_path.exists():
     with open(env_path, "r") as f:
@@ -25,3 +25,16 @@ DEV_MODE = os.getenv("DEV_MODE", "False").lower() in ("true", "1", "t", "yes", "
 LDAP_BASE_DN = os.getenv("LDAP_BASE_DN")
 # Construct the LDAP_USER_DN dynamically if LDAP_BASE_DN is present
 LDAP_USER_DN = f"CN=Users,{LDAP_BASE_DN}" if LDAP_BASE_DN else ""
+
+# ---------------- Email & SMTP Configuration ----------------
+SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USER = os.getenv("SMTP_USER", "")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
+SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", "no-reply.papg@cbi.co.in")
+SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "Central Bank of India - Payment Aggregator Portal")
+SMTP_USE_TLS = os.getenv("SMTP_USE_TLS", "True").lower() in ("true", "1", "t", "yes", "y")
+SMTP_USE_SSL = os.getenv("SMTP_USE_SSL", "False").lower() in ("true", "1", "t", "yes", "y")
+EMAIL_ENABLED = os.getenv("EMAIL_ENABLED", "True").lower() in ("true", "1", "t", "yes", "y")
+PORTAL_BASE_URL = os.getenv("PORTAL_BASE_URL", "http://localhost:5173")
+

@@ -32,17 +32,17 @@ export default function DataGridTable(props) {
   return (
     <Box
       sx={{
-        // width: '100%',
         minHeight: tableHeight,
-        borderRadius: 2,
-        boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+        borderRadius: '16px',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)',
+        border: '1px solid #e2e8f0',
         overflow: 'hidden',
         bgcolor: 'background.paper',
-        p: 2, // padding around table
+        p: 0,
       }}
     >
       {showSearch && (
-        <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-start', flexDirection: 'column' }}>
+        <Box sx={{ p: 2, pb: 1, display: 'flex', justifyContent: 'flex-start', flexDirection: 'column' }}>
           <TextFieldLabel label={searchLabel} />
           <Autocomplete
             size="small"
@@ -77,45 +77,59 @@ export default function DataGridTable(props) {
         getRowId={getRowId}
         hideFooter={filteredRows?.length < 1}
         sx={{
-          border: '1px solid #cbd5e1',
-          borderRadius: 2,
+          border: 'none',
+          borderRadius: 0,
           fontFamily: "'Inter', sans-serif",
           minHeight: tableHeight,
-          '& .MuiDataGrid-columnHeaders, & .MuiDataGrid-columnHeader, & .MuiDataGrid-columnHeaderRow': {
-            background: 'linear-gradient(135deg, #0a2342 0%, #0d3b6e 100%) !important',
-            backgroundColor: '#0a2342 !important',
+          '& .MuiDataGrid-topContainer, & .MuiDataGrid-columnHeaders, & .MuiDataGrid-columnHeader, & .MuiDataGrid-columnHeaderRow, & .MuiDataGrid-columnHeadersInner': {
+            background: 'linear-gradient(90deg, #0E4F8D 0%, #176FC1 50%, #0E4F8D 100%) !important',
+            backgroundColor: '#176FC1 !important',
             color: '#ffffff !important',
-            borderBottom: '2px solid #071830',
+            borderBottom: 'none !important',
+            borderRight: 'none !important',
+            borderLeft: 'none !important',
+            outline: 'none !important',
+            '&:focus, &:focus-within': {
+              outline: 'none !important',
+            },
           },
           '& .MuiDataGrid-columnHeaderTitle': {
             color: '#ffffff !important',
-            fontWeight: 700,
-            fontSize: '12px',
+            fontWeight: '700 !important',
+            fontSize: '12px !important',
             letterSpacing: '0.4px',
             textTransform: 'uppercase',
           },
-          '& .MuiDataGrid-sortIcon, & .MuiDataGrid-menuIconButton, & .MuiDataGrid-iconButtonContainer': {
+          '& .MuiDataGrid-columnHeaderTitleContainer': {
             color: '#ffffff !important',
           },
+          '& .MuiDataGrid-columnSeparator': {
+            display: 'none !important',
+          },
+          '& .MuiDataGrid-sortIcon, & .MuiDataGrid-menuIconButton, & .MuiDataGrid-iconButtonContainer, & .MuiDataGrid-iconButtonContainer *': {
+            color: '#ffffff !important',
+            fill: '#ffffff !important',
+          },
           '& .MuiDataGrid-row': {
-            borderRadius: 1,
             transition: 'all 0.2s ease',
             '&:hover': {
-              bgcolor: '#f1f5f9',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+              bgcolor: '#f8fafc !important',
             },
           },
-          '& .MuiDataGrid-row:nth-of-type(odd)': {
-            bgcolor: '#f8fafc',
-          },
           '& .MuiDataGrid-cell': {
-            fontSize: 12,
+            fontSize: 13,
             fontWeight: 500,
-            color: '#1e293b',
+            color: '#334155',
+            borderBottom: '1px solid #f1f5f9',
+            borderRight: 'none !important',
+            borderLeft: 'none !important',
+            '&:focus, &:focus-within': {
+              outline: 'none !important',
+            },
           },
           '& .MuiDataGrid-footerContainer': {
-            borderTop: '1px solid #cbd5e1',
-            bgcolor: '#f8fafc',
+            borderTop: '1px solid #e2e8f0',
+            bgcolor: '#ffffff',
           },
           '& .MuiDataGrid-virtualScroller': {
             scrollbarWidth: 'thin',

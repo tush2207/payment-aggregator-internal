@@ -10,8 +10,6 @@ import ProjectionEditorModal from '&src/components/ProjectionQuoteTable/Projecti
 import useApplicationFlow from './useApplicationFlow';
 import ApplicationFlowTable from './ApplicationFlowTable';
 import { ApplicationFlowDialog } from '&src/components/ApplicationFlow';
-import { GET_ALL_APPLICATION_RESPONSE } from "&src/data/data";
-// ^ Using local data as fallback if no real applications are fetched from the API yet
 
 const ApplicationFlowDashboard = () => {
   const {
@@ -48,11 +46,7 @@ const ApplicationFlowDashboard = () => {
   };
 
   useEffect(() => {
-    // Initial fetch
-    fetchApplications().then(() => {
-      // Fallback to local data if API returns empty to make testing easy
-      setApplications(prev => prev.length > 0 ? prev : GET_ALL_APPLICATION_RESPONSE);
-    });
+    fetchApplications();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

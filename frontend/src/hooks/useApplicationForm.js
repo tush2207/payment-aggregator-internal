@@ -55,6 +55,20 @@ const useApplicationForm = ({
       setValues({
         ...APPLICATION_FORM_VALUES,
         ...updateDetails,
+        email: updateDetails.email || updateDetails.EMAIL || "",
+        mobileNo: updateDetails.mobileNo !== null && updateDetails.mobileNo !== undefined ? String(updateDetails.mobileNo) : "",
+        address: updateDetails.address || updateDetails.ADDRESS || "",
+        category: updateDetails.category || updateDetails.CATEGORY || "",
+        integrateWith: updateDetails.integrateWith || "",
+        projection: updateDetails.projection || "",
+        customerName: updateDetails.customerName || "",
+        accountNo: updateDetails.accountNo !== null && updateDetails.accountNo !== undefined ? String(updateDetails.accountNo) : "",
+        averageBalance: updateDetails.averageBalance !== null && updateDetails.averageBalance !== undefined ? String(updateDetails.averageBalance) : "",
+        accountBalanceToday: updateDetails.accountBalanceToday !== null && updateDetails.accountBalanceToday !== undefined ? String(updateDetails.accountBalanceToday) : "",
+        avgTransactionYearly: updateDetails.avgTransactionYearly !== null && updateDetails.avgTransactionYearly !== undefined ? String(updateDetails.avgTransactionYearly) : "",
+        avgTransactionSize: updateDetails.avgTransactionSize !== null && updateDetails.avgTransactionSize !== undefined ? String(updateDetails.avgTransactionSize) : "",
+        kycFile: updateDetails.kycFile || null,
+        customerApplicationFile: updateDetails.customerApplicationFile || null,
       });
     }
   }, [updateDetails]);

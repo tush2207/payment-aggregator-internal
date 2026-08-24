@@ -22,8 +22,8 @@ const ApiUrls = {
     return `/get-all-applications/${zoneId}?${params.toString()}`;
   },
 
-  // GET_ALL_APPLICATIONS: (zoneId, page, search, status, category) => `/get-all-applications/${zoneId}/?page=${page}&search=${search}&status=${status}&category=${category}`,
   GET_APPLICATION_BY_ID: (applicationId) => `/get-single-applications/${applicationId}`,
+  GET_STAGE_METRICS: `/applications/stage-metrics`,
   ADD_APPLICATION: "/applications",
   UPDATE_APPLICATION: (applicationId) => `/applications/${applicationId}`,
   DELETE_APPLICATION: (applicationId) => `/applications/${applicationId}`,
@@ -32,6 +32,7 @@ const ApiUrls = {
   GET_APPLICATIONS_BY_ACCOUNT_NUMBER: (accountNo) => `/applications/${accountNo}`,
   UPLOAD_FILE: "/files/upload",
   DOWNLOAD_FILE: (fileId) => `/files/download/${fileId}`,
+  DELETE_FILE: (fileId) => `/files/delete/${fileId}`,
 
   // ----------------Manage Aggregators ----------------
   GET_ALL_AGGREGATORS: `/all-manage-aggregator`,
@@ -40,6 +41,7 @@ const ApiUrls = {
   ADD_AGGREGATOR: "/manage-aggregator",
   UPDATE_AGGREGATOR: (aggregatorId) => `/manage-aggregator/${aggregatorId}`,
   DELETE_AGGREGATOR: (aggregatorId) => `/manage-aggregator/${aggregatorId}`,
+  TEST_EMAIL: "/test-email",
 
   // ---------------- Aggregators by Application ----------------
 
@@ -71,6 +73,9 @@ const ApiUrls = {
 
   UPDATE_PROJECTION_BY_APP: (applicationId) =>
     `/applications/bulk-update-charges/${applicationId}`,
+
+  RESEND_QUOTE_EMAIL: (applicationId, aggregatorId) =>
+    `/applications/${applicationId}/aggregators/${aggregatorId}/resend-quote-email`,
 
   // ---------------- PO Generator ----------------
   GENERATE_PO: (applicationId, aggregatorId) => `/generate-purchase-order/applicationId/${applicationId}/aggregatorId/${aggregatorId}`,

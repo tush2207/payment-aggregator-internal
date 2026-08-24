@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Request
 from fastapi.responses import JSONResponse, StreamingResponse, Response, FileResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import and_
+from sqlalchemy import and_, or_
 from typing import List, Optional
 from datetime import date, datetime
 import io
@@ -15,6 +15,7 @@ from app.model.models import (ApplicationsInDB, ProjectionDetailsInDB, PaymentAg
 from app.schemas.schemas import (Applications, ApplicationsUpdate, ProjectionDetails, 
                                  ProjectionDetailsUpdate)
 from app.services.generate_po_service import PurchaseOrderService
+from app.services.email_service import EmailService
 from app.api.routes.audit import create_audit_entry
 
 router = APIRouter()
@@ -43,11 +44,24 @@ def create_application(application: Applications, db: Session = Depends(get_db),
             detail=f"Error creating application: {str(e)}"
         )
 
+def serialize_application(app):
+    if not app:
+        return None
+    data = {}
+    for col in ApplicationsInDB.__table__.columns:
+        val = getattr(app, col.key, None)
+        if isinstance(val, (datetime, date)):
+            val = val.isoformat()
+        data[col.key] = val
+    return data
+
 @router.get('/api/get-single-applications/{applicationId}')
 def get_single_application(applicationId: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     application = db.query(ApplicationsInDB).filter( 
         and_(ApplicationsInDB.isDeleted == False, ApplicationsInDB.applicationId == applicationId)).first()
-    return application
+    if not application:
+        raise HTTPException(status_code=404, detail="Application not found")
+    return serialize_application(application)
 
 @router.get('/api/get-all-applications/{zoneId}')
 def get_all_application(
@@ -93,69 +107,106 @@ def get_all_application(
     applications = query.order_by(ApplicationsInDB.createdAt.desc()).all()
 
     for app in applications:
+        # Helper to extract date from app.createdAt
+        app_date = None
+        if app.createdAt:
+            if isinstance(app.createdAt, datetime):
+                app_date = app.createdAt.date()
+            elif isinstance(app.createdAt, date):
+                app_date = app.createdAt
+            elif isinstance(app.createdAt, str):
+                try:
+                    app_date = datetime.strptime(app.createdAt[:10], "%Y-%m-%d").date()
+                except Exception:
+                    app_date = None
+
         # 1. status filter
         if status and status != "all" and app.status != status:
             continue
 
-        # 2. search filter
+        # 2. search filter across multiple fields
         if search and search.strip():
             s = str(search.strip()).lower()
-            if not(
-                s in str(app.applicationId).lower()
-                or s in str(app.customerName).lower()
-                or s in str(app.accountNo).lower()
+            app_id_str = str(app.applicationId or "").lower()
+            cust_name_str = str(app.customerName or "").lower()
+            acc_no_str = str(app.accountNo or "").lower()
+            email_str = str(app.email or "").lower()
+            cat_str = str(app.category or "").lower()
+            branch_str = str(app.branchName or "").lower()
+            region_str = str(app.regionName or "").lower()
+            status_str = str(app.status or "").lower()
+            if not (
+                s in app_id_str
+                or s in cust_name_str
+                or s in acc_no_str
+                or s in email_str
+                or s in cat_str
+                or s in branch_str
+                or s in region_str
+                or s in status_str
             ):
                 continue
 
         # 3. createdAt filter
         if createdAt and createdAt.strip():
-            s = createdAt
-            if not(s in app.createdAt.strftime("%Y-%m-%d")):
-                continue        
+            s = createdAt.strip()
+            if app_date:
+                if s not in app_date.strftime("%Y-%m-%d"):
+                    continue
+            else:
+                continue
 
         # 4. financialYear filter (e.g. "FY 2026-27" or "FY 2026-2027")
-        if financialYear and financialYear != "all":
+        if financialYear and financialYear != "all" and financialYear.strip():
             fy = financialYear.replace("FY ", "").strip()
             if "-" in fy:
                 try:
                     fy_start, fy_end = fy.split("-")
                     start_year = int(fy_start)
-                    # Handle both 2-digit and 4-digit end years (e.g., "27" vs "2027")
                     end_year = int(fy_end)
                     if end_year < 100:
                         end_year = (start_year // 100) * 100 + end_year
                     
-                    app_date = app.createdAt.date() if isinstance(app.createdAt, datetime) else app.createdAt
-                    if app_date < date(start_year, 4, 1) or app_date > date(end_year, 3, 31):
+                    if app_date:
+                        if app_date < date(start_year, 4, 1) or app_date > date(end_year, 3, 31):
+                            continue
+                    else:
                         continue
                 except Exception as e:
                     print(f"Error parsing financial year: {e}")
 
         # 5. month filter (0-indexed to match JS)
-        if month and month != "all":
+        if month and month != "all" and str(month).strip():
             try:
                 m_val = int(month)
-                app_month = app.createdAt.month - 1
-                if app_month != m_val:
+                if app_date:
+                    app_month = app_date.month - 1
+                    if app_month != m_val:
+                        continue
+                else:
                     continue
             except Exception as e:
                 print(f"Error parsing month: {e}")
 
         # 6. date range filters
-        if startDate:
+        if startDate and startDate.strip():
             try:
-                start_d = datetime.strptime(startDate, "%Y-%m-%d").date()
-                app_date = app.createdAt.date() if isinstance(app.createdAt, datetime) else app.createdAt
-                if app_date < start_d:
+                start_d = datetime.strptime(startDate.strip(), "%Y-%m-%d").date()
+                if app_date:
+                    if app_date < start_d:
+                        continue
+                else:
                     continue
             except Exception as e:
                 print(f"Error parsing startDate: {e}")
 
-        if endDate:
+        if endDate and endDate.strip():
             try:
-                end_d = datetime.strptime(endDate, "%Y-%m-%d").date()
-                app_date = app.createdAt.date() if isinstance(app.createdAt, datetime) else app.createdAt
-                if app_date > end_d:
+                end_d = datetime.strptime(endDate.strip(), "%Y-%m-%d").date()
+                if app_date:
+                    if app_date > end_d:
+                        continue
+                else:
                     continue
             except Exception as e:
                 print(f"Error parsing endDate: {e}")
@@ -253,9 +304,9 @@ def get_all_application(
         sliced_applications = new_applications[start:end]
         return {
             "totalRecords": total_records,
-            "data": sliced_applications
+            "data": [serialize_application(a) for a in sliced_applications]
         }
-    return new_applications
+    return [serialize_application(a) for a in new_applications]
 
 @router.delete('/api/applications/{id}')
 def delete_applications(id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
@@ -370,8 +421,118 @@ def get_all_projectionDetails(applicationId: int, aggregatorId: int, db: Session
     projectionDetails = db.query(ProjectionDetailsInDB).filter(
         and_(ProjectionDetailsInDB.isDeleted == False,
              ProjectionDetailsInDB.applicationId == applicationId,
-             ProjectionDetailsInDB.aggregatorId == aggregatorId)).all()
-    return projectionDetails
+             ProjectionDetailsInDB.aggregatorId == aggregatorId)).order_by(ProjectionDetailsInDB.id.asc()).all()
+    
+    # Deduplicate by transactionType (pick latest entry per channel)
+    unique_projections = []
+    seen_types = set()
+    for p in projectionDetails:
+        t_type = (p.transactionType or "").strip()
+        if t_type and t_type in seen_types:
+            continue
+        if t_type:
+            seen_types.add(t_type)
+        unique_projections.append(p)
+
+    return unique_projections
+
+@router.post('/api/applications/{applicationId}/aggregators/{aggregatorId}/resend-quote-email')
+def resend_quote_email(applicationId: int, aggregatorId: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    app = db.query(ApplicationsInDB).filter(ApplicationsInDB.applicationId == applicationId).first()
+    if not app:
+        raise HTTPException(status_code=404, detail=f"Application #{applicationId} not found")
+
+    # Look up in ManageAggregatorInDB by aggregatorId
+    aggregator = db.query(ManageAggregatorInDB).filter(
+        and_(
+            ManageAggregatorInDB.aggregatorId == aggregatorId,
+            ManageAggregatorInDB.isDeleted == False
+        )
+    ).first()
+
+    if not aggregator:
+        # Fallback to check PaymentAggregatorInDB
+        payment_agg = db.query(PaymentAggregatorInDB).filter(
+            and_(
+                PaymentAggregatorInDB.applicationId == applicationId,
+                or_(
+                    PaymentAggregatorInDB.aggregatorId == aggregatorId,
+                    PaymentAggregatorInDB.id == aggregatorId
+                )
+            )
+        ).first()
+        if payment_agg:
+            aggregator = db.query(ManageAggregatorInDB).filter(
+                ManageAggregatorInDB.aggregatorId == payment_agg.aggregatorId
+            ).first()
+
+    if not aggregator:
+        raise HTTPException(status_code=404, detail=f"Aggregator with ID {aggregatorId} not found")
+
+    # Fetch projections for this aggregator
+    projections = db.query(ProjectionDetailsInDB).filter(
+        and_(
+            ProjectionDetailsInDB.applicationId == applicationId,
+            ProjectionDetailsInDB.aggregatorId == aggregatorId,
+            ProjectionDetailsInDB.isDeleted == False,
+            ProjectionDetailsInDB.isIB == False
+        )
+    ).order_by(ProjectionDetailsInDB.id.asc()).all()
+
+    if not projections:
+        projections = db.query(ProjectionDetailsInDB).filter(
+            and_(
+                ProjectionDetailsInDB.applicationId == applicationId,
+                ProjectionDetailsInDB.isDeleted == False,
+                ProjectionDetailsInDB.isIB == False
+            )
+        ).order_by(ProjectionDetailsInDB.id.asc()).all()
+
+    # Deduplicate projections by transactionType
+    unique_projs = []
+    seen = set()
+    for p in projections:
+        t_type = (p.transactionType or "").strip()
+        if t_type and t_type not in seen:
+            seen.add(t_type)
+            unique_projs.append(p)
+
+    agg_name = aggregator.aggregatorName
+    agg_email = aggregator.email
+    contact_person = aggregator.contactPersonName
+
+    # Dispatch email
+    try:
+        sent = EmailService.send_quote_request_email(
+            aggregator_name=agg_name,
+            aggregator_email=agg_email,
+            contact_person=contact_person,
+            application=app,
+            end_date_str=str(app.endDate) if hasattr(app, "endDate") and app.endDate else None,
+            projections=unique_projs
+        )
+    except Exception as email_err:
+        print(f"[EMAIL ERROR] Failed to dispatch email: {email_err}")
+        sent = False
+
+    try:
+        create_audit_entry(
+            db=db,
+            action="RESEND_QUOTE_EMAIL",
+            applicationId=applicationId,
+            stage="AGGREGATOR_QUOTE",
+            performedBy=getattr(current_user, "username", "System"),
+            details=f"Re-triggered quotation email to {agg_name} ({agg_email}). Dispatch Status: {'SUCCESS' if sent else 'FAILED'}"
+        )
+    except Exception as audit_err:
+        print(f"[AUDIT ERROR] Failed to record audit log: {audit_err}")
+
+    return {
+        "status": "success" if sent else "warning",
+        "message": f"Quotation request email dispatched to {agg_name} ({agg_email})" if sent else f"Email queued (Check SMTP configuration in .env to deliver to {agg_email})",
+        "recipient": agg_email,
+        "sent": sent
+    }
 
 @router.delete('/api/applications/{applicationId}/aggregators/{aggregatorId}/projections/{projectionId}')
 def delete_projectionDetails(projectionId: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
@@ -498,6 +659,17 @@ def downloadFile(file_id: int, db: Session = Depends(get_db), current_user: User
         headers={"Content-Disposition": f"attachment; filename={db_file.filename}"}
     )
 
+@router.delete("/api/files/delete/{file_id}")
+@router.delete("/api/files/{file_id}")
+def deleteFile(file_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    db_file = db.query(FileStoreInDB).filter(FileStoreInDB.fileId == file_id).first()
+    if not db_file:
+        return {"success": False, "message": "File not found", "fileId": file_id}
+    
+    db.delete(db_file)
+    db.commit()
+    return {"success": True, "message": "File deleted successfully", "fileId": file_id}
+
 # --- PO Generation ---
 
 def to_dict(obj, keys):
@@ -589,3 +761,110 @@ def create_purchase_order_details_for_print(applicationId: int, aggregatorId: in
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
+
+# --- Workflow Stage Metrics Endpoint ---
+
+@router.get('/api/applications/stage-metrics')
+def get_stage_metrics(
+    zoneId: Optional[str] = None,
+    branchId: Optional[str] = None,
+    regionId: Optional[str] = None,
+    financialYear: Optional[str] = None,
+    month: Optional[str] = None,
+    startDate: Optional[str] = None,
+    endDate: Optional[str] = None,
+    search: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    query = db.query(ApplicationsInDB).filter(ApplicationsInDB.isDeleted == False)
+
+    if branchId and branchId != "all" and branchId.strip():
+        try:
+            query = query.filter(ApplicationsInDB.branchId == int(branchId))
+        except ValueError:
+            pass
+    elif regionId and regionId != "all" and regionId.strip():
+        try:
+            query = query.filter(ApplicationsInDB.regionId == int(regionId))
+        except ValueError:
+            pass
+    elif zoneId and zoneId != "00000" and zoneId != "all" and zoneId.strip():
+        try:
+            query = query.filter(ApplicationsInDB.zoneId == int(zoneId))
+        except ValueError:
+            pass
+
+    applications = query.all()
+
+    filtered_apps = []
+    for app in applications:
+        if search:
+            search_str = f"{app.customerName or ''} {app.applicationId or ''} {app.accountNo or ''} {app.category or ''} {app.branchName or ''} {app.status or ''}".lower()
+            if search.lower() not in search_str:
+                continue
+
+        if financialYear and financialYear != "all" and app.createdAt:
+            app_year = app.createdAt.year
+            app_month = app.createdAt.month
+            app_fy = f"FY {app_year}-{(app_year + 1) % 100:02d}" if app_month >= 4 else f"FY {app_year - 1}-{app_year % 100:02d}"
+            if app_fy != financialYear:
+                continue
+
+        if month and month != "all" and app.createdAt:
+            try:
+                if app.createdAt.month != (int(month) + 1):
+                    continue
+            except ValueError:
+                pass
+
+        if startDate and app.createdAt:
+            try:
+                start_dt = datetime.strptime(startDate, "%Y-%m-%d").date()
+                if app.createdAt.date() < start_dt:
+                    continue
+            except ValueError:
+                pass
+
+        if endDate and app.createdAt:
+            try:
+                end_dt = datetime.strptime(endDate, "%Y-%m-%d").date()
+                if app.createdAt.date() > end_dt:
+                    continue
+            except ValueError:
+                pass
+
+        filtered_apps.append(app)
+
+    stage_counts = [0, 0, 0, 0, 0, 0, 0]
+    kpis = {"total": len(filtered_apps), "pending": 0, "quotes": 0, "approved": 0}
+
+    for app in filtered_apps:
+        if app.isFinalApproved:
+            stage_counts[6] += 1
+            kpis["approved"] += 1
+        elif app.isQuoteAcceptRO:
+            stage_counts[5] += 1
+            kpis["quotes"] += 1
+        elif app.isQuoteReviewCO or app.isMarkUpAddedCO:
+            stage_counts[4] += 1
+            kpis["quotes"] += 1
+        elif app.isQuoteAddedPA or app.isAggregatorAdded:
+            stage_counts[3] += 1
+            kpis["quotes"] += 1
+        elif app.isReviewByCO:
+            stage_counts[2] += 1
+            kpis["pending"] += 1
+        elif app.isReviewByRO or app.isReviewByZO:
+            stage_counts[1] += 1
+            kpis["pending"] += 1
+        else:
+            stage_counts[0] += 1
+            kpis["pending"] += 1
+
+    return {
+        "total": len(filtered_apps),
+        "stageCounts": stage_counts,
+        "kpis": kpis
+    }
+

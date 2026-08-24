@@ -57,5 +57,14 @@ const aggregatorProjections = {
       throw error;
     }
   },
+
+  resendQuoteEmail: async (applicationId, aggregatorId, config) => {
+    try {
+      return await postMethod(ApiUrls.RESEND_QUOTE_EMAIL(applicationId, aggregatorId), {}, config);
+    } catch (error) {
+      console.error(`Error in RESEND_QUOTE_EMAIL:`, error);
+      throw error;
+    }
+  },
 };
 export default aggregatorProjections;

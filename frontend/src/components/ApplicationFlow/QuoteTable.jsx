@@ -12,7 +12,8 @@ import {
   Tooltip,
   Typography,
   TableContainer,
-  Paper
+  Paper,
+  CircularProgress
 } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -27,7 +28,7 @@ import aggregatorProjections from "&src/services/aggregatorProjections";
 import applicationServices from "&src/services/applications";
 import { formatNumber, PERCENTAGE, RS } from "&src/utils";
 import { calculateQuoteRow, calculateTotals } from "&src/utils/calculation";
-import { CurrencyRupee, ForwardOutlined, InfoOutlined } from "@mui/icons-material";
+import { CurrencyRupee, ForwardOutlined, InfoOutlined, Email } from "@mui/icons-material";
 import EndAlignedCell from "&src/components/EndAlignedCell";
 import FullScreenLoader from "&src/components/Loaders/FullScreenLoader";
 import NoData from "&src/components/NoData";
@@ -57,6 +58,8 @@ const QuoteTable = ({ applicationDetails, aggregatorId, aggregatorName, isRateAd
       return calculateQuoteRow(row, row?.chargesProposed, row?.unit, row?.rate)
     })
   }
+  const [resendingEmail, setResendingEmail] = useState(false);
+
   // ---------------------- Data Fetch ----------------------
   const fetchProjectionDetails = async () => {
     setLoading(true);
@@ -66,8 +69,61 @@ const QuoteTable = ({ applicationDetails, aggregatorId, aggregatorName, isRateAd
         aggregatorId,
       );
 
-      const calculateAll = calculateAllQuoteRows(response?.data);
-      if (Array.isArray(response?.data)) setQuoteDetails(calculateAll);
+      const rawData = Array.isArray(response?.data) ? response.data : (Array.isArray(response) ? response : []);
+      const cleanData = rawData.filter(
+        (p) =>
+          Number(p.applicationId) === Number(applicationId) &&
+          Number(p.aggregatorId) === Number(aggregatorId)
+      );
+
+      // Deduplicate by transactionType
+      const uniqueData = [];
+      const seenTypes = new Set();
+      for (const item of cleanData) {
+        const tType = item.transactionType?.trim();
+        if (tType && !seenTypes.has(tType)) {
+          seenTypes.add(tType);
+          uniqueData.push(item);
+        }
+      }
+
+      // If Internet banking exists, ensure sub-bank bifurcation rows (SBI, HDFC, ICICI, AXIS, OTHERS) are present
+      const ibIndex = uniqueData.findIndex((p) => p.transactionType === "Internet banking" && !p.isIB);
+      const hasIbChildren = uniqueData.some((p) => p.isIB);
+
+      let finalData = [...uniqueData];
+      if (ibIndex !== -1 && !hasIbChildren) {
+        const ibParent = uniqueData[ibIndex];
+        const ibChildren = [
+          { transactionType: "SBI", transactionTypePercent: "68.61%", isIB: true, allow: true },
+          { transactionType: "HDFC", transactionTypePercent: "10.78%", isIB: true, allow: true },
+          { transactionType: "ICICI", transactionTypePercent: "5.57%", isIB: true, allow: true },
+          { transactionType: "AXIS", transactionTypePercent: "4.47%", isIB: true, allow: true },
+          { transactionType: "OTHERS", transactionTypePercent: "10.56%", isIB: true, allow: true },
+        ].map((bank, bIdx) => {
+          const percent = parseFloat(bank.transactionTypePercent) / 100 || 0;
+          return {
+            ...bank,
+            id: `ib_${ibParent.id || 'ib'}_${bIdx}`,
+            applicationId,
+            aggregatorId,
+            order: (ibParent.order || 1) + (bIdx + 1) * 0.1,
+            estimatedTransactions: (ibParent.estimatedTransactions || 0) * percent,
+            aggregateAmount: (ibParent.aggregateAmount || 0) * percent,
+            rate: 0,
+            unit: "₹",
+            chargesProposed: 0,
+            grossAmount: 0,
+            vendorShare: 0,
+            expectedRevenue: 0,
+          };
+        });
+
+        finalData.splice(ibIndex + 1, 0, ...ibChildren);
+      }
+
+      const calculateAll = calculateAllQuoteRows(finalData);
+      setQuoteDetails(calculateAll);
     } catch (err) {
       console.error("[ERROR] Failed to fetch projections:", err);
       errorNotification(err?.response?.data?.message || "Failed to fetch projections");
@@ -200,9 +256,27 @@ const QuoteTable = ({ applicationDetails, aggregatorId, aggregatorName, isRateAd
       updateTotals()
     }
   }, [totals])
+  const handleResendQuoteEmail = async () => {
+    setResendingEmail(true);
+    try {
+      const res = await aggregatorProjections.resendQuoteEmail(applicationId, aggregatorId);
+      if (res?.data?.status === 'success' || res?.status === 'success') {
+        successNotification(res?.data?.message || res?.message || `Quotation email resent to ${aggregatorName} successfully!`);
+      } else {
+        errorNotification(res?.data?.message || res?.message || "Email queued. Please verify SMTP credentials in .env.");
+      }
+    } catch (err) {
+      console.error("[ERROR] Failed to resend quote email:", err);
+      errorNotification(err?.response?.data?.detail || err?.response?.data?.message || "Failed to resend quotation email");
+    } finally {
+      setResendingEmail(false);
+    }
+  };
+
   // ---------------------- Inner Components ----------------------
   const RoleBasedActions = () => (
-    <Box display="flex" gap={1}>
+    <Box display="flex" alignItems="center" gap={1}>
+
       {
         !isRateAdded && !isQuoteAcceptRO &&
         <Box>
@@ -367,7 +441,7 @@ const QuoteTable = ({ applicationDetails, aggregatorId, aggregatorName, isRateAd
       <Box sx={{ width: "100%", overflow: "hidden" }}>
         <Table size="small" sx={{ width: "100%", tableLayout: "auto" }}>
           <TableHead>
-            <TableRow sx={{ bgcolor: "#0f172a" }}>
+            <TableRow sx={{ background: 'linear-gradient(90deg, #0E4F8D 0%, #176FC1 50%, #0E4F8D 100%) !important' }}>
               {PROJECTION_COLUMNS_FOR_CO.map((col, idx) => (
                 <TableCell
                   key={idx}
@@ -377,7 +451,7 @@ const QuoteTable = ({ applicationDetails, aggregatorId, aggregatorName, isRateAd
                     py: "8px !important",
                     px: "6px !important",
                     color: "#ffffff !important",
-                    bgcolor: "#0f172a !important",
+                    background: "transparent !important",
                     whiteSpace: "normal !important",
                     wordBreak: "break-word",
                     lineHeight: 1.15,

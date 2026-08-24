@@ -3,6 +3,7 @@ import palette, { GRADIENTS, GOLD, NAVY, RED } from './palette';
 import typography from './typography';
 import shadows from './shadows';
 import getComponentsOverride from './components';
+import { CBI_THEME } from './cbiTableTheme';
 
 export default function ThemeProvider({ children }) {
     const theme = createTheme({
@@ -11,6 +12,7 @@ export default function ThemeProvider({ children }) {
         shape: { borderRadius: 10 },
         shadows,
         custom: {
+            cbiTheme: CBI_THEME,
             gradients: GRADIENTS,
             navy: NAVY,
             red: RED,
@@ -20,4 +22,4 @@ export default function ThemeProvider({ children }) {
     });
 
     return <MuiThemeProvider theme={theme}>{children}</MuiThemeProvider>;
-}
+}

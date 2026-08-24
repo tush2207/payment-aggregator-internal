@@ -16,6 +16,7 @@ import aggregatorByApplication from "&src/services/aggregatorByApplication";
 import aggregatorProjections from "&src/services/aggregatorProjections";
 import applicationServices from "&src/services/applications";
 import { PERCENTAGE, RS, sumofAggregatorRates } from "&src/utils";
+import { calculateQuoteRow, calculateTotals } from "&src/utils/calculation";
 import DialogWithHeader from "../Dialog/DialogWithHeader";
 import FullScreenLoader from "../Loaders/FullScreenLoader";
 import useStatusWiseAlert from "../ToastNotifications/useStatusWiseAlert";
@@ -26,7 +27,8 @@ const GetRates = ({
     aggregatorId,
     quoteDetails,
     openModal,
-    setOpenModal
+    setOpenModal,
+    onSaveSuccess,
 }) => {
     let serialNo = 0;
     const { applicationId } = applicationDetails || {};
@@ -102,19 +104,21 @@ const GetRates = ({
             // ✅ Clear previous errors if validation passed
             setErrorRowIds([]);
 
-            // ✅ Prepare final payload (keep all fields)
-            const finalPayload = rateDetails?.map((item) => ({
-                ...item,
-                rate: item.rate,
-                unit: item.unit
-            }));
+            // ✅ Calculate row-by-row commercial values
+            const calculatedRows = rateDetails.map((item) => {
+                return calculateQuoteRow(item, item.chargesProposed, item.unit, item.rate);
+            });
 
-            const sumOfRate = sumofAggregatorRates(rateDetails)
-            console.log("✅ Final Payload:", finalPayload);
+            const totals = calculateTotals(calculatedRows);
+            const sumOfRate = sumofAggregatorRates(rateDetails);
 
             const [res, resAgg, resApp] = await Promise.all([
-                aggregatorProjections.updateProjection(applicationId, aggregatorId, finalPayload),
-                aggregatorByApplication.updateAggregatorByApplication(applicationId, aggregatorId, { sumOfRate, status: 'submitted' }),
+                aggregatorProjections.updateProjection(applicationId, aggregatorId, calculatedRows),
+                aggregatorByApplication.updateAggregatorByApplication(applicationId, aggregatorId, {
+                    ...totals,
+                    sumOfRate,
+                    status: 'submitted'
+                }),
                 applicationServices.updateApplication(applicationId, {
                     isQuoteAddedPA: true,
                     status: "quotesubmitted",
@@ -129,19 +133,20 @@ const GetRates = ({
                 throw new Error("❌ One or more API calls failed.");
             }
 
-            successNotification("✅ Application approved and projections added successfully.");
-            window.location.reload();
-
-            setLoading(false);
-            successNotification("✅ Rates validated and ready to save.");
+            successNotification("✅ Rates and projections saved successfully.");
+            setOpenModal(false);
+            if (onSaveSuccess) {
+                await onSaveSuccess();
+            }
         } catch (err) {
-            setLoading(false);
             console.error("Error in saveAllRates:", err);
             errorNotification(
                 err?.response?.data?.message ||
                 err?.message ||
                 "⚠️ Something went wrong. Please try again."
             );
+        } finally {
+            setLoading(false);
         }
     };
 

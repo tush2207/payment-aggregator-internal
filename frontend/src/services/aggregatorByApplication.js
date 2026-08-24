@@ -11,6 +11,15 @@ const aggregatorByApplication = {
     }
   },
 
+  getAggregatorsByApplication: async (applicationId, config) => {
+    try {
+      return await getMethod(ApiUrls.GET_ALL_AGGREGATORS_BY_APPLICATION(applicationId), config);
+    } catch (error) {
+      console.error(`Error in getAggregatorsByApplication:`, error);
+      throw error;
+    }
+  },
+
   getAggregatorByApplication: async (applicationId, aggregatorId, config) => {
     try {
       return await getMethod(ApiUrls.GET_AGGREGATOR_BY_APPLICATION(applicationId, aggregatorId), config);

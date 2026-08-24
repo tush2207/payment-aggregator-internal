@@ -62,25 +62,25 @@ const WorkflowConnector = styled(StepConnector)(({ theme }) => ({
     border: 0,
     borderRadius: 0,
     margin: '0px',
-    background: 'linear-gradient(90deg, #003A8C, #005FCC)',
+    background: 'linear-gradient(90deg, #0E4F8D, #176FC1)',
     backgroundSize: '200% 200%',
     opacity: 0.4,
     transition: '0.4s ease',
-    boxShadow: '0 0 8px rgba(0, 90, 255, 0.25)',
+    boxShadow: '0 0 8px rgba(23, 111, 193, 0.25)',
   },
   [`&.${stepConnectorClasses.active} .${stepConnectorClasses.line}`]: {
     opacity: 1,
-    background: 'linear-gradient(270deg, #003A8C, #D32F2F, #003A8C)',
+    background: 'linear-gradient(270deg, #176FC1, #CE0F3E, #176FC1)',
     backgroundSize: '200% 200%',
     animation: `${flowingLine} 3s ease infinite`,
-    boxShadow: '0 0 10px rgba(0, 70, 200, 0.4)',
+    boxShadow: '0 0 10px rgba(206, 15, 62, 0.4)',
   },
   [`&.${stepConnectorClasses.completed} .${stepConnectorClasses.line}`]: {
     opacity: 1,
-    background: 'linear-gradient(270deg, #003A8C, #4CAF50, #003A8C)',
+    background: 'linear-gradient(270deg, #176FC1, #2E7D32, #176FC1)',
     backgroundSize: '200% 200%',
     animation: `${flowingLine} 3s ease infinite`,
-    boxShadow: '0 0 12px rgba(0, 200, 100, 0.4)',
+    boxShadow: '0 0 12px rgba(46, 125, 50, 0.4)',
   },
 }));
 
@@ -146,17 +146,17 @@ export default function RoleBasedWorkflowStepper() {
                         alignItems: "center",
                         justifyContent: "center",
                         boxShadow: isCompleted
-                          ? "0 0 12px rgba(0, 120, 255, 0.40)"
+                          ? "0 0 12px rgba(23, 111, 193, 0.40)"
                           : isActive
                             ? "0 0 14px rgba(255, 152, 0, 0.60)"
                             : "0 0 8px rgba(0,0,0,0.15)",
                         transform: isCompleted ? "scale(1.05)" : "scale(0.92)",
                         transition: "0.35s ease",
                         animation: isActive ? `${pulseGlow} 2s infinite ease-in-out` : "none",
-                        color: isCompleted ? "#003A8C" : isActive ? "#ff9800" : "#777",
+                        color: isCompleted ? "#176FC1" : isActive ? "#ff9800" : "#777",
                         "&:hover": {
                           transform: "scale(1.1)",
-                          boxShadow: "0 0 16px rgba(0, 100, 255, 0.45), 0 4px 8px rgba(0,0,0,0.1)",
+                          boxShadow: "0 0 16px rgba(23, 111, 193, 0.45), 0 4px 8px rgba(0,0,0,0.1)",
                         },
                       }}
                     >
@@ -192,6 +192,30 @@ export default function RoleBasedWorkflowStepper() {
                   >
                     {stepStatusText}
                   </Typography>
+
+                  {step.date && (
+                    <Typography
+                      variant="caption"
+                      color="success.main"
+                      fontWeight={600}
+                      display="block"
+                      sx={{ fontSize: "9px", mt: 0.2 }}
+                    >
+                      {step.date}
+                    </Typography>
+                  )}
+
+                  {step.approvedBy && (
+                    <Typography
+                      variant="caption"
+                      color="primary.main"
+                      fontWeight={700}
+                      display="block"
+                      sx={{ fontSize: "9px" }}
+                    >
+                      By: {step.approvedBy}
+                    </Typography>
+                  )}
                 </Box>
               </StepLabel>
             </Step>

@@ -179,7 +179,7 @@ export default function GlobalAuditLogsModal({ open, onClose }) {
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth PaperProps={{ sx: { borderRadius: "14px", height: "85vh" } }}>
-      <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", bgcolor: "#0a2342", color: "#ffffff", py: 1.8 }}>
+      <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "linear-gradient(90deg, #176FC1 0%, #135FA6 40%, #9B0A2E 80%, #CE0F3E 100%)", color: "#ffffff", py: 1.8 }}>
         <Box display="flex" alignItems="center" gap={1.5}>
           <AssessmentIcon sx={{ color: "#f6d365" }} />
           <Typography variant="h6" fontWeight={700}>
@@ -286,7 +286,7 @@ export default function GlobalAuditLogsModal({ open, onClose }) {
         {/* Logs Table */}
         <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #e2e8f0", borderRadius: "10px" }}>
           <Table size="small">
-            <TableHead sx={{ bgcolor: "#0a2342" }}>
+            <TableHead sx={{ background: "linear-gradient(90deg, #0E4F8D 0%, #176FC1 50%, #0E4F8D 100%)" }}>
               <TableRow>
                 <TableCell sx={{ color: "#fff", fontWeight: 700 }}>Method</TableCell>
                 <TableCell sx={{ color: "#fff", fontWeight: 700 }}>API Endpoint / Action</TableCell>

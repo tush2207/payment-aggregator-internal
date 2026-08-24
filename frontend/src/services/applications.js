@@ -123,6 +123,19 @@ const applicationServices = {
     }
   },
 
+  // 🔹 Delete file
+  deleteFile: async (fileId, config) => {
+    try {
+      return await deleteMethod(ApiUrls.DELETE_FILE(fileId), {
+        ...config,
+        baseType: 'loginMockApi',
+      });
+    } catch (error) {
+      console.error(`Error in ${ApiUrls.DELETE_FILE(fileId)}:`, error);
+      throw error;
+    }
+  },
+
   generatePO: async (applicationId, aggregatorId, data, config) => {
 
     try {
@@ -138,8 +151,27 @@ const applicationServices = {
     }
   },
 
+  // 🔹 Get stage counts and KPI metrics
+  getStageMetrics: async (params = {}, config) => {
+    try {
+      const queryParams = new URLSearchParams();
+      if (params.zoneId) queryParams.append('zoneId', params.zoneId);
+      if (params.branchId) queryParams.append('branchId', params.branchId);
+      if (params.regionId) queryParams.append('regionId', params.regionId);
+      if (params.financialYear) queryParams.append('financialYear', params.financialYear);
+      if (params.month) queryParams.append('month', params.month);
+      if (params.startDate) queryParams.append('startDate', params.startDate);
+      if (params.endDate) queryParams.append('endDate', params.endDate);
+      if (params.search) queryParams.append('search', params.search);
 
+      const url = `${ApiUrls.GET_STAGE_METRICS}?${queryParams.toString()}`;
+      return await getMethod(url, config);
+    } catch (error) {
+      console.error('Error in getStageMetrics:', error);
+      throw error;
+    }
+  },
 
 };
 
-export default applicationServices
+export default applicationServices;

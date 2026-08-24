@@ -6,19 +6,44 @@ export const PERCENTAGE = "%"
 
 
 export const formatDateAndTime = (dateString) => {
+  if (!dateString) return 'N/A';
   const date = new Date(dateString);
+  if (isNaN(date.getTime())) return dateString;
   const options = {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
-    // second: '2-digit',
     hour12: true,
     timeZone: 'Asia/Kolkata'
-  }
-  return date.toLocaleString("en-US", options)
-}
+  };
+  return date.toLocaleString("en-US", options);
+};
+
+export const formatDateOnly = (dateString) => {
+  if (!dateString) return 'N/A';
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return dateString;
+  return date.toLocaleDateString("en-US", {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'Asia/Kolkata'
+  });
+};
+
+export const formatTimeOnly = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return '';
+  return date.toLocaleTimeString("en-US", {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: 'Asia/Kolkata'
+  });
+};
 
 export const getActionsColumn = ({
   onEdit,

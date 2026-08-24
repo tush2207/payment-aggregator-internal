@@ -4,24 +4,21 @@ import { lazy } from 'react';
 const APPLICATION_ROUTES_URLS = {
   LOGIN: '/login',
   DASHBOARD: '/dashboard',
+  ALL_APPLICATIONS: '/applications',
   AGGREGRATOR_DASHBOARD: '/aggregrator-dashboard',
   MANAGE_AGGREGRATOR: '/manage-aggregrator',
-  HELP_DESK:'/helpdesk',
-  TEST_FLOW: '/test-flow'
+  HELP_DESK: '/helpdesk',
+  TEST_FLOW: '/test-flow',
 };
 
 //-------------------------------LAZY IMPORTS-------------------------------//
 
 const Login = lazy(() => import('&src/Pages/Login'));
-
 const Dashboard = lazy(() => import('&src/pages/Dashboard'));
-
+const Applications = lazy(() => import('&src/pages/Applications'));
 const ManageAggregator = lazy(() => import('&src/pages/ManageAggregator'));
-
 const AggregratorDashboard = lazy(() => import('&src/pages/AggregratorDashboard'));
-
 const HelpDesk = lazy(() => import('&src/pages/HelpDesk'));
-
 const TestApplicationFlow = lazy(() => import('&src/pages/TestApplicationFlow'));
 
 //-------------------------------DEFAULT ROUTES-------------------------------//
@@ -43,10 +40,15 @@ const PROTECTED_ROUTES = [
     element: <Dashboard />,
   },
   {
+    pageTitle: 'Applications',
+    path: APPLICATION_ROUTES_URLS.ALL_APPLICATIONS,
+    element: <Applications />,
+  },
+  {
     pageTitle: 'Manage Aggregator',
     path: APPLICATION_ROUTES_URLS.MANAGE_AGGREGRATOR,
     element: <ManageAggregator />,
-    allowedRoles: ["CO"],   // 🔑 only CO can access
+    allowedRoles: ['CO'], // 🔑 only CO can access
   },
   {
     pageTitle: 'Payment Aggregators',
@@ -62,7 +64,7 @@ const PROTECTED_ROUTES = [
     pageTitle: 'Test Application Flow',
     path: APPLICATION_ROUTES_URLS.TEST_FLOW,
     element: <TestApplicationFlow />,
-  }
+  },
 ];
 
 export { APPLICATION_ROUTES_URLS, DEFAULT_ROUTES, PROTECTED_ROUTES };

@@ -53,16 +53,40 @@ const ApplicationRow = memo(
         return (
             <Fragment>
                 <TableRow hover sx={{ transition: '0.2s', backgroundColor: isExpanded ? '#fafafa' : '#fff' }}>
-                    <TableCell>
-                        <Typography fontWeight={700} color="#333">
+                    <TableCell sx={{ minWidth: 160, py: 1.2 }}>
+                        <Typography variant="body2" fontWeight={700} color="#0E4F8D" sx={{ fontSize: '13px', lineHeight: 1.3, mb: 0.3 }}>
                             {branch}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary" display="block">
-                            Region: {region}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary" display="block">
-                            Zone: {zone}
-                        </Typography>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            <Typography
+                                variant="caption"
+                                sx={{
+                                    fontSize: '11px',
+                                    lineHeight: 1.2,
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 0.5,
+                                    whiteSpace: 'nowrap',
+                                }}
+                            >
+                                <span style={{ fontWeight: 600, color: '#64748b' }}>Region:</span>
+                                <span style={{ fontWeight: 600, color: '#1e293b' }}>{region}</span>
+                            </Typography>
+                            <Typography
+                                variant="caption"
+                                sx={{
+                                    fontSize: '11px',
+                                    lineHeight: 1.2,
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 0.5,
+                                    whiteSpace: 'nowrap',
+                                }}
+                            >
+                                <span style={{ fontWeight: 600, color: '#64748b' }}>Zone:</span>
+                                <span style={{ fontWeight: 600, color: '#1e293b' }}>{zone}</span>
+                            </Typography>
+                        </Box>
                     </TableCell>
 
                     <TableCell>{formatDateAndTime(application.createdAt)}</TableCell>

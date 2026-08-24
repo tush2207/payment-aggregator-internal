@@ -51,5 +51,15 @@ const manageAggregatorServices = {
       throw error;
     }
   },
+
+  // 🔹 Test Email Dispatch
+  testEmail: async (data, config) => {
+    try {
+      return await postMethod(ApiUrls.TEST_EMAIL, data, config);
+    } catch (error) {
+      console.error(`Error in ${ApiUrls.TEST_EMAIL}:`, error);
+      throw error;
+    }
+  },
 };
-export default manageAggregatorServices
+export default manageAggregatorServices;

@@ -53,7 +53,7 @@ const DialogWithHeader = ({
       sx={{
         p: 2.2,
         px: 3,
-        background: headerBg || 'linear-gradient(135deg, #0a2342 0%, #0d3b6e 60%, #071830 100%)',
+        background: headerBg || 'linear-gradient(90deg, #176FC1 0%, #135FA6 40%, #9B0A2E 80%, #CE0F3E 100%)',
         color: headerColor || '#ffffff',
         position: 'relative',
         boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
@@ -115,7 +115,7 @@ const DialogWithHeader = ({
     </DialogTitle>
 
     {/* Brand Accent Stripe */}
-    <Box sx={{ height: '3px', background: 'linear-gradient(90deg, #c0392b 0%, #f6d365 50%, #c0392b 100%)' }} />
+    <Box sx={{ height: '3px', background: 'linear-gradient(90deg, #CE0F3E, #176FC1, #CE0F3E)' }} />
 
     {/* Content */}
     <DialogContent sx={{ p: 3, bgcolor: '#ffffff' }}>{children}</DialogContent>
