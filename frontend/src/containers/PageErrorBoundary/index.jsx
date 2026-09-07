@@ -1,86 +1,138 @@
 import React from 'react';
 import palette from '&src/theme/palette';
-import { ErrorOutline } from '@mui/icons-material';
-import { Container, Paper, Typography, Box } from '@mui/material';
+import { ErrorOutline, Refresh, Home } from '@mui/icons-material';
+import { Container, Paper, Typography, Box, Button, Stack } from '@mui/material';
+
 class PageErrorBoundary extends React.Component {
-  // Constructor initializes the component's state
   constructor(props) {
     super(props);
     this.state = {
-      hasError: false, // Tracks if an error has occurred
-      error: null, // Holds the error object
-      errorInfo: null, // Holds additional information about the error
+      hasError: false,
+      error: null,
+      errorInfo: null,
     };
   }
 
-  // getDerivedStateFromError is called when an error is thrown in a child component
   static getDerivedStateFromError(error) {
-    // This updates the state to show the fallback UI (the error message)
-    return { hasError: true, error }; // Set hasError to true and store the error
+    return { hasError: true, error };
   }
 
-  // componentDidCatch is called after an error is thrown and caught by the error boundary
   componentDidCatch(error, errorInfo) {
-    // Here, you can log the error to an external service for tracking
-    this.setState({ errorInfo }); // Save the errorInfo in the state for rendering details
-    console.error('Error Boundary caught an error:', error, errorInfo); // Log the error details to the console
+    this.setState({ errorInfo });
+    console.error('Error Boundary caught an error:', error, errorInfo);
   }
 
-  // This lifecycle method is called when the component updates due to a change in props or state
   componentDidUpdate(prevProps) {
-    // Check if the pageName prop has changed since the last render
     if (prevProps.pageName !== this.props.pageName) {
-      // Reset the error state if the pageName prop has changed
       this.setState({
-        hasError: false, // Reset hasError to false so the component renders normally
-        error: null, // Clear the stored error
-        errorInfo: null, // Clear the stored error info
+        hasError: false,
+        error: null,
+        errorInfo: null,
       });
     }
   }
 
   render() {
-    // If the state indicates an error has occurred, render the error UI
     if (this.state.hasError) {
       return (
         <Container
-          component={Paper}
-          style={{
-            padding: '50px 24px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            textAlign: 'center',
-            border: `1px solid ${palette.error.main}`,
-            overflowWrap: 'break-word',
-            wordWrap: 'break-word',
-            wordBreak: 'break-word',
-          }}>
-          <ErrorOutline fontSize="large" color="error" />
-          <Typography variant="h4" color="error">
-            Something went wrong.
-          </Typography>
-          <Box sx={{ mt: 2, mb: 2 }}>
-            <Typography fontWeight={700}>
-              Error in: {this.props.pageName || 'Unknown Page'}
-            </Typography>
-          </Box>
-
-          <details style={{ whiteSpace: 'pre-wrap', width: '100%' }}>
-            <Typography
-              variant="body2" component="div"
-              style={{
-                wordBreak: 'break-word',
-                overflowWrap: 'break-word',
-                whiteSpace: 'pre-wrap',
+          maxWidth="md"
+          sx={{ py: 6, display: 'flex', justifyContent: 'center' }}
+        >
+          <Paper
+            elevation={4}
+            sx={{
+              p: { xs: 3, sm: 5 },
+              width: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              textAlign: 'center',
+              borderRadius: 3,
+              border: `1px solid ${palette?.error?.light || '#f44336'}`,
+              background: '#fff',
+            }}
+          >
+            <Box
+              sx={{
+                p: 2,
+                borderRadius: '50%',
+                bgcolor: 'rgba(211, 47, 47, 0.1)',
+                color: '#d32f2f',
+                mb: 2,
               }}
             >
-              {this.state.error && this.state.error.toString()}
-              <br />
-              {this.state.errorInfo?.componentStack}
+              <ErrorOutline sx={{ fontSize: 56 }} />
+            </Box>
+
+            <Typography variant="h5" fontWeight={700} color="error" gutterBottom>
+              Something went wrong on this page.
             </Typography>
-          </details>
+
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              An unexpected error occurred while rendering <strong>{this.props.pageName || 'this component'}</strong>.
+            </Typography>
+
+            <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
+              <Button
+                variant="outlined"
+                startIcon={<Refresh />}
+                onClick={() => window.location.reload()}
+                sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
+              >
+                Reload Page
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<Home />}
+                onClick={() => (window.location.href = '/dashboard')}
+                sx={{
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  bgcolor: '#004c8f',
+                  '&:hover': { bgcolor: '#003366' },
+                }}
+              >
+                Go to Dashboard
+              </Button>
+            </Stack>
+
+            {/* Error stack collapsible details */}
+            <Box
+              component="details"
+              sx={{
+                width: '100%',
+                textAlign: 'left',
+                bgcolor: '#f8f9fa',
+                p: 2,
+                borderRadius: 2,
+                border: '1px solid #e9ecef',
+                cursor: 'pointer',
+              }}
+            >
+              <summary style={{ fontWeight: 600, color: '#495057', fontSize: '0.85rem' }}>
+                View Error Details (Technical Diagnostics)
+              </summary>
+              <Box
+                component="pre"
+                sx={{
+                  mt: 1.5,
+                  fontSize: '0.75rem',
+                  color: '#d32f2f',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                  overflowX: 'auto',
+                  fontFamily: 'monospace',
+                }}
+              >
+                {this.state.error && this.state.error.toString()}
+                {'\n\n'}
+                {this.state.errorInfo?.componentStack}
+              </Box>
+            </Box>
+          </Paper>
         </Container>
       );
     }

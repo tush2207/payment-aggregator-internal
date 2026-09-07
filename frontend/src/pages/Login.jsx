@@ -1,22 +1,5 @@
 import LoginModule from '&src/modules/Login';
-import { Grid } from '@mui/material';
 
-const Login = () => (
-  <Grid
-    container
-    direction={{ xs: 'column', md: 'row' }}
-    sx={{
-      minHeight: '100vh',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: 'background.default',
-    }}
-    spacing={4}
-  >
-    <Grid item xs={12} md={12} lg={12}>
-      <LoginModule />
-    </Grid>
-  </Grid>
-);
+const Login = () => <LoginModule />;
 
 export default Login;

@@ -2,6 +2,9 @@
 import cbiBGLogo from './cbiBGLogo.png';
 import cbiLogo from './cbiLogo.png';
 import centralbanklogo from './centralbanklogo.png';
+import loginLeftside from './loginLeftside.png';
+import papgLogo from './papgLogo.png';
+
 
 import emptyBox from './icons/empty-box.png';
 import TaskManagement from './task.png';
@@ -17,6 +20,7 @@ import message from './icons/message.png';
 
 // Exporting icons & images
 export {
-  applicationSubmission, centralbanklogo, cbiBGLogo, cbiLogo, coforward, customerAcceptance, emptyBox, finalApproval, quoteEvaluation, quoteSubmission, review, TaskManagement, message
+  applicationSubmission, centralbanklogo, cbiBGLogo, cbiLogo, coforward, customerAcceptance, emptyBox, finalApproval, quoteEvaluation, quoteSubmission, review, TaskManagement, message, loginLeftside
+  , papgLogo
 };
 
