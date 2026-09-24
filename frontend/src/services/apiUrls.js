@@ -5,7 +5,8 @@ const ApiUrls = {
   GET_USER_DETAILS: (userId) => `/get-user-details/${userId}`,
 
   // ---------------- Applications ----------------
-  GET_ALL_APPLICATIONS: (zoneId, page, search, status, category, createdAt, financialYear, month, startDate, endDate, pageSize, branchId, regionId, exportType) => {
+  GET_ALL_APPLICATIONS: (zoneId, page, search, status, category, createdAt, financialYear, month, startDate, endDate, pageSize, branchId, regionId, exportType, userRole) => {
+    const safeZoneId = (zoneId === '0' || zoneId === 0 || !zoneId || zoneId === 'undefined' || zoneId === 'null') ? '00000' : zoneId;
     const params = new URLSearchParams();
     if (status) params.append('status', status);
     if (search) params.append('search', search);
@@ -18,15 +19,21 @@ const ApiUrls = {
     if (pageSize) params.append('pageSize', pageSize);
     if (branchId) params.append('branchId', branchId);
     if (regionId) params.append('regionId', regionId);
+    if (userRole) params.append('userRole', userRole);
     if (exportType) params.append('export', exportType);
-    return `/get-all-applications/${zoneId}?${params.toString()}`;
+    return `/get-all-applications/${safeZoneId}?${params.toString()}`;
   },
 
   GET_APPLICATION_BY_ID: (applicationId) => `/get-single-applications/${applicationId}`,
   GET_STAGE_METRICS: `/applications/stage-metrics`,
+  GENERATE_SANCTION_LETTER: (applicationId) => `/applications/generate-sanction-letter/${applicationId}`,
+  RESEND_PO_EMAIL: (applicationId) => `/applications/${applicationId}/resend-po-email`,
   ADD_APPLICATION: "/applications",
   UPDATE_APPLICATION: (applicationId) => `/applications/${applicationId}`,
   DELETE_APPLICATION: (applicationId) => `/applications/${applicationId}`,
+  MARK_NOTIFICATION_READ: (notifId) => `/application-notifications/${notifId}/read`,
+  MARK_ALL_NOTIFICATIONS_READ: `/application-notifications/mark-all-read`,
+
 
   // ---------------- Files ----------------
   GET_APPLICATIONS_BY_ACCOUNT_NUMBER: (accountNo) => `/applications/${accountNo}`,
@@ -41,6 +48,9 @@ const ApiUrls = {
   ADD_AGGREGATOR: "/manage-aggregator",
   UPDATE_AGGREGATOR: (aggregatorId) => `/manage-aggregator/${aggregatorId}`,
   DELETE_AGGREGATOR: (aggregatorId) => `/manage-aggregator/${aggregatorId}`,
+  RESET_AGGREGATOR_CREDENTIALS: (aggregatorId) => `/manage-aggregator/${aggregatorId}/reset-credentials`,
+  GET_AGGREGATOR_AUDIT_LOGS: (params = '') => `/manage-aggregator/audit-logs${params ? `?${params}` : ''}`,
+  GET_SINGLE_AGGREGATOR_AUDIT_LOGS: (aggregatorId) => `/manage-aggregator/${aggregatorId}/audit-logs`,
   TEST_EMAIL: "/test-email",
 
   // ---------------- Aggregators by Application ----------------
@@ -76,6 +86,18 @@ const ApiUrls = {
 
   RESEND_QUOTE_EMAIL: (applicationId, aggregatorId) =>
     `/applications/${applicationId}/aggregators/${aggregatorId}/resend-quote-email`,
+
+  REQUEST_QUOTE_NEGOTIATION: (applicationId) =>
+    `/applications/${applicationId}/request-negotiation`,
+
+  GET_QUOTE_VERSIONS: (applicationId, aggregatorId) =>
+    `/applications/${applicationId}/aggregators/${aggregatorId}/quote-versions`,
+
+  GET_QUOTE_VERSION_DETAILS: (applicationId, aggregatorId, version) =>
+    `/applications/${applicationId}/aggregators/${aggregatorId}/quote-versions/${version}`,
+
+  COMPARE_QUOTE_VERSIONS: (applicationId, aggregatorId, v1, v2) =>
+    `/applications/${applicationId}/aggregators/${aggregatorId}/quote-versions-compare?v1=${v1}&v2=${v2}`,
 
   // ---------------- PO Generator ----------------
   GENERATE_PO: (applicationId, aggregatorId) => `/generate-purchase-order/applicationId/${applicationId}/aggregatorId/${aggregatorId}`,

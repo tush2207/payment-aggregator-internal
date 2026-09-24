@@ -8,8 +8,21 @@ import CustomerAcceptanceModal from './CustomerAcceptanceModal';
 import POFreezeModal from './POFreezeModal';
 import { PAYMENT_AGGREGATOR_WORKFLOW } from '&src/constants/PaymentAggregratorConstant';
 import useApplicationFlowAPI from '&src/hooks/useApplicationFlowAPI';
+import { useSelector } from 'react-redux';
+import { selectUserRole } from '&src/store/applicationFlowSlice';
+import { isUserAdmin } from '&src/utils';
 
 export default function ApplicationFlowRow({ customer, onRefresh }) {
+  const userDetails = React.useMemo(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem('userDetails') || '{}');
+    } catch {
+      return {};
+    }
+  }, []);
+
+  const userRole = useSelector(selectUserRole) || sessionStorage.getItem('role') || 'CO';
+  const isAdmin = React.useMemo(() => isUserAdmin(userDetails), [userDetails]);
   const { 
     submitReviewZO,
     submitReviewRO,
@@ -73,6 +86,8 @@ export default function ApplicationFlowRow({ customer, onRefresh }) {
     onRefresh();
   };
 
+  const hasAnyActions = isAdmin || (userRole === 'RO' && isPendingRO) || (userRole === 'ZO' && isPendingZO);
+
   return (
     <TableRow sx={{ p: 0, bgcolor: 'grey.50' }}>
       <TableCell colSpan={11} sx={{ p: 2 }}>
@@ -83,14 +98,16 @@ export default function ApplicationFlowRow({ customer, onRefresh }) {
           <Divider orientation="vertical" flexItem />
           <Box flex={1} sx={{ p: 2 }}>
             <Typography variant="h6" gutterBottom color="primary">
-              Next Actions
+              {hasAnyActions ? 'Next Actions' : 'Application Overview'}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Based on the current state of the application, please proceed with the following steps.
+              {hasAnyActions
+                ? 'Based on the current state of the application, please proceed with the following steps.'
+                : 'Workflow execution is managed by authorized administrators. You have view-only access to this application.'}
             </Typography>
 
             <Stack spacing={2} alignItems="flex-start">
-              {isPendingZO && (
+              {(isAdmin || userRole === 'ZO') && isPendingZO && (
                 <Stack direction="row" spacing={2}>
                   <Button variant="contained" color="success" onClick={() => handleReviewAction('ZO', 'approved')}>
                     Approve as ZO
@@ -100,7 +117,7 @@ export default function ApplicationFlowRow({ customer, onRefresh }) {
                   </Button>
                 </Stack>
               )}
-              {isPendingRO && (
+              {(isAdmin || userRole === 'RO') && isPendingRO && (
                 <Stack direction="row" spacing={2}>
                   <Button variant="contained" color="success" onClick={() => handleReviewAction('RO', 'approved')}>
                     Approve as RO
@@ -110,7 +127,7 @@ export default function ApplicationFlowRow({ customer, onRefresh }) {
                   </Button>
                 </Stack>
               )}
-              {isPendingCO && (
+              {isAdmin && isPendingCO && (
                 <Stack direction="row" spacing={2}>
                   <Button variant="contained" color="success" onClick={() => handleReviewAction('CO', 'approved')}>
                     Approve as CO
@@ -121,7 +138,7 @@ export default function ApplicationFlowRow({ customer, onRefresh }) {
                 </Stack>
               )}
 
-              {showUpdateProjections && (
+              {isAdmin && showUpdateProjections && (
                 <Stack direction="row" spacing={2}>
                   <Button variant="contained" onClick={() => setOpenProjection(true)}>
                     Update Projections
@@ -131,22 +148,22 @@ export default function ApplicationFlowRow({ customer, onRefresh }) {
                   </Button>
                 </Stack>
               )}
-              {showAddAggregators && (
+              {isAdmin && showAddAggregators && (
                 <Button variant="contained" onClick={() => setOpenAggregatorSelect(true)}>
                   Select Aggregators & Send Quote
                 </Button>
               )}
-              {showQuoteAnalysis && (
+              {isAdmin && showQuoteAnalysis && (
                 <Button variant="contained" onClick={() => setOpenQuotes(true)}>
                   Analyze Quotes & Add Markup
                 </Button>
               )}
-              {showCustomerAcceptance && (
+              {isAdmin && showCustomerAcceptance && (
                 <Button variant="contained" onClick={() => setOpenAcceptance(true)}>
                   Upload Customer Acceptance
                 </Button>
               )}
-              {showFinalApproval && (
+              {isAdmin && showFinalApproval && (
                 <Button variant="contained" color="success" onClick={() => setOpenPOFreeze(true)}>
                   Final Approval & PO Freeze
                 </Button>
@@ -158,7 +175,7 @@ export default function ApplicationFlowRow({ customer, onRefresh }) {
                 </Button>
               )}
               
-              {!isPendingZO && !isPendingRO && !isPendingCO && !showUpdateProjections && !showAddAggregators && !showQuoteAnalysis && !showCustomerAcceptance && !showFinalApproval && !customer?.isFinalApproved && (
+              {isAdmin && !isPendingZO && !isPendingRO && !isPendingCO && !showUpdateProjections && !showAddAggregators && !showQuoteAnalysis && !showCustomerAcceptance && !showFinalApproval && !customer?.isFinalApproved && (
                 <Typography variant="body2" fontStyle="italic" color="text.secondary">
                   Waiting for previous steps to complete...
                 </Typography>

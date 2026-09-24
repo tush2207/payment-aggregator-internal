@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Float, Sequence, LargeBinary, BigInteger
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Float, Sequence, LargeBinary, BigInteger, Text
 from sqlalchemy.sql import func
 from datetime import datetime
 from app.database.engine import Base, MSSQLBase
@@ -36,7 +36,16 @@ class ManageAggregatorInDB(Base):
     mobileNo = Column(BigInteger)
     location = Column(String(255))
     services = Column(String(255))
+    alternateEmail = Column(String(255), nullable=True)
+    status = Column(String(50), default="active", nullable=True)
     isDeleted = Column(Boolean, default=False)
+    hashed_password = Column(String(255), nullable=True)
+    must_reset_password = Column(Boolean, default=True, nullable=True)
+    failed_login_attempts = Column(Integer, default=0, nullable=True)
+    locked_until = Column(DateTime(timezone=True), nullable=True)
+    last_login_at = Column(DateTime(timezone=True), nullable=True)
+    last_login_ip = Column(String(255), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.current_timestamp(), nullable=True)
 
 class ApplicationsInDB(Base):
     __tablename__ = "applications"
@@ -50,6 +59,14 @@ class ApplicationsInDB(Base):
     address = Column(String(1020), nullable=True)
     integrateWith = Column(String(1020), nullable=True)
     category = Column(String(1020), nullable=True)
+    businessCategory = Column(String(255), nullable=True)
+    customerAcceptanceRequired = Column(Boolean, default=True, nullable=True)
+    poMailStatus = Column(String(50), default="PENDING", nullable=True)
+    poMailSentAt = Column(DateTime(timezone=True), nullable=True)
+    poMailRecipient = Column(String(255), nullable=True)
+    rejectedBy = Column(String(255), nullable=True)
+    rejectedRole = Column(String(50), nullable=True)
+    rejectedDate = Column(DateTime(timezone=True), nullable=True)
     avgTransactionYearly = Column(BigInteger, nullable=True)
     avgTransactionSize = Column(BigInteger, nullable=True)
     accountBalanceToday = Column(BigInteger, nullable=True)
@@ -98,6 +115,12 @@ class ApplicationsInDB(Base):
     authorisedPersonDesignation = Column(String(1020), nullable=True)
     branchName = Column(String(1020), nullable=True)
     regionName = Column(String(1020), nullable=True)
+    zoneName = Column(String(1020), nullable=True)
+    currentQuoteVersion = Column(Integer, default=1)
+    isNegotiationRequested = Column(Boolean, default=False)
+    negotiationRemarks = Column(String(1020), nullable=True)
+    negotiationRequestedBy = Column(String(255), nullable=True)
+    negotiationRequestedDate = Column(DateTime(timezone=True), nullable=True)
     
 class ProjectionDetailsInDB(Base):
     __tablename__ = 'projection_details'
@@ -121,6 +144,9 @@ class ProjectionDetailsInDB(Base):
     order = Column(Integer, nullable=True)
     allow = Column(Boolean, nullable=True)
     bankUnit = Column(String(255), nullable=True)
+    quoteVersion = Column(Integer, default=1)
+    revisionRemarks = Column(String(1020), nullable=True)
+    createdAt = Column(DateTime(timezone=True), server_default=func.current_timestamp())
 
 class FileStoreInDB(Base):
     __tablename__ = "files"
@@ -135,21 +161,23 @@ class HelpDesk(Base):
     __tablename__ = "helpdesk"
     id = Column(Integer, Sequence('helpdesk_details_id_seq'), primary_key=True)
     ticketName = Column(String(150))
-    customerName = Column(String(150))
-    branchName = Column(String(150))
-    zoneName = Column(String(150))
-    regionName = Column(String(150))
-    accountNo = Column(Integer)
-    customerEmail = Column(String(150))
-    customerMobileNo = Column(Integer)
-    description = Column(String(500))
-    priority = Column(String(50))
-    status = Column(String(50))
+    customerName = Column(String(150), nullable=True)
+    branchName = Column(String(150), nullable=True)
+    zoneName = Column(String(150), nullable=True)
+    regionName = Column(String(150), nullable=True)
+    accountNo = Column(BigInteger, nullable=True)
+    customerEmail = Column(String(150), nullable=True)
+    customerMobileNo = Column(BigInteger, nullable=True)
+    description = Column(Text, nullable=True)
+    priority = Column(String(50), nullable=True)
+    status = Column(String(50), nullable=True)
     createdAt = Column(DateTime, server_default=func.current_timestamp())
     updatedAt = Column(DateTime, onupdate=func.current_timestamp())
-    applicationNo = Column(Integer)
-    chats = Column(String(255))
-    remark = Column(String(500))
+    applicationNo = Column(Integer, nullable=True)
+    chats = Column(Text, nullable=True)
+    remark = Column(Text, nullable=True)
+    attachmentUrl = Column("ATTACHMENTURL", String(512), nullable=True)
+    attachmentName = Column("ATTACHMENTNAME", String(256), nullable=True)
 
 class VEmployeeAllDetailsInDB(MSSQLBase):
     __tablename__ = "VEmployeeAllDetails"
@@ -182,3 +210,41 @@ class ApplicationAuditLogInDB(Base):
     details = Column(String(2000), nullable=True)
     ipAddress = Column(String(255), nullable=True)
     createdAt = Column(DateTime(timezone=True), server_default=func.current_timestamp())
+
+class NotificationInDB(Base):
+    __tablename__ = 'app_notifications'
+    id = Column(Integer, Sequence('notif_id_seq'), primary_key=True)
+    applicationId = Column(Integer, nullable=True)
+    title = Column(String(255), nullable=False)
+    message = Column(String(1020), nullable=False)
+    type = Column(String(50), default="info")  # 'info', 'success', 'warning', 'error'
+    stage = Column(String(100), nullable=True)
+    targetRole = Column(String(50), nullable=True)  # 'BO', 'RO', 'ZO', 'CO', 'ALL'
+    targetUserId = Column(String(255), nullable=True)
+    branchName = Column(String(255), nullable=True)
+    regionName = Column(String(255), nullable=True)
+    zoneName = Column(String(255), nullable=True)
+    isRead = Column(Boolean, default=False)
+    createdAt = Column(DateTime(timezone=True), server_default=func.current_timestamp())
+
+class AggregatorAuditLogInDB(Base):
+    __tablename__ = 'aggregator_audit_logs'
+    id = Column(Integer, Sequence('agg_audit_log_id_seq'), primary_key=True)
+    aggregatorId = Column(Integer, nullable=True)
+    aggregatorName = Column(String(255), nullable=True)
+    action = Column(String(255), nullable=False)
+    performedBy = Column(String(255), nullable=True)
+    userRole = Column(String(50), nullable=True)
+    details = Column(String(2000), nullable=True)
+    ipAddress = Column(String(255), nullable=True)
+    createdAt = Column(DateTime(timezone=True), server_default=func.current_timestamp())
+
+# Automatically ensure all tables and migrations are initialized whenever models are loaded
+try:
+    from app.database.engine import init_db
+    init_db()
+except Exception as _e:
+    pass
+
+
+

@@ -13,7 +13,7 @@ import {
   Paper
 } from '@mui/material';
 import DialogWithHeader from '&src/components/Dialog/DialogWithHeader';
-import { generateProjectionArray, calculateProjectionDetails } from '&src/utils/calculation';
+import { generateProjectionArray, calculateProjectionDetails, getProjectionsForCustomer } from '&src/utils/calculation';
 import { PROJECTION_CAL_DETAILS } from '&src/constants/PaymentAggregratorConstant';
 
 const ProjectionModal = ({ open, onClose, applicationDetails, onSubmitProjections }) => {
@@ -22,9 +22,9 @@ const ProjectionModal = ({ open, onClose, applicationDetails, onSubmitProjection
 
   useEffect(() => {
     if (open && applicationDetails) {
-      const { avgTransactionSize, avgTransactionYearly, aggregateDepositAmt, applicationId } = applicationDetails;
-      // Generate default array
-      const projectionList = generateProjectionArray(PROJECTION_CAL_DETAILS, avgTransactionSize);
+      const { avgTransactionSize, avgTransactionYearly, aggregateDepositAmt, applicationId, projection } = applicationDetails;
+      // Generate default array filtered by customer application projection
+      const projectionList = getProjectionsForCustomer(PROJECTION_CAL_DETAILS, projection, avgTransactionSize, applicationId);
       
       // Calculate full details
       const payload = calculateProjectionDetails({

@@ -57,8 +57,9 @@ const usePOGenerator = (applicationDetails, setOpenPOModal, openPOModal) => {
       );
       setOpenPOModal && setOpenPOModal(false)
 
-      const blob =  new Blob([res?.data],{
-        type:'application/vnd.openxmlformats-officedocument.wordprocesssingml.document'
+      const rawData = res?.data || res;
+      const blob = new Blob([rawData], {
+        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
       });
       if (!blob) throw new Error("Invalid file data");
       const poCustomerName = applicationDetails?.customerName || customerName;

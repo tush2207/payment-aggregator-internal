@@ -49,7 +49,7 @@ export default function AggregatorApplicationsTable({
   const theme = useTheme();
   const dispatch = useDispatch();
   const userRole = useSelector(selectUserRole) || sessionStorage.getItem('role') || 'CO';
-  const isCO = userRole === 'CO';
+  const isCO = userRole === 'CO' || userRole === 'ADMIN';
 
   const [expandedAggregatorId, setExpandedAggregatorId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -369,7 +369,11 @@ export default function AggregatorApplicationsTable({
                                           </Typography>
                                         </TableCell>
                                         <TableCell sx={{ fontWeight: 700, fontSize: '12px' }}>{cust.applicationId}</TableCell>
-                                        <TableCell sx={{ fontWeight: 600, fontSize: '12.5px' }}>{cust.customerName}</TableCell>
+                                        <TableCell sx={{ fontWeight: 600, fontSize: '12.5px' }}>
+                                          <Typography variant="body2" fontWeight={600} sx={{ fontSize: '12.5px' }}>
+                                            {cust.customerName}
+                                          </Typography>
+                                        </TableCell>
                                         <TableCell sx={{ minWidth: 160, py: 1 }}>
                                           <Typography variant="caption" fontWeight={700} color="#0E4F8D" sx={{ fontSize: '12px', display: 'block', mb: 0.2 }}>
                                             {cust.branchName || 'N/A'}
@@ -385,7 +389,40 @@ export default function AggregatorApplicationsTable({
                                             </Typography>
                                           </Box>
                                         </TableCell>
-                                        <TableCell sx={{ fontSize: '12px' }}>{cust.category || 'General Services'}</TableCell>
+                                        <TableCell sx={{ minWidth: 150, fontSize: '12px' }}>
+                                          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.4 }}>
+                                            <Chip
+                                              label={cust.category || 'General Services'}
+                                              size="small"
+                                              sx={{
+                                                height: 22,
+                                                fontSize: '10.5px',
+                                                fontWeight: 700,
+                                                bgcolor: cust.category === 'Govt' ? '#eff6ff' : '#f8fafc',
+                                                color: cust.category === 'Govt' ? '#1d4ed8' : '#334155',
+                                                border: cust.category === 'Govt' ? '1px solid #bfdbfe' : '1px solid #e2e8f0',
+                                                borderRadius: '5px'
+                                              }}
+                                            />
+                                            {cust.businessCategory && (
+                                              <Typography
+                                                variant="caption"
+                                                sx={{
+                                                  fontSize: '10.5px',
+                                                  color: '#0E4F8D',
+                                                  fontWeight: 600,
+                                                  lineHeight: 1.25,
+                                                  display: 'flex',
+                                                  alignItems: 'center',
+                                                  gap: 0.4
+                                                }}
+                                              >
+                                                <span style={{ color: '#94a3b8', fontSize: '9px' }}>●</span>
+                                                {cust.businessCategory}
+                                              </Typography>
+                                            )}
+                                          </Box>
+                                        </TableCell>
                                         <TableCell align="center">
                                           <StatusChipOrSelect value={cust.status || 'pending'} type="workflow" />
                                         </TableCell>

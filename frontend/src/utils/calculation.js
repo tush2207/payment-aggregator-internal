@@ -1,32 +1,244 @@
 import { PERCENTAGE, RS } from ".";
 
-export function generateProjectionArray(projectionDetails, avgTransactionSize) {
-  const isLessThanOrEqual2K = avgTransactionSize <= 2000;
+/**
+ * Canonical channel ordering helper.
+ * Standard base channels follow strict banking order:
+ * 1: Internet banking
+ * 2: SBI
+ * 3: HDFC
+ * 4: ICICI
+ * 5: AXIS
+ * 6: OTHERS
+ * 7: UPI
+ * 8: Debit card - Rupay
+ * 9: Debit card - Master/Visa (Upto 2000)
+ * 10: Debit card - Master/Visa (Above 2000)
+ * 11: Credit cards
+ * 12: Wallets & Prepaid Cards
+ * Any newly added custom channels/keys will always be placed at the bottom (>= 100).
+ */
+export function getChannelOrder(item) {
+  if (!item) return 999;
+  const t = (item.transactionType || '').toLowerCase().trim();
+  if (t === 'internet banking' && !item.isIB) return 1;
+  if (t === 'sbi') return 2;
+  if (t === 'hdfc') return 3;
+  if (t === 'icici') return 4;
+  if (t === 'axis') return 5;
+  if (t === 'others') return 6;
+  if (t === 'upi') return 7;
+  if (t.includes('rupay') || (t.includes('debit') && !t.includes('master') && !t.includes('visa'))) return 8;
+  if (t.includes('master') || t.includes('visa')) {
+    return (t.includes('above') || t.includes('>')) ? 10 : 9;
+  }
+  if (t.includes('credit')) return 11;
+  if (t.includes('wallet') || t.includes('prepaid')) return 12;
+  if (typeof item.order === 'number' && item.order >= 100) return item.order;
+  return 100 + (typeof item.id === 'number' ? item.id : 0);
+}
 
-  return projectionDetails.map((item) => {
-    // Upto 2000 rule
-    if (item.transactionType === "Debit card - Master/Visa (Upto 2000)") {
-      return {
-        ...item,
-        transactionCount: isLessThanOrEqual2K ? "40%" : "",
-        transactionValue: isLessThanOrEqual2K ? "25%" : "",
-        allow: isLessThanOrEqual2K
-      };
+/**
+ * Dynamically builds and filters baseline projections for a customer application.
+ * - Shows only selected channels if customerProjection is provided
+ * - If default channel is missing from customerProjection, removes it
+ * - If new custom channel is present in customerProjection, dynamically adds it
+ * - Preserves exact default percentages for matched instruments
+ * - Applies <= 2000 vs > 2000 ticket size rule for Master/Visa
+ */
+export function getProjectionsForCustomer(
+  defaultProjections = [],
+  customerProjection = '',
+  avgTransactionSize = 0,
+  applicationId = null
+) {
+  const isLessThanOrEqual2K = Number(avgTransactionSize) <= 2000;
+  const rawList = Array.isArray(customerProjection)
+    ? customerProjection.map((s) => String(s).trim()).filter(Boolean)
+    : typeof customerProjection === 'string' && customerProjection.trim()
+    ? customerProjection.split('|').map((s) => s.trim()).filter(Boolean)
+    : [];
+
+  const selectedProjs = rawList.map((s) => s.toLowerCase());
+  const hasFilter = selectedProjs.length > 0;
+
+  const resultList = [];
+  let nextOrder = 1;
+
+  // 1. Process and Filter Standard Default Channels
+  (defaultProjections || []).forEach((q) => {
+    const typeLower = (q.transactionType || '').toLowerCase();
+    let shouldInclude = true;
+
+    if (hasFilter) {
+      if (q.isIB) {
+        // Keep Net Banking sub-banks if Internet banking is selected
+        shouldInclude = selectedProjs.some(
+          (p) => p.includes('internet') || p.includes('banking') || p.includes('netbanking')
+        );
+      } else if (typeLower.includes('internet') || typeLower.includes('banking')) {
+        shouldInclude = selectedProjs.some(
+          (p) => p.includes('internet') || p.includes('banking') || p.includes('netbanking')
+        );
+      } else if (typeLower.includes('upi')) {
+        shouldInclude = selectedProjs.some((p) => p.includes('upi'));
+      } else if (typeLower.includes('rupay')) {
+        shouldInclude = selectedProjs.some(
+          (p) => p.includes('rupay') || (p.includes('debit') && !p.includes('master') && !p.includes('visa'))
+        );
+      } else if (typeLower.includes('master') || typeLower.includes('visa')) {
+        shouldInclude = selectedProjs.some(
+          (p) => p.includes('master') || p.includes('visa') || (p.includes('debit') && !p.includes('rupay'))
+        );
+      } else if (typeLower.includes('credit')) {
+        shouldInclude = selectedProjs.some((p) => p.includes('credit'));
+      } else {
+        shouldInclude = selectedProjs.some((p) => p === typeLower);
+      }
     }
 
-    // Above 2000 rule
-    if (item.transactionType === "Debit card - Master/Visa (Above 2000)") {
-      return {
-        ...item,
-        transactionCount: isLessThanOrEqual2K ? "" : "40%",
-        transactionValue: isLessThanOrEqual2K ? "" : "25%",
-        allow: !isLessThanOrEqual2K
-      };
-    }
+    if (shouldInclude) {
+      let count = q.transactionCount ? parseInt(q.transactionCount, 10) || 0 : 0;
+      let val = q.transactionValue ? parseInt(q.transactionValue, 10) || 0 : 0;
 
-    // otherwise return item unchanged
-    return item;
+      // Master/Visa 2000 ticket size condition
+      if (q.transactionType === 'Debit card - Master/Visa (Upto 2000)') {
+        count = isLessThanOrEqual2K ? (parseInt(q.transactionCount, 10) || 40) : 0;
+        val = isLessThanOrEqual2K ? (parseInt(q.transactionValue, 10) || 25) : 0;
+      } else if (q.transactionType === 'Debit card - Master/Visa (Above 2000)') {
+        count = isLessThanOrEqual2K ? 0 : (parseInt(q.transactionCount, 10) || 40);
+        val = isLessThanOrEqual2K ? 0 : (parseInt(q.transactionValue, 10) || 25);
+      }
+
+      // If this is an inactive Master/Visa row (0 count and 0 value), do not include it
+      if (q.transactionType?.includes('Debit card - Master/Visa') && count === 0 && val === 0) {
+        return;
+      }
+
+      resultList.push({
+        ...q,
+        id: nextOrder,
+        order: nextOrder,
+        applicationId: applicationId || q.applicationId || null,
+        aggregatorId: q.aggregatorId || null,
+        transactionType: q.transactionType,
+        transactionCount: count,
+        transactionValue: val,
+        transactionTypePercent: q.transactionTypePercent || '',
+        isIB: q.isIB || false,
+        allow: q.allow ?? (!q.isIB && q.transactionType !== 'Internet banking'),
+        rate: q.rate ?? 0,
+        unit: q.unit || '₹',
+        bankUnit: q.bankUnit || '₹',
+        chargesProposed: q.chargesProposed ?? 0,
+        grossAmount: q.grossAmount ?? 0,
+        vendorShare: q.vendorShare ?? 0,
+        expectedRevenue: q.expectedRevenue ?? 0,
+        estimatedTransactions: q.estimatedTransactions ?? 0,
+        aggregateAmount: q.aggregateAmount ?? 0,
+        isDeleted: false,
+        quoteVersion: 1,
+        revisionRemarks: null,
+        isCustom: false,
+      });
+      nextOrder++;
+    }
   });
+
+  // 2. Add New Custom Channels from Customer Application Form
+  if (hasFilter) {
+    rawList.forEach((projName) => {
+      const pLower = projName.toLowerCase();
+      const isStandard =
+        pLower.includes('internet') ||
+        pLower.includes('banking') ||
+        pLower.includes('upi') ||
+        pLower.includes('debit') ||
+        pLower.includes('credit') ||
+        pLower.includes('rupay') ||
+        pLower.includes('master') ||
+        pLower.includes('visa');
+
+      if (!isStandard) {
+        const alreadyExists = resultList.some(
+          (item) => item.transactionType.toLowerCase() === pLower
+        );
+        if (!alreadyExists) {
+          const existingItem = (defaultProjections || []).find(
+            (d) => (d.transactionType || '').toLowerCase() === pLower
+          );
+          const count = existingItem?.transactionCount !== undefined && existingItem?.transactionCount !== null && existingItem?.transactionCount !== ''
+            ? (parseInt(existingItem.transactionCount, 10) || 0)
+            : 0;
+          const val = existingItem?.transactionValue !== undefined && existingItem?.transactionValue !== null && existingItem?.transactionValue !== ''
+            ? (parseInt(existingItem.transactionValue, 10) || 0)
+            : 0;
+
+          resultList.push({
+            id: nextOrder,
+            order: nextOrder,
+            applicationId: applicationId || null,
+            aggregatorId: null,
+            transactionType: projName,
+            transactionCount: count,
+            transactionValue: val,
+            transactionTypePercent: `${val}%`,
+            isIB: false,
+            allow: true,
+            rate: existingItem?.rate ?? 0,
+            unit: existingItem?.unit || '%',
+            bankUnit: existingItem?.bankUnit || '%',
+            chargesProposed: existingItem?.chargesProposed ?? 0,
+            grossAmount: existingItem?.grossAmount ?? 0,
+            vendorShare: existingItem?.vendorShare ?? 0,
+            expectedRevenue: existingItem?.expectedRevenue ?? 0,
+            estimatedTransactions: existingItem?.estimatedTransactions ?? 0,
+            aggregateAmount: existingItem?.aggregateAmount ?? 0,
+            isDeleted: false,
+            quoteVersion: 1,
+            revisionRemarks: null,
+            isCustom: true,
+          });
+          nextOrder++;
+        }
+      }
+    });
+  }
+
+  return resultList;
+}
+
+export function generateProjectionArray(projectionDetails, avgTransactionSize) {
+  const isLessThanOrEqual2K = Number(avgTransactionSize) <= 2000;
+
+  return projectionDetails
+    .filter((item) => {
+      if (item.transactionType === "Debit card - Master/Visa (Upto 2000)" && !isLessThanOrEqual2K) {
+        return false;
+      }
+      if (item.transactionType === "Debit card - Master/Visa (Above 2000)" && isLessThanOrEqual2K) {
+        return false;
+      }
+      return true;
+    })
+    .map((item) => {
+      if (item.transactionType === "Debit card - Master/Visa (Upto 2000)") {
+        return {
+          ...item,
+          transactionCount: "40%",
+          transactionValue: "25%",
+          allow: true
+        };
+      }
+      if (item.transactionType === "Debit card - Master/Visa (Above 2000)") {
+        return {
+          ...item,
+          transactionCount: "40%",
+          transactionValue: "25%",
+          allow: true
+        };
+      }
+      return item;
+    });
 }
 
 
@@ -351,7 +563,7 @@ export function calculateProjectionDetails_working({
         updatedItem.allow = !item.isIB
           ? selectedProjections?.includes(item.transactionType)
           : true;
-      };
+      }
 
       console.log(
         "⚙️ Final Item After Allow Logic: calculateProjectionDetails 6",
@@ -465,13 +677,17 @@ export function markAllowedIBTransactions(data, projectionList = []) {
 //   };
 // };
 export const calculateQuoteRow = (row, newCharges, newUnit, newRate) => {
-  const unit = newUnit || row.unit;         // Aggregator unit (% or ₹)
-  const bankUnit = row?.bankUnit;            // Bank-side unit (% or ₹)
+  const unit = newUnit || row.unit || "₹";         // Aggregator unit (% or ₹)
+  const rateNum = newRate !== undefined ? parseFloat(newRate) || 0 : (parseFloat(row.rate) || 0);
 
-  const chargesStr = newCharges ?? row.chargesProposed ?? "";
+  let chargesStr = newCharges !== undefined && newCharges !== null && newCharges !== ""
+    ? newCharges
+    : (row.chargesProposed !== undefined && row.chargesProposed !== null && row.chargesProposed !== "" && Number(row.chargesProposed) > 0
+        ? row.chargesProposed
+        : (rateNum > 0 ? String(rateNum) : ""));
+
+  const bankUnit = row?.bankUnit || unit;            // Bank-side unit (% or ₹)
   const chargesNum = parseFloat(chargesStr) || 0;
-
-  const rateNum = newRate !== undefined ? parseFloat(newRate) || 0 : row.rate || 0;
 
   const aggAmt = row.aggregateAmount || 0;
   const estTxn = row.estimatedTransactions || 0;
@@ -532,6 +748,7 @@ export const calculateQuoteRow = (row, newCharges, newUnit, newRate) => {
   return {
     ...row,
     chargesProposed: chargesStr,
+    bankUnit,
     unit,
     rate: rateNum,
     grossAmount,

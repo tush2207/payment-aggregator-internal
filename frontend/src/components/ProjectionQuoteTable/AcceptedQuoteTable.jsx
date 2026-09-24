@@ -1,20 +1,37 @@
+import React from "react";
 import {
-  Add,
-  CheckCircle,
-          // Calculate totals for each aggregator
-          const aggregatorTotals = {};
-activeAggs.forEach((agg) => {
-  aggregatorTotals[agg.aggregatorId] = calculateTotals(allProjections[agg.aggregatorId] || []);
-});
-aggregatorTotals[agg.aggregatorId] = calculateTotals(allProjections[ag          const baseTotals = calculateTotals(baseRows);
-const baseTotals = calculateTotals(baseRows);
-const sortedActiveAggs = [...activeAggs].sort((a, b) => {
-  const shareA = aggregatorTotals[a.aggregatorId]?.totalVendorShare || 0;
-  const shareB = aggregatorTotals[b.aggregatorId]?.totalVendorShare || 0;
-  return shareA - shareB;
-});
-let serialNo = 0;
-const handleExportExcel = () => {
+  Box,
+  Button,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Typography,
+} from "@mui/material";
+import { Download } from "@mui/icons-material";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
+import { formatNumber, PERCENTAGE } from "&src/utils";
+import { calculateTotals } from "&src/utils/calculation";
+
+const AggregatorDetails = ({ customerDetails, activeAggs = [], allProjections = {}, baseRows = [], finalizedAggregatorId }) => {
+  const aggregatorTotals = {};
+  activeAggs.forEach((agg) => {
+    aggregatorTotals[agg.aggregatorId] = calculateTotals(allProjections[agg.aggregatorId] || []);
+  });
+  const baseTotals = calculateTotals(baseRows);
+  const sortedActiveAggs = [...activeAggs].sort((a, b) => {
+    const shareA = aggregatorTotals[a.aggregatorId]?.totalVendorShare || 0;
+    const shareB = aggregatorTotals[b.aggregatorId]?.totalVendorShare || 0;
+    return shareA - shareB;
+  });
+
+  const handleExportExcel = () => {
   const data = [];
   // Title
   data.push([`Cost Benefit Analysis for ${customerDetails?.customerName || "Customer"}`]);
@@ -158,14 +175,7 @@ return (
   <Box sx={{ width: "100%", mt: 2, p: 2 }}>
     {/* Downloader & Legend Bar */}
     {isAccepted && (
-      <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ mb: 2, bgcolor: "#f8fafc", p: 1.5, borderRadius: "8px", border: "1px solid #e2e8f0" }}>
-        <Typography variant="body2" color="text.secondary" fontWeight={500}>
-          {finalizedAggregatorId && (
-            <span>
-              ℹ️ Color Legend: <strong style={{ color: "#16a34a" }}>Green columns</strong> represent the Finalized Aggregator. <strong style={{ color: "#dc2626" }}>Red columns</strong> represent other rejected aggregators.
-            </span>
-          )}
-        </Typography>
+      <Box display="flex" justifyContent="flex-end" alignItems="center" sx={{ mb: 2, bgcolor: "#f8fafc", p: 1.5, borderRadius: "8px", border: "1px solid #e2e8f0" }}>
         <Stack direction="row" spacing={1}>
           <Button
             variant="outlined"
@@ -225,7 +235,6 @@ return (
               <TableCell sx={{ ...subHeaderCellSx, minWidth: "140px" }}>Gross Amount Received from Charges (Rs)</TableCell>
               {activeAggs.map((agg) => {
                 const isFinalized = finalizedAggregatorId && Number(agg.aggregatorId) === Number(finalizedAggregatorId);
-                const subHeaderBg = finalizedAggregatorId
                 const subHeaderBg = isAccepted
                   ? (isFinalized ? "#dcfce7" : "#fee2e2")
                   : "#ccfbf1";
@@ -239,11 +248,12 @@ return (
               })}
             </TableRow>
           </TableHead>
-          <TableBody>ableHead>
-            <TableBody>
-              {baseRows.map((row, idx) => {
+          <TableBody>
+            {(() => {
+              let parentCounter = 0;
+              return baseRows.map((row, idx) => {
                 const isSubBank = row.isIB;
-                if (!isSubBank) serialNo += 1;
+                const srNo = !isSubBank ? ++parentCounter : "";
                 return (
                   <TableRow key={idx} sx={{ "&:hover": { bgcolor: "#f8fafc" }, bgcolor: isSubBank ? "#fdfdfd" : "transparent" }}>
                     {/* Count % */}
@@ -299,7 +309,8 @@ return (
                     })}
                   </TableRow>
                 );
-              })}
+              });
+            })()}
               {/* Totals Row */}
               <TableRow>
                 <TableCell colSpan={3} sx={{ ...totalCellSx }} align="center">TOTAL</TableCell>
@@ -339,5 +350,5 @@ return (
   </Box>
 );
 };
-};
+
 export default AggregatorDetails;

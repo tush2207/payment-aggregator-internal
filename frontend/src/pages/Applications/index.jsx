@@ -16,7 +16,8 @@ import {
   Add,
   FileDownloadRounded,
 } from '@mui/icons-material';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { useSearchParams } from 'react-router-dom';
 
 import { ApplicationFlowTable, ApplicationFlowDialog } from '&src/components/ApplicationFlow';
 import SectionHeader from '&src/components/Headers/SectionHeader';
@@ -26,7 +27,7 @@ import FullScreenLoader from '&src/components/Loaders/FullScreenLoader';
 import useStatusWiseAlert from '&src/components/ToastNotifications/useStatusWiseAlert';
 import useAggregatorDetails from '&src/hooks/useAggregatorDetails';
 import applicationServices from '&src/services/applications';
-import { selectUserRole, selectDialogOpen } from '&src/store/applicationFlowSlice';
+import { selectUserRole, selectDialogOpen, openWorkflowDialog } from '&src/store/applicationFlowSlice';
 import AggregatorApplicationsTable from './AggregatorApplicationsTable';
 
 const getCurrentFinancialYear = () => {
@@ -42,6 +43,9 @@ const getCurrentFinancialYear = () => {
 
 export default function Applications() {
   const theme = useTheme();
+  const dispatch = useDispatch();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const openAppId = searchParams.get('openAppId');
   const [currentTab, setCurrentTab] = useState(0);
   const [mockApp, setMockApp] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -50,8 +54,8 @@ export default function Applications() {
   const [applicationData, setApplicationData] = useState(null);
 
   const [filters, setFilters] = useState({
-    financialYear: 'all',
-    selectedMonth: 'all',
+    financialYear: getCurrentFinancialYear(),
+    selectedMonth: String(new Date().getMonth()),
     startDate: '',
     endDate: '',
     search: '',
@@ -89,7 +93,9 @@ export default function Applications() {
       } else if (userRole === 'RO') {
         reqRegionId = userDetails.regionId;
       } else if (userRole === 'ZO') {
-        filterby = userDetails.zoneId || '00000';
+        filterby = (userDetails.zoneId && userDetails.zoneId !== '0' && userDetails.zoneId !== 0) ? userDetails.zoneId : '00000';
+      } else {
+        filterby = '00000';
       }
 
       const response = await applicationServices.getAllApplications({
@@ -105,7 +111,9 @@ export default function Applications() {
         endDate: filters.endDate,
         branchId: reqBranchId,
         regionId: reqRegionId,
+        userRole: userRole,
       });
+
 
       if (response && response.data) {
         const appList = response.data.data || response.data || [];
@@ -141,6 +149,26 @@ export default function Applications() {
       fetchApplicationsData();
     }
   }, [dialogOpen, fetchApplicationsData]);
+
+  // Notification click: ensure search filter does not hide target application
+  useEffect(() => {
+    if (!openAppId) return;
+    setFilters((prev) => ({ ...prev, search: '' }));
+  }, [openAppId]);
+
+  const handleApplicationCreatedOrUpdated = useCallback(async (createdOrUpdatedData) => {
+    setFilters((prev) => ({ ...prev, search: '', page: 1 }));
+    await fetchApplicationsData();
+    if (createdOrUpdatedData?.applicationId) {
+      try {
+        const fullAppRes = await applicationServices.getApplicationById(createdOrUpdatedData.applicationId);
+        const appObj = fullAppRes?.data?.data || fullAppRes?.data || createdOrUpdatedData;
+        dispatch(openWorkflowDialog(appObj));
+      } catch (e) {
+        dispatch(openWorkflowDialog(createdOrUpdatedData));
+      }
+    }
+  }, [fetchApplicationsData, dispatch]);
 
   const handleOpen = () => {
     setApplicationData(null);
@@ -190,7 +218,9 @@ export default function Applications() {
       } else if (userRole === 'RO') {
         reqRegionId = userDetails.regionId;
       } else if (userRole === 'ZO') {
-        filterby = userDetails.zoneId || '00000';
+        filterby = (userDetails.zoneId && userDetails.zoneId !== '0' && userDetails.zoneId !== 0) ? userDetails.zoneId : '00000';
+      } else {
+        filterby = '00000';
       }
 
       const response = await applicationServices.getAllApplications({
@@ -204,6 +234,7 @@ export default function Applications() {
         endDate: filters.endDate,
         branchId: reqBranchId,
         regionId: reqRegionId,
+        userRole: userRole,
         exportType: 'excel',
         config: { responseType: 'blob' },
       });
@@ -359,7 +390,7 @@ export default function Applications() {
         headerText={isReview ? 'Review Customer Application' : 'Customer Application Details'}
       >
         <ApplicationForm
-          fetchAllApplications={fetchApplicationsData}
+          fetchAllApplications={handleApplicationCreatedOrUpdated}
           updateDetails={applicationData}
           handleClose={handleClose}
           formClosed={open}

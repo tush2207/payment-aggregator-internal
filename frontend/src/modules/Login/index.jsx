@@ -26,16 +26,16 @@ import { DEV_ROLES, IS_DEV, useLogin } from './useLogin';
 // ─────────────────────────────────────────────────────────────────────────────
 
 const ROLE_META = {
-  CO: { accent: '#c0392b', label: 'CO', title: 'Central Office (CO)', desc: 'Central Office' },
-  RO: { accent: '#1565c0', label: 'RO', title: 'Regional Office (RO)', desc: 'Regional Office' },
-  ZO: { accent: '#2e7d32', label: 'ZO', title: 'Zonal Office (ZO)', desc: 'Zonal Office' },
-  BO: { accent: '#6a1b9a', label: 'BO', title: 'Branch Office (BO)', desc: 'Branch Office' },
+  CO: { accent: '#c0392b', label: 'CO', short: 'CO' },
+  RO: { accent: '#1565c0', label: 'RO', short: 'RO' },
+  ZO: { accent: '#2e7d32', label: 'ZO', short: 'ZO' },
+  BO: { accent: '#6a1b9a', label: 'BO', short: 'BO' },
 };
 
 const FIELD_SX = {
   '& .MuiOutlinedInput-root': {
     borderRadius: '10px',
-    fontSize: '0.86rem',
+    fontSize: '0.88rem',
     background: '#f4f7fb',
     transition: 'all 0.2s ease',
     '& fieldset': {
@@ -58,24 +58,23 @@ const FIELD_SX = {
 const LABEL_SX = {
   color: '#475569',
   fontWeight: 700,
-  mb: 0.4,
+  mb: 0.5,
   display: 'block',
-  fontSize: '0.68rem',
+  fontSize: '0.70rem',
   letterSpacing: '0.6px',
   textTransform: 'uppercase',
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DEV ROLE SELECTOR — Clean single line with short forms (CO, RO, ZO, BO)
+// DEV ROLE SELECTOR (Digital Ambassador Style)
 // ─────────────────────────────────────────────────────────────────────────────
 
 const DevRoleSelector = ({ devRole, setDevRole }) => (
   <Box
     sx={{
       width: '100%',
-      mb: 1.2,
-      px: 1,
-      py: 0.8,
+      mb: 1.5,
+      p: 1,
       borderRadius: '10px',
       background: 'rgba(0, 73, 144, 0.04)',
       border: '1px dashed rgba(0, 73, 144, 0.25)',
@@ -90,52 +89,36 @@ const DevRoleSelector = ({ devRole, setDevRole }) => (
         mb: 0.6,
         textAlign: 'center',
         letterSpacing: '0.4px',
-        fontSize: '0.65rem',
-        textTransform: 'uppercase',
+        fontSize: '0.68rem',
       }}
     >
-      🛠️ Dev Mode — Target Role
+      🛠️ DEV MODE — SELECT TARGET ROLE
     </Typography>
 
-    <Box
-      sx={{
-        display: 'flex',
-        gap: 0.8,
-        justifyContent: 'center',
-        alignItems: 'center',
-        flexWrap: 'nowrap',
-        width: '100%',
-      }}
-    >
+    <Box sx={{ display: 'flex', gap: 0.6, justifyContent: 'center', flexWrap: 'wrap' }}>
       {DEV_ROLES.map(({ value }) => {
         const isSel = devRole === value;
-        const meta = ROLE_META[value] || { accent: '#004990', label: value, title: value, desc: value };
+        const meta = ROLE_META[value] || { accent: '#004990', label: value };
         return (
-          <Tooltip key={value} title={meta.title} arrow placement="top">
-            <Chip
-              label={meta.label}
-              size="small"
-              onClick={() => setDevRole(value)}
-              sx={{
-                flex: 1,
-                fontWeight: 800,
-                fontSize: '0.75rem',
-                letterSpacing: '0.5px',
-                height: 26,
-                cursor: 'pointer',
-                bgcolor: isSel ? meta.accent : 'transparent',
-                color: isSel ? '#ffffff' : '#475569',
-                border: `1.5px solid ${isSel ? meta.accent : '#cbd5e1'}`,
-                boxShadow: isSel ? `0 2px 8px ${meta.accent}40` : 'none',
-                transition: 'all 0.2s ease',
-                '&:hover': {
-                  bgcolor: isSel ? meta.accent : 'rgba(0,0,0,0.06)',
-                  borderColor: meta.accent,
-                  color: isSel ? '#ffffff' : meta.accent,
-                },
-              }}
-            />
-          </Tooltip>
+          <Chip
+            key={value}
+            label={meta.label}
+            size="small"
+            onClick={() => setDevRole(value)}
+            sx={{
+              fontWeight: 700,
+              fontSize: '0.68rem',
+              height: 24,
+              cursor: 'pointer',
+              bgcolor: isSel ? meta.accent : 'transparent',
+              color: isSel ? '#ffffff' : '#475569',
+              border: `1.5px solid ${isSel ? meta.accent : '#cbd5e1'}`,
+              transition: 'all 0.2s ease',
+              '&:hover': {
+                bgcolor: isSel ? meta.accent : 'rgba(0,0,0,0.05)',
+              },
+            }}
+          />
         );
       })}
     </Box>
@@ -154,7 +137,7 @@ const LoginModule = () => {
 
   return (
     <>
-      {isLoading && <FullScreenLoader />}
+      {isLoading && <FullScreenLoader message="Authenticating credentials..." />}
 
       {/* Main Fullscreen Viewport — 100vh with Zero Scrollbars */}
       <Box
@@ -177,9 +160,9 @@ const LoginModule = () => {
           elevation={16}
           sx={{
             width: '100%',
-            maxWidth: 1180,
-            height: { xs: 'auto', md: '620px' },
-            maxHeight: '94vh',
+            maxWidth: 1160,
+            height: { xs: '100%', md: '580px' },
+            maxHeight: '90vh',
             borderRadius: '24px',
             overflow: 'hidden',
             display: 'flex',
@@ -203,12 +186,13 @@ const LoginModule = () => {
             <Box
               component="img"
               src={loginLeftside}
-              alt="Central Bank of India - Digital Ambassador"
+              alt="Central Bank of India - Payment Aggregator Portal"
               sx={{
                 width: '100%',
                 height: '100%',
                 objectFit: 'cover',
                 objectPosition: 'left center',
+                display: 'block',
               }}
             />
           </Box>
@@ -223,43 +207,38 @@ const LoginModule = () => {
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              px: { xs: 2.5, sm: 3.5, md: 4 },
-              py: { xs: 2, sm: 2.5, md: 3 },
+              p: { xs: 2.5, sm: 3.5, md: 4.5 },
               height: '100%',
               boxSizing: 'border-box',
               overflowY: 'auto',
               background: '#ffffff',
             }}
           >
-            <Box sx={{ width: '100%', maxWidth: 360, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              {/* Top Official PAPG Logo — Enlarged & Clearly Readable */}
-              <Box sx={{ mb: 1.2, textAlign: 'center', width: '100%', display: 'flex', justifyContent: 'center' }}>
+            <Box sx={{ width: '100%', maxWidth: 350, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              {/* Top Official Portal Logo */}
+              <Box sx={{ mb: 1.5, textAlign: 'center', width: '100%', display: 'flex', justifyContent: 'center' }}>
                 <Box
                   component="img"
                   src={papgLogo}
                   alt="Central Bank of India - Payment Aggregator Portal"
                   sx={{
-                    height: { xs: 80, sm: 100, md: 105 },
-                    maxHeight: 115,
+                    height: { xs: 75, sm: 110, md: 120 },
+                    maxHeight: 130,
                     width: 'auto',
                     objectFit: 'contain',
-                    filter: 'drop-shadow(0 3px 10px rgba(0, 0, 0, 0.08))',
-                    transition: 'transform 0.3s ease',
-                    '&:hover': {
-                      transform: 'scale(1.03)',
-                    },
+                    filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.06))',
                   }}
                 />
               </Box>
 
               {/* Title + Accent Stripe */}
-              <Box sx={{ textAlign: 'center', mb: 1.5 }}>
+              <Box sx={{ textAlign: 'center', mb: 2 }}>
                 <Typography
                   variant="h6"
                   sx={{
                     fontWeight: 800,
                     color: '#003875',
-                    fontSize: '1.2rem',
+                    fontSize: '1.18rem',
                     letterSpacing: '-0.2px',
                   }}
                 >
@@ -270,24 +249,24 @@ const LoginModule = () => {
                     height: 3,
                     width: 44,
                     mx: 'auto',
-                    mt: 0.5,
+                    mt: 0.6,
                     borderRadius: 2,
                     background: 'linear-gradient(90deg, #c0392b, #e74c3c)',
                   }}
                 />
-                <Typography variant="body2" sx={{ color: '#64748b', fontSize: '0.76rem', mt: 0.6 }}>
+                <Typography variant="body2" sx={{ color: '#64748b', fontSize: '0.78rem', mt: 0.8 }}>
                   Sign in to your account to continue
                 </Typography>
               </Box>
 
-              {/* DEV Role Selector (Active only in DEV mode) — Single Line CO, RO, ZO, BO */}
+              {/* DEV Role Selector (Active only in DEV mode) */}
               {IS_DEV && <DevRoleSelector devRole={devRole} setDevRole={setDevRole} />}
 
               {/* Form Inputs */}
               <Box
                 component="form"
                 onSubmit={handleSubmit}
-                sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 1.5 }}
+                sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 1.8 }}
               >
                 {/* Username Input */}
                 <Box>
@@ -324,6 +303,7 @@ const LoginModule = () => {
                     type={showPassword ? 'text' : 'password'}
                     placeholder="Enter your password"
                     fullWidth
+                    autoComplete="current-password"
                     value={values?.password ?? ''}
                     onChange={handleChange}
                     onBlur={handleBlur}
@@ -338,7 +318,7 @@ const LoginModule = () => {
                       endAdornment: (
                         <InputAdornment position="end">
                           <IconButton
-                            onClick={() => setShowPassword(p => !p)}
+                            onClick={() => setShowPassword((p) => !p)}
                             edge="end"
                             size="small"
                             sx={{ color: '#64748b', '&:hover': { color: '#004990' } }}
@@ -356,8 +336,8 @@ const LoginModule = () => {
                   type="submit"
                   disabled={isLoading}
                   sx={{
-                    mt: 0.4,
-                    height: 42,
+                    mt: 0.6,
+                    height: 44,
                     borderRadius: '10px',
                     fontWeight: 800,
                     fontSize: '0.90rem',
@@ -366,9 +346,11 @@ const LoginModule = () => {
                     background: 'linear-gradient(90deg, #ff5733 0%, #e74c3c 100%)',
                     boxShadow: '0 6px 18px rgba(231, 76, 60, 0.35)',
                     textTransform: 'uppercase',
+                    transition: 'all 0.25s ease',
                     '&:hover': {
                       background: 'linear-gradient(90deg, #e04826 0%, #c0392b 100%)',
                       boxShadow: '0 8px 22px rgba(231, 76, 60, 0.45)',
+                      transform: 'translateY(-1px)',
                     },
                     '&.Mui-disabled': {
                       background: 'rgba(0, 0, 0, 0.12)',
@@ -377,7 +359,7 @@ const LoginModule = () => {
                     },
                   }}
                 >
-                  LOGIN
+                  {isLoading ? 'AUTHENTICATING...' : 'LOGIN'}
                 </Button>
               </Box>
 
@@ -388,9 +370,9 @@ const LoginModule = () => {
                   color: '#94a3b8',
                   textAlign: 'center',
                   fontSize: '0.66rem',
-                  lineHeight: 1.4,
-                  mt: 1.8,
-                  pt: 1.2,
+                  lineHeight: 1.5,
+                  mt: 2.5,
+                  pt: 1.5,
                   borderTop: '1px solid #f1f5f9',
                   width: '100%',
                 }}

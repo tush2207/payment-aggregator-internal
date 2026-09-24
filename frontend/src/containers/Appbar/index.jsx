@@ -1,114 +1,193 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { cbiBGLogo } from '&src/assets';
-import { user_role } from '&src/constants/PaymentAggregratorConstant';
-import { APPLICATION_ROUTES_URLS } from '&src/routes/routesConfig';
-import { clearAllCookie } from '&src/utils/cookies';
-import BrandingHeader from '&src/components/common/PageHeader/BrandingHeader';
-
-import {
-  AccountCircle,
-  ExpandLess,
-  ExpandMore,
-  Logout,
-  Menu as MenuIcon,
-} from '@mui/icons-material';
-
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   AppBar,
   Box,
-  CssBaseline,
-  Divider,
-  Fade,
+  Toolbar,
+  Typography,
   IconButton,
   Menu,
   MenuItem,
-  Toolbar,
-  Typography,
   Chip,
-  Avatar,
+  Badge,
+  Divider,
+  Fade,
   useTheme,
+  CssBaseline,
 } from '@mui/material';
-import { useLocation, useNavigate } from 'react-router-dom';
+import {
+  Menu as MenuIcon,
+  NotificationsNoneRounded,
+  NotificationsActiveRounded,
+  AdminPanelSettings,
+  Logout,
+  CorporateFare,
+  LocationCity,
+  AccountBalance,
+  ChevronRight,
+  ExpandMore,
+  ExpandLess,
+  AccountCircle,
+  DoneAllRounded,
+  InfoOutlined,
+} from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { cbiBGLogo } from '&src/assets';
+import BrandingHeader from '&src/components/common/PageHeader/BrandingHeader';
+import AdminRoleSwitcherModal from '&src/components/modal/AdminRoleSwitcherModal';
+import { APPLICATION_ROUTES_URLS } from '&src/routes/routesConfig';
+import { clearAllCookie } from '&src/utils/cookies';
+import { isUserAdmin } from '&src/utils';
 
-const Navbar = ({ onDrawerToggle, sidebarOpen }) => {
+const Navbar = ({ onDrawerToggle }) => {
   const theme = useTheme();
-  const RED = theme.palette.secondary.main || '#CE0F3E';
+  const RED = theme.palette.secondary?.main || '#CE0F3E';
   const GOLD = theme.palette.accent?.main || '#f6d365';
 
-  const location = useLocation();
   const navigate = useNavigate();
 
-  const userDetails = useMemo(() => {
+  const [userDetails, setUserDetails] = useState(() => {
     try {
       const stored = sessionStorage.getItem('userDetails');
       return stored ? JSON.parse(stored) : {};
     } catch {
       return {};
     }
-  }, []);
+  });
 
-  const { employeeName, pfId, role: storedRole, name } = userDetails || {};
-  const role = user_role || storedRole || 'CO';
-  const displayName = employeeName || name || 'Bank Officer';
-  const displayPfId = pfId ? `PF: ${pfId}` : role;
+  const [role, setRole] = useState(() => {
+    return sessionStorage.getItem('role') || userDetails?.role || user_role || 'CO';
+  });
 
-  const [anchorElUser, setAnchorElUser] = useState(null);
-  const [currentTimeStr, setCurrentTimeStr] = useState('');
-
-  // Format formatted timestamp for Last Login
   useEffect(() => {
-    const formatDate = () => {
-      const now = new Date();
-      const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
-      const day = String(now.getDate()).padStart(2, '0');
-      const month = months[now.getMonth()];
-      const year = now.getFullYear();
-      let hours = now.getHours();
-      const minutes = String(now.getMinutes()).padStart(2, '0');
-      const seconds = String(now.getSeconds()).padStart(2, '0');
-      const ampm = hours >= 12 ? 'PM' : 'AM';
-      hours = hours % 12;
-      hours = hours ? hours : 12;
-      const hoursStr = String(hours).padStart(2, '0');
-      return `${day}-${month}-${year} ${hoursStr}:${minutes}:${seconds} ${ampm}`;
+    const handleSessionChange = () => {
+      try {
+        const stored = sessionStorage.getItem('userDetails');
+        if (stored) setUserDetails(JSON.parse(stored));
+        const newRole = sessionStorage.getItem('role') || 'CO';
+        setRole(newRole);
+      } catch (e) {
+        console.debug('Session update parse error', e);
+      }
     };
-    setCurrentTimeStr(formatDate());
+    window.addEventListener('user-session-changed', handleSessionChange);
+    window.addEventListener('storage', handleSessionChange);
+    return () => {
+      window.removeEventListener('user-session-changed', handleSessionChange);
+      window.removeEventListener('storage', handleSessionChange);
+    };
   }, []);
 
-  // Dynamic greeting based on time of day
-  const greeting = useMemo(() => {
-    const hour = new Date().getHours();
-    if (hour >= 5 && hour < 12) return 'Good Morning';
-    if (hour >= 12 && hour < 17) return 'Good Afternoon';
-    return 'Good Evening';
-  }, []);
+  const pfId = userDetails?.pfId || sessionStorage.getItem('userId') || '138922';
+
+  const employeeName =
+    userDetails?.employeeName ||
+    userDetails?.name ||
+    (String(pfId) === '138922' || String(pfId) === '139822' ? 'Tushar Kasbe' : 'Bank Officer');
+
+  // Location fields with safe fallbacks
+  const zoneName =
+    userDetails?.zoneName ||
+    userDetails?.Zone_Name ||
+    userDetails?.zone ||
+    '';
+  const zoneId = userDetails?.zoneId || userDetails?.ZoneId || '';
+
+  const regionName =
+    userDetails?.regionName ||
+    userDetails?.Region_Name ||
+    userDetails?.region ||
+    '';
+  const regionId = userDetails?.regionId || userDetails?.RegionId || '';
+
+  const branchName =
+    userDetails?.branchName ||
+    userDetails?.Branch_Name ||
+    userDetails?.branch ||
+    '';
+  const branchId = userDetails?.branchId || userDetails?.Locationid || '';
+
+  const isSuperUser = isUserAdmin(userDetails);
+
+
+  // Menu Anchors & Dialog states
+  const [anchorElUser, setAnchorElUser] = useState(null);
+  const [roleSwitcherOpen, setRoleSwitcherOpen] = useState(false);
+  const [notifAnchor, setNotifAnchor] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+  const [readNotifIds, setReadNotifIds] = useState(() => {
+    try {
+      const stored = localStorage.getItem('readNotificationIds');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Real-time workflow notifications (temporarily disabled for current phase)
+  const fetchNotifications = async () => {};
+
+  useEffect(() => {
+    // Disabled in current phase
+  }, [role, regionName, branchName, zoneName]);
+
+  const unreadCount = useMemo(() => {
+    return notifications.filter((n) => !readNotifIds.includes(n.id) && !n.isRead).length;
+  }, [notifications, readNotifIds]);
 
   const handleOpenUserMenu = (e) => setAnchorElUser(e.currentTarget);
   const handleCloseUserMenu = () => setAnchorElUser(null);
 
+  const handleNotificationClick = async (item) => {
+    const newReadIds = Array.from(new Set([...readNotifIds, item.id]));
+    setReadNotifIds(newReadIds);
+    try {
+      localStorage.setItem('readNotificationIds', JSON.stringify(newReadIds));
+      if (item.rawId || (item.id && String(item.id).startsWith('db_notif_'))) {
+        await axios.put(`/api/application-notifications/${item.id}/read`);
+      }
+    } catch (e) {
+      console.debug('Failed to update notification read status', e);
+    }
+    setNotifAnchor(null);
+
+    if (item.applicationId) {
+      navigate(`${APPLICATION_ROUTES_URLS.DASHBOARD}?openAppId=${item.applicationId}&action=flow`);
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    const allIds = notifications.map((n) => n.id);
+    const newReadIds = Array.from(new Set([...readNotifIds, ...allIds]));
+    setReadNotifIds(newReadIds);
+    try {
+      localStorage.setItem('readNotificationIds', JSON.stringify(newReadIds));
+      await axios.post('/api/application-notifications/mark-all-read', null, {
+        params: { userRole: role, regionName, branchName },
+      });
+    } catch (e) {
+      console.debug('Failed to mark all notifications read', e);
+    }
+  };
+
   const handleLogout = () => {
     clearAllCookie();
     sessionStorage.clear();
-    navigate(APPLICATION_ROUTES_URLS.LOGIN, { replace: true });
-    window.location.reload();
+    window.location.href = APPLICATION_ROUTES_URLS.LOGIN;
   };
 
   return (
     <Box sx={{ display: 'flex' }}>
       <CssBaseline />
 
-      {/* ================= OFFICIAL CBI BRAND SIGNATURE HEADER ================= */}
       <AppBar
         position="fixed"
         sx={{
           borderRadius: 0,
           zIndex: (t) => t.zIndex.drawer + 2,
           /* ── Signature Dual-Tone CBI Header Gradient: Blue on Left → Red on Right ── */
-          background:
-            theme.palette.gradients?.cbiHeader ||
-            'linear-gradient(90deg, #176FC1 0%, #135FA6 35%, #9B0A2E 75%, #CE0F3E 100%)',
+          background: 'linear-gradient(90deg, #176FC1 0%, #135fa6 35%, #9b0a2e 75%, #CE0F3E 100%)',
           backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
           boxShadow: '0 4px 20px rgba(0, 0, 0, 0.35)',
           borderBottom: '1px solid rgba(255, 255, 255, 0.15)',
 
@@ -120,9 +199,7 @@ const Navbar = ({ onDrawerToggle, sidebarOpen }) => {
             left: 0,
             right: 0,
             height: '3px',
-            background:
-              theme.palette.gradients?.accent ||
-              `linear-gradient(90deg, ${RED} 0%, ${GOLD} 50%, ${RED} 100%)`,
+            background: `linear-gradient(90deg, ${RED} 0%, ${GOLD} 50%, ${RED} 100%)`,
           },
         }}
       >
@@ -156,15 +233,14 @@ const Navbar = ({ onDrawerToggle, sidebarOpen }) => {
               <MenuIcon sx={{ fontSize: 22 }} />
             </IconButton>
 
-            {/* CBI Logo */}
             <Box
               onClick={() => navigate(APPLICATION_ROUTES_URLS.DASHBOARD)}
               sx={{
                 display: 'flex',
                 alignItems: 'center',
+                gap: 1.5,
                 cursor: 'pointer',
-                transition: 'transform 0.25s ease',
-                '&:hover': { transform: 'scale(1.03)' },
+                userSelect: 'none',
               }}
             >
               <img
@@ -172,54 +248,90 @@ const Navbar = ({ onDrawerToggle, sidebarOpen }) => {
                 alt="Central Bank of India"
                 style={{
                   height: 44,
+                  width: 'auto',
+                  maxWidth: '260px',
                   objectFit: 'contain',
-                  filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.35))',
+                  filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.30))',
                 }}
               />
+              <BrandingHeader />
             </Box>
-
-            {/* Vertical Divider */}
-            <Divider
-              orientation="vertical"
-              flexItem
-              sx={{
-                borderColor: 'rgba(255,255,255,0.20)',
-                height: 28,
-                my: 'auto',
-                display: { xs: 'none', sm: 'block' },
-              }}
-            />
-
-            {/* Branding Header Component */}
-            <BrandingHeader />
           </Box>
 
-          {/* ── RIGHT: LAST LOGIN + USER GREETING + PROFILE CHIP + DROPDOWN ── */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 1.8 } }}>
-            {/* Last Login Info Pill */}
-            {currentTimeStr && (
-              <Box
-                sx={{
-                  display: { xs: 'none', lg: 'flex' },
-                  flexDirection: 'column',
-                  alignItems: 'flex-end',
-                  px: 1.5,
-                  py: 0.5,
-                  borderRadius: '8px',
-                  background: 'rgba(0, 0, 0, 0.15)',
-                  border: '1px solid rgba(255, 255, 255, 0.10)',
-                }}
-              >
-                <Typography sx={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.65rem', fontWeight: 600, textTransform: 'uppercase' }}>
-                  Session Active
-                </Typography>
-                <Typography sx={{ color: '#ffffff', fontSize: '0.74rem', fontWeight: 700, letterSpacing: '0.2px' }}>
-                  {currentTimeStr}
+          {/* ── CENTER: ACTIVE JURISDICTION / LOCATION BREADCRUMB CAPSULE (Digital Ambassador Portal Style) ── */}
+          <Box
+            sx={{
+              display: { xs: 'none', lg: 'flex' },
+              alignItems: 'center',
+              px: 1.6,
+              py: 0.45,
+              borderRadius: '30px',
+              background: 'rgba(7, 30, 61, 0.45)',
+              border: '1px solid rgba(255, 255, 255, 0.18)',
+              backdropFilter: 'blur(10px)',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.22)',
+              gap: 0.8,
+            }}
+          >
+            {role === 'CO' || role === 'ADMIN' ? (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8, px: 0.6 }}>
+                <CorporateFare sx={{ color: GOLD, fontSize: 18 }} />
+                <Typography sx={{ color: '#fff', fontSize: '0.80rem', fontWeight: 700, letterSpacing: '0.2px' }}>
+                  Central Office • All India Scope
                 </Typography>
               </Box>
-            )}
+            ) : (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6, flexWrap: 'nowrap' }}>
+                {zoneName && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, px: 0.6 }}>
+                    <CorporateFare sx={{ color: GOLD, fontSize: 16 }} />
+                    <Typography sx={{ color: '#ffffff', fontSize: '0.74rem', fontWeight: 600 }}>
+                      Zone: <strong style={{ color: GOLD }}>{zoneName}</strong>{zoneId ? ` (${zoneId})` : ''}
+                    </Typography>
+                  </Box>
+                )}
 
-            {/* User Profile Action Chip */}
+                {regionName && (
+                  <>
+                    <ChevronRight sx={{ color: 'rgba(255,255,255,0.4)', fontSize: 16 }} />
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, px: 0.6 }}>
+                      <LocationCity sx={{ color: '#81ecec', fontSize: 16 }} />
+                      <Typography sx={{ color: '#ffffff', fontSize: '0.74rem', fontWeight: 600 }}>
+                        Region: <strong style={{ color: '#81ecec' }}>{regionName}</strong>{regionId ? ` (${regionId})` : ''}
+                      </Typography>
+                    </Box>
+                  </>
+                )}
+
+                {branchName && (
+                  <>
+                    <ChevronRight sx={{ color: 'rgba(255,255,255,0.4)', fontSize: 16 }} />
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 0.5,
+                        px: 1,
+                        py: 0.25,
+                        borderRadius: '16px',
+                        bgcolor: 'rgba(206,15,62,0.45)',
+                        border: '1px solid rgba(246,211,101,0.4)',
+                      }}
+                    >
+                      <AccountBalance sx={{ color: '#ffbe76', fontSize: 15 }} />
+                      <Typography sx={{ color: '#ffffff', fontSize: '0.74rem', fontWeight: 700 }}>
+                        Branch: <span style={{ color: '#fff' }}>{branchName}</span>{branchId ? ` (${branchId})` : ''}
+                      </Typography>
+                    </Box>
+                  </>
+                )}
+              </Box>
+            )}
+          </Box>
+
+          {/* ── RIGHT: USER PROFILE CAPSULE ── */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.8, sm: 1.2 }, flexShrink: 0 }}>
+            {/* User Profile Pill */}
             <Box
               onClick={handleOpenUserMenu}
               sx={{
@@ -227,111 +339,270 @@ const Navbar = ({ onDrawerToggle, sidebarOpen }) => {
                 alignItems: 'center',
                 gap: 1.2,
                 px: 1.4,
-                py: 0.7,
-                borderRadius: '10px',
+                py: 0.55,
+                borderRadius: '24px',
                 cursor: 'pointer',
-                background: 'rgba(255, 255, 255, 0.10)',
-                border: '1px solid rgba(255, 255, 255, 0.18)',
-                backdropFilter: 'blur(8px)',
-                transition: 'all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                background: 'rgba(255,255,255,0.12)',
+                border: '1px solid rgba(255,255,255,0.22)',
+                transition: 'all 0.2s ease',
                 '&:hover': {
-                  background: 'rgba(255, 255, 255, 0.20)',
-                  border: '1px solid rgba(255, 255, 255, 0.35)',
-                  transform: 'translateY(-1px)',
-                  boxShadow: '0 4px 14px rgba(0, 0, 0, 0.25)',
+                  background: 'rgba(255,255,255,0.22)',
+                  borderColor: 'rgba(255,255,255,0.38)',
                 },
               }}
             >
-              <Avatar
+              {/* Avatar circle with gold-red gradient */}
+              <Box
                 sx={{
-                  width: 32,
-                  height: 32,
-                  bgcolor: RED,
-                  color: '#ffffff',
-                  fontWeight: 800,
-                  fontSize: '0.80rem',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                  width: 28,
+                  height: 28,
+                  borderRadius: '50%',
+                  background: `linear-gradient(135deg, ${RED}, #9B0A2E)`,
+                  border: `1.5px solid ${GOLD}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
                 }}
               >
-                {role || 'U'}
-              </Avatar>
+                <AccountCircle sx={{ color: '#fff', fontSize: 20 }} />
+              </Box>
 
-              <Box sx={{ display: { xs: 'none', sm: 'flex' }, flexDirection: 'column', textAlign: 'left' }}>
-                <Typography sx={{ color: '#ffffff', fontSize: '0.82rem', fontWeight: 700, lineHeight: 1.2 }}>
-                  {displayName}
+              <Box sx={{ display: { xs: 'none', sm: 'block' }, textAlign: 'left' }}>
+                <Typography
+                  sx={{
+                    color: '#fff',
+                    fontSize: '0.80rem',
+                    fontWeight: 700,
+                    lineHeight: 1.15,
+                  }}
+                >
+                  {employeeName}
                 </Typography>
-                <Typography sx={{ color: GOLD, fontSize: '0.70rem', fontWeight: 600, letterSpacing: '0.4px' }}>
-                  {greeting} • {role}
+                <Typography
+                  sx={{
+                    color: GOLD,
+                    fontSize: '0.66rem',
+                    fontWeight: 600,
+                    lineHeight: 1.15,
+                  }}
+                >
+                  {role} • PF: {pfId || 'N/A'}
                 </Typography>
               </Box>
 
-              {Boolean(anchorElUser) ? (
-                <ExpandLess sx={{ color: '#ffffff', fontSize: 18 }} />
+              {anchorElUser ? (
+                <ExpandLess sx={{ color: 'rgba(255,255,255,0.9)', fontSize: 18 }} />
               ) : (
-                <ExpandMore sx={{ color: '#ffffff', fontSize: 18 }} />
+                <ExpandMore sx={{ color: 'rgba(255,255,255,0.9)', fontSize: 18 }} />
               )}
             </Box>
-
-            {/* Profile Dropdown Menu */}
-            <Menu
-              anchorEl={anchorElUser}
-              open={Boolean(anchorElUser)}
-              onClose={handleCloseUserMenu}
-              TransitionComponent={Fade}
-              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-              transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-              PaperProps={{
-                elevation: 6,
-                sx: {
-                  mt: 1.2,
-                  minWidth: 220,
-                  borderRadius: '12px',
-                  border: '1px solid #eaeaea',
-                  overflow: 'hidden',
-                  p: 0,
-                  boxShadow: '0 12px 32px rgba(0,0,0,0.18)',
-                },
-              }}
-            >
-              <Box sx={{ p: 2, bgcolor: '#f8fafc', borderBottom: '1px solid #eaeaea' }}>
-                <Typography variant="subtitle2" fontWeight={700} color="text.primary">
-                  {displayName}
-                </Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.8 }}>
-                  {displayPfId}
-                </Typography>
-                <Chip
-                  label={`Role: ${role}`}
-                  size="small"
-                  sx={{
-                    bgcolor: `${RED}18`,
-                    color: RED,
-                    fontWeight: 700,
-                    fontSize: '0.70rem',
-                    borderRadius: '6px',
-                  }}
-                />
-              </Box>
-
-              <MenuItem
-                onClick={handleLogout}
-                sx={{
-                  py: 1.4,
-                  px: 2,
-                  gap: 1.5,
-                  color: 'error.main',
-                  fontWeight: 600,
-                  fontSize: '0.86rem',
-                  '&:hover': { bgcolor: 'error.lighter' },
-                }}
-              >
-                <Logout fontSize="small" />
-                Sign Out
-              </MenuItem>
-            </Menu>
           </Box>
         </Toolbar>
       </AppBar>
+
+      {/* ── USER DROPDOWN MENU (Digital Ambassador Portal Style) ── */}
+      <Menu
+        anchorEl={anchorElUser}
+        open={Boolean(anchorElUser)}
+        onClose={handleCloseUserMenu}
+        TransitionComponent={Fade}
+        PaperProps={{
+          sx: {
+            mt: 1.4,
+            minWidth: 280,
+            borderRadius: '12px',
+            border: '1px solid rgba(0,0,0,0.08)',
+            boxShadow: '0 12px 40px rgba(0,0,0,0.22)',
+            overflow: 'hidden',
+          },
+        }}
+      >
+        {/* Profile summary inside menu with signature CBI gradient */}
+        <Box
+          sx={{
+            px: 2.2,
+            py: 2,
+            background: 'linear-gradient(135deg, #0E4F8D 0%, #176FC1 100%)',
+          }}
+        >
+          <Typography
+            sx={{
+              color: '#fff',
+              fontWeight: 700,
+              fontSize: '0.92rem',
+            }}
+          >
+            {employeeName}
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8, mt: 0.4 }}>
+            <Chip
+              size="small"
+              label={`Role: ${role}`}
+              sx={{
+                height: 20,
+                fontSize: '0.68rem',
+                fontWeight: 700,
+                bgcolor: 'rgba(255,255,255,0.22)',
+                color: '#fff',
+              }}
+            />
+            <Typography
+              sx={{
+                color: 'rgba(255,255,255,0.85)',
+                fontSize: '0.74rem',
+              }}
+            >
+              PF: {pfId || 'N/A'}
+            </Typography>
+          </Box>
+
+          {/* Structured Location Breakdown */}
+          <Box sx={{ mt: 1.2, pt: 1, borderTop: '1px solid rgba(255,255,255,0.18)', display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+            {role === 'CO' || role === 'ADMIN' ? (
+              <Typography sx={{ color: GOLD, fontSize: '0.74rem', fontWeight: 600 }}>
+                🏛️ Central Office (All India Scope)
+              </Typography>
+            ) : (
+              <>
+                {zoneName && (
+                  <Typography sx={{ color: 'rgba(255,255,255,0.92)', fontSize: '0.72rem' }}>
+                    🏢 <strong>Zone:</strong> {zoneName} {zoneId ? `(${zoneId})` : ''}
+                  </Typography>
+                )}
+                {regionName && (
+                  <Typography sx={{ color: 'rgba(255,255,255,0.92)', fontSize: '0.72rem' }}>
+                    📍 <strong>Region:</strong> {regionName} {regionId ? `(${regionId})` : ''}
+                  </Typography>
+                )}
+                {branchName && (
+                  <Typography sx={{ color: GOLD, fontSize: '0.74rem', fontWeight: 600 }}>
+                    🏦 <strong>Branch:</strong> {branchName} {branchId ? `(${branchId})` : ''}
+                  </Typography>
+                )}
+              </>
+            )}
+          </Box>
+        </Box>
+
+        {isSuperUser && (
+          <>
+            <MenuItem
+              onClick={() => {
+                handleCloseUserMenu();
+                setRoleSwitcherOpen(true);
+              }}
+              sx={{
+                py: 1.4,
+                px: 2.2,
+                gap: 1.2,
+                fontSize: '0.86rem',
+                fontWeight: 600,
+                color: '#1565c0',
+                transition: 'all 0.15s ease',
+                '&:hover': { background: 'rgba(21,101,192,0.08)' },
+              }}
+            >
+              <AdminPanelSettings sx={{ fontSize: 20, color: '#1565c0' }} />
+              Change Role & Location (Admin View)
+            </MenuItem>
+            <Divider />
+          </>
+        )}
+
+        <MenuItem
+          onClick={handleLogout}
+          sx={{
+            py: 1.4,
+            px: 2.2,
+            gap: 1.2,
+            fontSize: '0.86rem',
+            fontWeight: 600,
+            color: RED,
+            transition: 'all 0.15s ease',
+            '&:hover': { background: 'rgba(192,57,43,0.08)' },
+          }}
+        >
+          <Logout sx={{ fontSize: 19, color: RED }} />
+          Logout
+        </MenuItem>
+      </Menu>
+
+      {/* ── NOTIFICATIONS POPUP MENU ── */}
+      <Menu
+        anchorEl={notifAnchor}
+        open={Boolean(notifAnchor)}
+        onClose={() => setNotifAnchor(null)}
+        TransitionComponent={Fade}
+        PaperProps={{
+          sx: {
+            mt: 1.4,
+            width: 360,
+            maxHeight: 450,
+            borderRadius: '12px',
+            boxShadow: '0 12px 40px rgba(0,0,0,0.2)',
+            overflow: 'hidden',
+          },
+        }}
+      >
+        <Box sx={{ p: 1.8, bgcolor: '#0E4F8D', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography sx={{ fontWeight: 700, fontSize: '0.9rem' }}>Workflow Notifications</Typography>
+          {unreadCount > 0 && (
+            <IconButton size="small" onClick={handleMarkAllRead} sx={{ color: '#fff', fontSize: '0.75rem', gap: 0.5 }}>
+              <DoneAllRounded sx={{ fontSize: 16 }} /> Mark Read
+            </IconButton>
+          )}
+        </Box>
+        <Box sx={{ maxHeight: 350, overflowY: 'auto' }}>
+          {notifications.length === 0 ? (
+            <Box sx={{ py: 4, textAlign: 'center', color: '#64748b' }}>
+              <InfoOutlined sx={{ fontSize: 32, mb: 0.5, opacity: 0.5 }} />
+              <Typography variant="body2">No notifications found.</Typography>
+            </Box>
+          ) : (
+            notifications.map((item) => {
+              const isUnread = !readNotifIds.includes(item.id) && !item.isRead;
+              return (
+                <MenuItem
+                  key={item.id}
+                  onClick={() => handleNotificationClick(item)}
+                  sx={{
+                    py: 1.2,
+                    px: 2,
+                    borderBottom: '1px solid #f1f5f9',
+                    bgcolor: isUnread ? 'rgba(23, 111, 193, 0.06)' : 'transparent',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-start',
+                    gap: 0.4,
+                  }}
+                >
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                    <Typography sx={{ fontWeight: isUnread ? 700 : 500, fontSize: '0.82rem', color: isUnread ? '#0E4F8D' : '#334155' }}>
+                      {item.title || item.message}
+                    </Typography>
+                    {isUnread && <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: RED }} />}
+                  </Box>
+                  {item.description && (
+                    <Typography sx={{ fontSize: '0.74rem', color: '#64748b', whiteSpace: 'normal', lineHeight: 1.3 }}>
+                      {item.description}
+                    </Typography>
+                  )}
+                  <Typography sx={{ fontSize: '0.68rem', color: '#94a3b8' }}>{item.time || item.createdAt || 'Just now'}</Typography>
+                </MenuItem>
+              );
+            })
+          )}
+        </Box>
+      </Menu>
+
+      {/* ── ADMIN ROLE & LOCATION SWITCHER MODAL ── */}
+      <AdminRoleSwitcherModal
+        open={roleSwitcherOpen}
+        onClose={() => setRoleSwitcherOpen(false)}
+        currentUser={{ ...userDetails, role }}
+      />
     </Box>
   );
 };

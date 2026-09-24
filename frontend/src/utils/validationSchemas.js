@@ -1,11 +1,10 @@
-import { isBO, isRO } from "&src/constants/PaymentAggregratorConstant";
 import * as Yup from "yup";
 
 // Alphanumeric regex (allows letters and numbers only, no special characters)
 export const isAlphanumeric = /^[a-zA-Z0-9]+$/;
 
 // Pass regex (at least 8 characters, one uppercase, one lowercase, one number, and one special character)
-export const isPassword = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+export const isPassword = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
 
 export const isAlphaNumeric = (str) => /^[a-z0-9]+$/i.test(str);
 
@@ -34,18 +33,23 @@ export const applicationFormSchema = (user_role) => {
       .max(100, "Customer Name must be under 100 characters"),
 
     accountNo: Yup.string().when("userType", {
-      is: (val) => val !== "new",
-      then: (schema) =>
+      is: (val) => val === "new",
+      then: (schema) => schema.nullable().notRequired().transform((v, o) => (o === "" ? null : v)),
+      otherwise: (schema) =>
         schema
           .required("Account number is required")
           .matches(/^[0-9]+$/, "Account number must be numeric"),
-      otherwise: (schema) => schema.notRequired().nullable(),
     }),
 
-    averageBalance: Yup.number()
-      .typeError("Average Balance must be a number")
-      .required("Average Balance is required")
-      .min(1000, "Average Balance must be at least ₹1000"),
+    averageBalance: Yup.mixed().when("userType", {
+      is: (val) => val === "new",
+      then: (schema) => schema.nullable().notRequired().transform((v, o) => (o === "" ? null : v)),
+      otherwise: (schema) =>
+        schema
+          .typeError("Average Balance must be a number")
+          .required("Average Balance is required")
+          .test("min-avg-balance", "Average Balance must be at least ₹1000", (val) => !val || Number(val) >= 1000),
+    }),
 
     email: Yup.string()
       .email("Invalid email address")
@@ -64,6 +68,7 @@ export const applicationFormSchema = (user_role) => {
       .max(100, "Integrate With must be under 100 characters"),
 
     category: Yup.string().required("Category is required"),
+    businessCategory: Yup.string().required("Business Category is required"),
 
     projection: Yup.string().required("At least one projection must be selected"),
 
@@ -77,13 +82,18 @@ export const applicationFormSchema = (user_role) => {
       .required("Average Ticket Size (Yearly) is required")
       .min(500, "Average Ticket Size must be at least ₹500"),
 
-    accountBalanceToday: Yup.number()
-      .typeError("Account Balance must be a number")
-      .required("Account Balance is required")
-      .min(1000, "Account Balance must be at least ₹1000"),
+    accountBalanceToday: Yup.mixed().when("userType", {
+      is: (val) => val === "new",
+      then: (schema) => schema.nullable().notRequired().transform((v, o) => (o === "" ? null : v)),
+      otherwise: (schema) =>
+        schema
+          .typeError("Account Balance must be a number")
+          .required("Account Balance is required")
+          .test("min-today-balance", "Account Balance must be at least ₹1000", (val) => !val || Number(val) >= 1000),
+    }),
 
-    // 🔹 Conditionally add file validations based on role
-    ...(isBO
+    // 🔹 Conditionally add file validations based on dynamic role
+    ...(user_role === "BO" || sessionStorage.getItem('role') === "BO"
       ? {
         kycFile: Yup.mixed().required("KYC File is required"),
         customerApplicationFile: Yup.mixed().required(
@@ -92,11 +102,9 @@ export const applicationFormSchema = (user_role) => {
       }
       : {}),
 
-    ...(isRO
+    ...(user_role === "RO" || sessionStorage.getItem('role') === "RO"
       ? {
-        rhRecommendationFile: Yup.mixed().required(
-          "RH Recommendation File is required"
-        ),
+        rhRecommendationFile: Yup.mixed().nullable().notRequired(),
       }
       : {}),
   });
@@ -120,6 +128,14 @@ export const aggregatorFormSchema = Yup.object().shape({
       "Enter a valid email address"
     )
     .required("Email is required"),
+  alternateEmail: Yup.string()
+    .trim()
+    .matches(
+      /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,}$/,
+      "Enter a valid alternate email address"
+    )
+    .nullable()
+    .notRequired(),
   mobileNo: Yup.string()
     .trim()
     .matches(/^[6-9]\d{9}$/, 'Mobile number must be valid')

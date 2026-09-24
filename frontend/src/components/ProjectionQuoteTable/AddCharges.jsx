@@ -23,7 +23,8 @@ const AddCharges = ({
     applicationDetails,
     aggregatorId,
     openModal,
-    setOpenModal
+    setOpenModal,
+    onSaveSuccess
 }) => {
     const { applicationId } = applicationDetails || {};
     const { errorNotification, successNotification } = useStatusWiseAlert();
@@ -39,7 +40,7 @@ const AddCharges = ({
                 id: q.id ?? i + 1,
                 allow: q.allow,
                 transactionType: q.transactionType,
-                chargesProposed: q.chargesProposed ?? q.chargesProposed ?? 0.0,
+                chargesProposed: q.chargesProposed ?? 0.0,
                 bankUnit: RS
             }));
             setAllCharges(initialized);
@@ -70,12 +71,13 @@ const AddCharges = ({
     // ---------------------- Save All ----------------------
     const saveAllChareges = async () => {
         setLoading(true);
-        console.log('allCharges', allCharges)
         try {
-            await aggregatorProjections.updateProjectionByApplication(applicationId, allCharges),
-                successNotification("✅ Application approved and projections added successfully.");
-            window.location.reload();
-
+            await aggregatorProjections.updateProjectionByApplication(applicationId, allCharges);
+            successNotification("✅ Bank charges updated and projections recalculated successfully.");
+            setOpenModal(false);
+            if (onSaveSuccess) {
+                await onSaveSuccess();
+            }
             setLoading(false);
         } catch (err) {
             setLoading(false);

@@ -25,9 +25,11 @@ import {
   ArrowForwardRounded,
   TimelineRounded,
   TouchAppRounded,
+  CancelRounded,
+  HelpOutlineRounded,
 } from '@mui/icons-material';
-import { useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { ApplicationFlowTable, ApplicationFlowDialog } from '&src/components/ApplicationFlow';
 import SectionHeader from '&src/components/Headers/SectionHeader';
@@ -39,7 +41,7 @@ import useStatusWiseAlert from '&src/components/ToastNotifications/useStatusWise
 import { PAYMENT_AGGREGATOR_WORKFLOW } from '&src/constants/PaymentAggregratorConstant';
 import { APPLICATION_ROUTES_URLS } from '&src/routes/routesConfig';
 import applicationServices from '&src/services/applications';
-import { selectUserRole, selectDialogOpen } from '&src/store/applicationFlowSlice';
+import { selectUserRole, selectDialogOpen, openWorkflowDialog, fetchApplicationDetails } from '&src/store/applicationFlowSlice';
 
 const getCurrentFinancialYear = () => {
   const today = new Date();
@@ -55,6 +57,9 @@ const getCurrentFinancialYear = () => {
 export default function Dashboard() {
   const theme = useTheme();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const openAppId = searchParams.get('openAppId');
   const [mockApp, setMockApp] = useState([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
@@ -65,8 +70,8 @@ export default function Dashboard() {
   const [selectedStageIndex, setSelectedStageIndex] = useState(null);
 
   const [filters, setFilters] = useState({
-    financialYear: 'all',
-    selectedMonth: 'all',
+    financialYear: getCurrentFinancialYear(),
+    selectedMonth: String(new Date().getMonth()),
     startDate: '',
     endDate: '',
     search: '',
@@ -102,7 +107,9 @@ export default function Dashboard() {
       } else if (userRole === 'RO') {
         reqRegionId = userDetails.regionId;
       } else if (userRole === 'ZO') {
-        filterby = userDetails.zoneId || '00000';
+        filterby = (userDetails.zoneId && userDetails.zoneId !== '0' && userDetails.zoneId !== 0) ? userDetails.zoneId : '00000';
+      } else {
+        filterby = '00000';
       }
 
       const response = await applicationServices.getAllApplications({
@@ -118,6 +125,7 @@ export default function Dashboard() {
         endDate: filters.endDate,
         branchId: reqBranchId,
         regionId: reqRegionId,
+        userRole: userRole,
       });
 
       if (response && response.data) {
@@ -155,6 +163,21 @@ export default function Dashboard() {
     }
   }, [dialogOpen, fetchApplicationsData]);
 
+  // Notification click: ensure filters allow target application to be visible on table
+  useEffect(() => {
+    if (!openAppId) return;
+    setSelectedKpiFilter('ALL');
+    setSelectedStageIndex(null);
+    setFilters((prev) => ({ ...prev, search: '' }));
+  }, [openAppId]);
+
+  const handleApplicationCreatedOrUpdated = useCallback(async (createdOrUpdatedData) => {
+    setSelectedKpiFilter('ALL');
+    setSelectedStageIndex(null);
+    setFilters((prev) => ({ ...prev, search: '', page: 1 }));
+    await fetchApplicationsData();
+  }, [fetchApplicationsData]);
+
 // Helper to determine the EXACT active workflow stage index (0-6) of an application
 const getApplicationActiveStage = (app) => {
   if (!app) return 0;
@@ -179,28 +202,44 @@ const getApplicationActiveStage = (app) => {
     return counts;
   }, [mockApp]);
 
-  // Compute live KPI analytics
+  const currentUserId = sessionStorage.getItem('userId') || sessionStorage.getItem('user_id') || userDetails.employeeId || userDetails.pfNumber;
+  const isReadOnlyUser = String(currentUserId) === '115019';
+
+  // Compute live KPI analytics for 6 statuses
   const kpiStats = useMemo(() => {
-    const total = totalRecords || mockApp.length;
     let pending = 0;
+    let inProgress = 0;
     let approved = 0;
-    let quotes = 0;
+    let rejected = 0;
+    let query = 0;
 
     mockApp.forEach((app) => {
-      if (app.isFinalApproved) {
+      const statusStr = String(app.status || '').toLowerCase();
+      const isRej = statusStr.includes('reject') || Boolean(app.reasonOfRejection) || Boolean(app.rejectedDate);
+      const isAppr = !isRej && (Boolean(app.isFinalApproved) || ['finalapproved', 'approved', 'completed'].includes(statusStr));
+      const isQry = !isRej && (statusStr.includes('query') || statusStr === 'query');
+
+      if (isRej) {
+        rejected++;
+      } else if (isAppr) {
         approved++;
-      } else if (app.isQuoteAddedPA || app.isMarkUpAddedCO || app.isQuoteAcceptRO) {
-        quotes++;
+      } else if (isQry) {
+        query++;
+        inProgress++;
+      } else if (app.isReviewByCO || app.isAggregatorAdded || app.isQuoteAddedPA || app.isMarkUpAddedCO || app.isQuoteReviewCO || app.isQuoteAcceptRO) {
+        inProgress++;
       } else {
         pending++;
       }
     });
 
     return {
-      total,
+      total: totalRecords || mockApp.length,
       pending,
+      inProgress,
       approved,
-      quotes,
+      rejected,
+      query,
     };
   }, [mockApp, totalRecords]);
 
@@ -215,14 +254,38 @@ const getApplicationActiveStage = (app) => {
 
     // 2. KPI Filter (if user clicked a KPI card)
     if (selectedKpiFilter === 'PENDING') {
-      list = list.filter((app) => !app.isFinalApproved && !app.isQuoteAddedPA && !app.isMarkUpAddedCO && !app.isQuoteAcceptRO);
+      list = list.filter((app) => {
+        const s = String(app.status || '').toLowerCase();
+        const isRej = s.includes('reject') || Boolean(app.reasonOfRejection);
+        return !isRej && !app.isFinalApproved && !app.isReviewByCO && !app.isAggregatorAdded && !app.isQuoteAddedPA && !app.isMarkUpAddedCO && !app.isQuoteAcceptRO;
+      });
+    } else if (selectedKpiFilter === 'IN_PROGRESS') {
+      list = list.filter((app) => {
+        const s = String(app.status || '').toLowerCase();
+        const isRej = s.includes('reject') || Boolean(app.reasonOfRejection);
+        return !isRej && !app.isFinalApproved && (app.isReviewByCO || app.isAggregatorAdded || app.isQuoteAddedPA || app.isMarkUpAddedCO || app.isQuoteAcceptRO || s.includes('query'));
+      });
     } else if (selectedKpiFilter === 'APPROVED') {
-      list = list.filter((app) => app.isFinalApproved === true);
-    } else if (selectedKpiFilter === 'QUOTES') {
-      list = list.filter((app) => !app.isFinalApproved && (app.isQuoteAddedPA || app.isMarkUpAddedCO || app.isQuoteAcceptRO));
+      list = list.filter((app) => {
+        const s = String(app.status || '').toLowerCase();
+        const isRej = s.includes('reject') || Boolean(app.reasonOfRejection);
+        return !isRej && (Boolean(app.isFinalApproved) || ['finalapproved', 'approved', 'completed'].includes(s));
+      });
+    } else if (selectedKpiFilter === 'REJECTED') {
+      list = list.filter((app) => {
+        const s = String(app.status || '').toLowerCase();
+        return s.includes('reject') || Boolean(app.reasonOfRejection) || Boolean(app.rejectedDate);
+      });
+    } else if (selectedKpiFilter === 'QUERY') {
+      list = list.filter((app) => String(app.status || '').toLowerCase().includes('query'));
     }
 
-    return list;
+    return [...list].sort((a, b) => {
+      const dateA = new Date(a.createdAt || 0).getTime();
+      const dateB = new Date(b.createdAt || 0).getTime();
+      if (dateB !== dateA) return dateB - dateA;
+      return (Number(b.applicationId) || 0) - (Number(a.applicationId) || 0);
+    });
   }, [mockApp, selectedStageIndex, selectedKpiFilter]);
 
   const recentThreeApplications = useMemo(() => {
@@ -247,6 +310,14 @@ const getApplicationActiveStage = (app) => {
     setApplicationData(null);
     setIsReview(false);
     setOpen(true);
+  };
+
+  const handleFilterChange = useCallback((newFilters) => {
+    setFilters((prev) => ({ ...prev, ...newFilters }));
+  }, []);
+
+  const handleClearStageFilter = () => {
+    setSelectedStageIndex(null);
   };
 
   const handleClose = () => {
@@ -311,7 +382,9 @@ const getApplicationActiveStage = (app) => {
       } else if (userRole === 'RO') {
         reqRegionId = userDetails.regionId;
       } else if (userRole === 'ZO') {
-        filterby = userDetails.zoneId || '00000';
+        filterby = (userDetails.zoneId && userDetails.zoneId !== '0' && userDetails.zoneId !== 0) ? userDetails.zoneId : '00000';
+      } else {
+        filterby = '00000';
       }
 
       const response = await applicationServices.getAllApplications({
@@ -325,6 +398,7 @@ const getApplicationActiveStage = (app) => {
         endDate: filters.endDate,
         branchId: reqBranchId,
         regionId: reqRegionId,
+        userRole: userRole,
         exportType: 'excel',
         config: { responseType: 'blob' },
       });
@@ -363,7 +437,7 @@ const getApplicationActiveStage = (app) => {
       id: 'ALL',
       title: 'Total Applications',
       value: kpiStats.total,
-      icon: <AssignmentRounded sx={{ fontSize: 28 }} />,
+      icon: <AssignmentRounded sx={{ fontSize: 26 }} />,
       color: theme.palette.primary.main || '#176FC1',
       bgGradient: 'linear-gradient(135deg, rgba(23,111,193,0.12) 0%, rgba(23,111,193,0.02) 100%)',
       badge: 'All Records',
@@ -372,28 +446,37 @@ const getApplicationActiveStage = (app) => {
       id: 'PENDING',
       title: 'Pending Reviews',
       value: kpiStats.pending,
-      icon: <HourglassTopRounded sx={{ fontSize: 28 }} />,
+      icon: <HourglassTopRounded sx={{ fontSize: 26 }} />,
       color: '#ed6c02',
       bgGradient: 'linear-gradient(135deg, rgba(237,108,2,0.12) 0%, rgba(237,108,2,0.02) 100%)',
-      badge: 'Action Required',
+      badge: 'Initial Action',
     },
     {
-      id: 'QUOTES',
-      title: 'Quotes & Projections',
-      value: kpiStats.quotes,
-      icon: <ReceiptLongRounded sx={{ fontSize: 28 }} />,
-      color: theme.palette.secondary.main || '#CE0F3E',
-      bgGradient: 'linear-gradient(135deg, rgba(206,15,62,0.12) 0%, rgba(206,15,62,0.02) 100%)',
-      badge: 'Aggregator Quotes',
+      id: 'IN_PROGRESS',
+      title: 'In Progress',
+      value: kpiStats.inProgress,
+      icon: <ReceiptLongRounded sx={{ fontSize: 26 }} />,
+      color: '#0284c7',
+      bgGradient: 'linear-gradient(135deg, rgba(2,132,199,0.12) 0%, rgba(2,132,199,0.02) 100%)',
+      badge: 'Quotes & Markup',
     },
     {
       id: 'APPROVED',
       title: 'Approved & Active',
       value: kpiStats.approved,
-      icon: <CheckCircleRounded sx={{ fontSize: 28 }} />,
+      icon: <CheckCircleRounded sx={{ fontSize: 26 }} />,
       color: '#2e7d32',
       bgGradient: 'linear-gradient(135deg, rgba(46,125,50,0.12) 0%, rgba(46,125,50,0.02) 100%)',
       badge: 'PO Issued',
+    },
+    {
+      id: 'REJECTED',
+      title: 'Rejected',
+      value: kpiStats.rejected,
+      icon: <CancelRounded sx={{ fontSize: 26 }} />,
+      color: '#d32f2f',
+      bgGradient: 'linear-gradient(135deg, rgba(211,47,47,0.12) 0%, rgba(211,47,47,0.02) 100%)',
+      badge: 'Locked Out',
     },
   ];
 
@@ -406,7 +489,7 @@ const getApplicationActiveStage = (app) => {
         title="Customer Applications & Workflow Dashboard"
         description="Monitor, review, and process merchant payment aggregator applications, approvals, and quotations in real-time."
         icon={<DashboardRounded />}
-        showButton={isBO}
+        showButton={isBO && !isReadOnlyUser}
         buttonText="Add Customer Application"
         buttonProps={{
           startIcon: <Add />,
@@ -433,7 +516,7 @@ const getApplicationActiveStage = (app) => {
           const isSelected = selectedKpiFilter === card.id && selectedStageIndex === null;
 
           return (
-            <Grid item xs={12} sm={6} md={3} key={card.id}>
+            <Grid item xs={12} sm={6} md={4} lg={2.4} key={card.id}>
               <Card
                 onClick={() => handleKpiCardClick(card.id)}
                 elevation={0}
@@ -614,9 +697,9 @@ const getApplicationActiveStage = (app) => {
         onRefresh={fetchApplicationsData}
         onView={handleView}
         onVerify={handleVerify}
-        onCreateApplication={isBO ? handleOpen : undefined}
-        onDelete={isBO ? handleDelete : undefined}
-        onFilterChange={setFilters}
+        onCreateApplication={isBO && !isReadOnlyUser ? handleOpen : undefined}
+        onDelete={isBO && !isReadOnlyUser ? handleDelete : undefined}
+        onFilterChange={handleFilterChange}
         onExport={handleExportExcel}
       />
 
@@ -631,7 +714,7 @@ const getApplicationActiveStage = (app) => {
         headerText={isReview ? 'Review Customer Application' : 'Customer Application Details'}
       >
         <ApplicationForm
-          fetchAllApplications={fetchApplicationsData}
+          fetchAllApplications={handleApplicationCreatedOrUpdated}
           updateDetails={applicationData}
           handleClose={handleClose}
           formClosed={open}

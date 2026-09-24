@@ -10,26 +10,30 @@ import {
   Typography,
   Tooltip,
   Fade,
-  useTheme
+  useTheme,
+  Divider,
 } from '@mui/material';
 import {
   DashboardRounded,
-  AssignmentRounded,
   Groups2,
-  AccountBalanceWalletRounded,
   HelpCenterRounded,
-  TimelineRounded,
+  DescriptionRounded,
+  BusinessRounded,
+  StoreRounded,
+  HomeWorkRounded,
+  AccountBalanceRounded,
 } from '@mui/icons-material';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { user_role } from '&src/constants/PaymentAggregratorConstant';
+import { user_role, ROLE_NAV_ACCESS } from '&src/constants/PaymentAggregratorConstant';
 import { APPLICATION_ROUTES_URLS } from '&src/routes/routesConfig';
 
 export const SIDEBAR_WIDTH = 260;
 export const COLLAPSED_WIDTH = 76;
 
-const Sidebar = ({ open, onToggle }) => {
+const Sidebar = ({ open }) => {
   const theme = useTheme();
   const RED = theme.palette.secondary.main || '#CE0F3E';
+  const BLUE = theme.palette.primary.main || '#176FC1';
   const location = useLocation();
   const navigate = useNavigate();
   const role = user_role || 'CO';
@@ -45,30 +49,39 @@ const Sidebar = ({ open, onToggle }) => {
     }
   }, []);
 
-  const navItems = [
-    {
-      label: 'Dashboard',
-      icon: <DashboardRounded />,
-      path: APPLICATION_ROUTES_URLS.DASHBOARD,
-      allowedRoles: ['CO', 'RO', 'ZO', 'BO'],
-    },
-    {
-      label: 'Manage Aggregator',
-      icon: <Groups2 />,
-      path: APPLICATION_ROUTES_URLS.MANAGE_AGGREGRATOR,
-      allowedRoles: ['CO'],
-    },
-    {
-      label: 'Help Desk',
-      icon: <HelpCenterRounded />,
-      path: APPLICATION_ROUTES_URLS.HELP_DESK,
-      allowedRoles: ['CO', 'RO', 'ZO', 'BO'],
-    },
-  ];
+  // Robust location field resolution supporting all API/DB key formats
+  const zoneName =
+    userDetails?.zoneName ||
+    userDetails?.Zone_Name ||
+    userDetails?.zone ||
+    (userDetails?.zoneId && userDetails.zoneId !== 0 && userDetails.zoneId !== '00000'
+      ? `Zone ${userDetails.zoneId}`
+      : '');
 
-  const visibleItems = navItems.filter(
-    (item) => !item.allowedRoles || item.allowedRoles.includes(role)
-  );
+  const regionName =
+    userDetails?.regionName ||
+    userDetails?.Region_Name ||
+    userDetails?.region ||
+    (userDetails?.regionId && userDetails.regionId !== 0
+      ? `Region ${userDetails.regionId}`
+      : '');
+
+  const branchName =
+    userDetails?.branchName ||
+    userDetails?.Branch_Name ||
+    userDetails?.branch ||
+    (userDetails?.branchId && userDetails.branchId !== 0
+      ? `Branch ${userDetails.branchId}`
+      : '');
+
+  // Retrieve navigation items based on current role from constants
+  const visibleItems =
+    ROLE_NAV_ACCESS[role] ||
+    ROLE_NAV_ACCESS.CO || [
+      { label: 'Dashboard', icon: <DashboardRounded />, path: APPLICATION_ROUTES_URLS.DASHBOARD },
+      { label: 'Help Desk', icon: <HelpCenterRounded />, path: APPLICATION_ROUTES_URLS.HELP_DESK },
+      { label: 'Annexures', icon: <DescriptionRounded />, path: APPLICATION_ROUTES_URLS.ANNEXURES },
+    ];
 
   return (
     <Drawer
@@ -144,7 +157,7 @@ const Sidebar = ({ open, onToggle }) => {
                     '&:hover': {
                       backgroundColor: isActive ? 'rgba(206,15,62,0.14)' : 'rgba(0,0,0,0.04)',
                       '& .MuiListItemIcon-root': {
-                        color: isActive ? RED : theme.palette.primary.main,
+                        color: isActive ? RED : BLUE,
                       },
                       '& .MuiSvgIcon-root': {
                         transform: 'scale(1.15) rotate(-3deg)',
@@ -203,32 +216,53 @@ const Sidebar = ({ open, onToggle }) => {
 
       <Box sx={{ flexGrow: 1 }} />
 
-      {/* Organization branch / zone info when expanded */}
-      {(userDetails?.zoneName || userDetails?.regionName || userDetails?.branchName) && (
+      {/* Organization branch / zone info when expanded (Digital Ambassador Portal Style) */}
+      {(zoneName || regionName || branchName) && (
         <Box
           sx={{
-            p: 1.8,
-            borderTop: '1px solid rgba(0,0,0,0.06)',
+            p: 2,
+            mx: 1.5,
+            mb: 2,
+            borderRadius: '12px',
+            border: '1px solid rgba(23, 111, 193, 0.15)',
             opacity: isExpanded ? 1 : 0,
             transition: 'opacity 0.2s ease',
             display: isExpanded ? 'block' : 'none',
-            bgcolor: '#fafafa',
+            bgcolor: 'rgba(240, 247, 255, 0.8)',
           }}
         >
           <Typography
             sx={{
-              color: '#637381',
-              fontSize: '0.72rem',
-              fontWeight: 600,
+              color: '#0E4F8D',
+              fontSize: '0.68rem',
+              fontWeight: 800,
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+              mb: 0.8,
               display: 'flex',
-              flexDirection: 'column',
-              gap: 0.4,
+              alignItems: 'center',
+              gap: 0.6,
             }}
           >
-            {userDetails?.zoneName && <span>Zone: {userDetails.zoneName}</span>}
-            {userDetails?.regionName && <span>Region: {userDetails.regionName}</span>}
-            {userDetails?.branchName && <span>Branch: {userDetails.branchName}</span>}
+            <BusinessRounded sx={{ fontSize: 14, color: RED }} /> Assigned Location
           </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.4 }}>
+            {zoneName && (
+              <Typography sx={{ color: '#334155', fontSize: '0.74rem', fontWeight: 600 }}>
+                <b>Zone:</b> {zoneName}
+              </Typography>
+            )}
+            {regionName && (
+              <Typography sx={{ color: '#334155', fontSize: '0.74rem', fontWeight: 600 }}>
+                <b>Region:</b> {regionName}
+              </Typography>
+            )}
+            {branchName && (
+              <Typography sx={{ color: '#334155', fontSize: '0.74rem', fontWeight: 600 }}>
+                <b>Branch:</b> {branchName}
+              </Typography>
+            )}
+          </Box>
         </Box>
       )}
     </Drawer>

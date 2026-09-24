@@ -16,7 +16,7 @@ import {
 } from './routesConfig';
 
 const ProtectedRoute = ({ element, allowedRoles, userRole, redirectTo }) => {
-  if (allowedRoles && !allowedRoles.includes(userRole)) {
+  if (allowedRoles && userRole !== 'ADMIN' && !allowedRoles.includes(userRole)) {
     return <Navigate to={redirectTo || APPLICATION_ROUTES_URLS.ACCESS_DENIED} replace />;
   }
   return element || <Navigate to={redirectTo || APPLICATION_ROUTES_URLS.DASHBOARD} replace />;
@@ -58,14 +58,7 @@ const PublicRoutes = () => (
     />
     <Route
       path="*"
-      element={
-        <PageErrorBoundary pageName="404 Not Found">
-          <Helmet>
-            <title>404 - Page Not Found | Payment Aggregator Portal</title>
-          </Helmet>
-          <NotFound />
-        </PageErrorBoundary>
-      }
+      element={<Navigate to={APPLICATION_ROUTES_URLS.LOGIN} replace />}
     />
   </Routes>
 );

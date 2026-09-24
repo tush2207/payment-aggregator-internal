@@ -12,6 +12,7 @@ const AutocompleteDropdown = ({
   label,
   options = [],
   multiple = false,
+  limitTags = 2,
   value,
   setFieldValue,
   handleBlur,
@@ -27,6 +28,7 @@ const AutocompleteDropdown = ({
     <Autocomplete
       fullWidth
       multiple={multiple}
+      limitTags={limitTags}
       disablePortal
       size="small"
       disableCloseOnSelect={multiple}
@@ -136,6 +138,8 @@ const AutocompleteDropdown = ({
               "& .MuiOutlinedInput-root": {
                 borderRadius: "8px",
                 bgcolor: "#ffffff",
+                minHeight: "40px",
+                padding: multiple ? "3px 8px !important" : undefined,
               },
             }}
           />

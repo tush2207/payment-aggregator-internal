@@ -35,7 +35,6 @@ import GetRates from "./GetRates";
 import POForm from "./POForm";
 
 const QuoteTable = ({ applicationDetails, aggregatorId, aggregatorName, isRateAdded }) => {
-  let serialNo = 0;
   const { applicationId, isQuoteReviewCO, isQuoteAcceptRO, finalizedAggregatorId, isFinalApproved, isQuoteAddedPA } = applicationDetails || {};
   const { errorNotification, successNotification } = useStatusWiseAlert();
   const [openPOModal, setOpenPOModal] = useState(false);
@@ -270,14 +269,13 @@ const QuoteTable = ({ applicationDetails, aggregatorId, aggregatorName, isRateAd
     </Box>
   );
 
-  const QuoteRow = ({ row, rowIndex, errorRowIds, isFinalApproved }) => {
+  const QuoteRow = ({ row, rowIndex, srNo, errorRowIds, isFinalApproved }) => {
     const [localCharges, setLocalCharges] = useState(row.chargesProposed ?? "");
-    if (!row.isIB) serialNo += 1;
 
     if (isCO) {
       return (
         <TableRow>
-          <TableCell>{!row.isIB ? serialNo : ""}</TableCell>
+          <TableCell>{srNo}</TableCell>
           <TableCell>{row.transactionCount}</TableCell>
           <TableCell>{row.transactionValue}</TableCell>
           <TableCell>
@@ -413,9 +411,21 @@ const QuoteTable = ({ applicationDetails, aggregatorId, aggregatorName, isRateAd
         <TableBody>
           {quoteDetails?.length > 0 ? (
             <>
-              {quoteDetails.map((row, i) => (
-                <QuoteRow key={i} row={row} rowIndex={i} errorRowIds={errorRowIds} />
-              ))}
+              {(() => {
+                let parentCounter = 0;
+                return quoteDetails.map((row, i) => {
+                  const srNo = !row.isIB ? ++parentCounter : "";
+                  return (
+                    <QuoteRow
+                      key={row.id || i}
+                      row={row}
+                      rowIndex={i}
+                      srNo={srNo}
+                      errorRowIds={errorRowIds}
+                    />
+                  );
+                });
+              })()}
               {isCO && <TotalsRow />}
             </>
           ) : (

@@ -22,6 +22,7 @@ export function FormField({
   onChange,
   onBlur,
   helperText,
+  error,
   type = 'text',
   disabled,
   size = 'small',
@@ -43,7 +44,7 @@ export function FormField({
             onBlur={onBlur}
             onChange={onChange}
             type={type}
-            error={!!helperText}
+            error={error !== undefined ? Boolean(error) : Boolean(helperText)}
             helperText={helperText}
             fullWidth
             disabled={disabled}
@@ -78,6 +79,7 @@ export function TextAreaField({
   onChange,
   onBlur,
   helperText,
+  error,
   size = 'small',
   required,
   rows = 2,
@@ -95,13 +97,12 @@ export function TextAreaField({
         onBlur={onBlur}
         onChange={onChange}
         type="text"
-        error={!!helperText}
+        error={error !== undefined ? Boolean(error) : Boolean(helperText)}
         helperText={helperText}
         fullWidth
         multiline
         rows={rows}
         size={size}
-
         placeholder={placeholder || `Enter ${label}`}
       />
     </>
@@ -115,6 +116,7 @@ TextAreaField.propTypes = {
   onChange: PropTypes.func,
   onBlur: PropTypes.func,
   helperText: PropTypes.string,
+  error: PropTypes.bool,
   size: PropTypes.string,
   required: PropTypes.bool,
 };
@@ -127,6 +129,7 @@ export function DateField({
   onChange,
   onBlur,
   helperText,
+  error,
   size = 'small',
   required,
 }) {
@@ -141,7 +144,7 @@ export function DateField({
         onBlur={onBlur}
         onChange={onChange}
         type="date"
-        error={!!helperText}
+        error={error !== undefined ? Boolean(error) : Boolean(helperText)}
         helperText={helperText}
         fullWidth
         size={size}
@@ -158,6 +161,7 @@ DateField.propTypes = {
   onChange: PropTypes.func,
   onBlur: PropTypes.func,
   helperText: PropTypes.string,
+  error: PropTypes.bool,
   size: PropTypes.string,
   required: PropTypes.bool,
 };
@@ -170,6 +174,7 @@ export function EmailField({
   onChange,
   onBlur,
   helperText,
+  error,
   required,
   size = 'small',
   disabled
@@ -184,7 +189,7 @@ export function EmailField({
         onBlur={onBlur}
         onChange={onChange}
         type="email"
-        error={!!helperText}
+        error={error !== undefined ? Boolean(error) : Boolean(helperText)}
         helperText={helperText}
         fullWidth
         size={size}
@@ -201,6 +206,7 @@ EmailField.propTypes = {
   onChange: PropTypes.func,
   onBlur: PropTypes.func,
   helperText: PropTypes.string,
+  error: PropTypes.bool,
   required: PropTypes.bool,
   size: PropTypes.string,
 };
@@ -213,6 +219,7 @@ export function NumberField({
   onChange,
   onBlur,
   helperText,
+  error,
   size = 'small',
   required,
   placeholder,
@@ -228,7 +235,7 @@ export function NumberField({
         onBlur={onBlur}
         onChange={onChange}
         type="number"
-        error={!!helperText}
+        error={error !== undefined ? Boolean(error) : Boolean(helperText)}
         helperText={helperText}
         fullWidth
         disabled={disabled}
@@ -253,6 +260,7 @@ NumberField.propTypes = {
   onChange: PropTypes.func,
   onBlur: PropTypes.func,
   helperText: PropTypes.string,
+  error: PropTypes.bool,
   size: PropTypes.string,
   required: PropTypes.bool,
 };
@@ -274,6 +282,7 @@ export function PasswordField({
   onChange,
   onBlur,
   helperText,
+  error,
   defaultValue,
   size = 'small',
   required,
@@ -290,7 +299,7 @@ export function PasswordField({
         onBlur={onBlur}
         onChange={onChange}
         type={showPassword ? 'text' : 'password'}
-        error={!!helperText}
+        error={error !== undefined ? Boolean(error) : Boolean(helperText)}
         helperText={helperText}
         defaultValue={defaultValue}
         fullWidth
@@ -318,6 +327,7 @@ PasswordField.propTypes = {
   onChange: PropTypes.func,
   onBlur: PropTypes.func,
   helperText: PropTypes.string,
+  error: PropTypes.bool,
   defaultValue: PropTypes.any,
   size: PropTypes.string,
   required: PropTypes.bool,

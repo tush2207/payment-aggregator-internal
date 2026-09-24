@@ -17,10 +17,14 @@ import {
   Button,
   CircularProgress,
   Backdrop,
+  Grid,
+  Chip,
+  Alert,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import TimelineIcon from "@mui/icons-material/Timeline";
 import CancelOutlinedIcon from "@mui/icons-material/CancelOutlined";
+import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import {
   selectDialogOpen,
   selectApplicationDetails,
@@ -32,7 +36,9 @@ import {
 } from "&src/store/applicationFlowSlice";
 import RoleBasedWorkflowStepper from "./RoleBasedWorkflowStepper";
 import WorkflowTabs from "./WorkflowTabs";
+import ApplicationHelpdeskSection from "./ApplicationHelpdeskSection";
 import useStatusWiseAlert from "&src/components/ToastNotifications/useStatusWiseAlert";
+import { isUserAdmin } from "&src/utils";
 
 // Slide transition from bottom for full-screen dialog
 const Transition = React.forwardRef(function Transition(props, ref) {
@@ -46,7 +52,20 @@ export default function ApplicationFlowDialog() {
   const currentStep = useSelector(selectCurrentStep);
   const isLoading = useSelector(selectFlowLoading);
   const userRole = useSelector(selectUserRole) || sessionStorage.getItem('role') || 'CO';
-  const isCO = userRole === 'CO';
+  const isCO = userRole === 'CO' || userRole === 'ADMIN';
+
+  const userDetails = React.useMemo(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem('userDetails') || '{}');
+    } catch {
+      return {};
+    }
+  }, []);
+
+  const isAdmin = React.useMemo(() => isUserAdmin(userDetails), [userDetails]);
+
+  const [helpdeskOpen, setHelpdeskOpen] = useState(false);
+  const [ticketCount, setTicketCount] = useState(0);
 
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
@@ -91,7 +110,11 @@ export default function ApplicationFlowDialog() {
 
   if (!application) return null;
 
-  const canCOReject = isCO && application.status !== 'rejected' && !application.isFinalApproved;
+  const currentUserId = sessionStorage.getItem('userId') || sessionStorage.getItem('user_id') || (JSON.parse(sessionStorage.getItem('userDetails') || '{}')).employeeId || (JSON.parse(sessionStorage.getItem('userDetails') || '{}')).pfNumber;
+  const isReadOnlyUser = String(currentUserId) === '115019';
+  const isRejected = application.status?.toLowerCase()?.includes('reject') || Boolean(application.reasonOfRejection) || Boolean(application.rejectedDate);
+
+  const canCOReject = isAdmin && isCO && !isRejected && !application.isFinalApproved && !isReadOnlyUser;
 
   return (
     <>
@@ -156,24 +179,102 @@ export default function ApplicationFlowDialog() {
           </Toolbar>
         </AppBar>
 
-        {/* Main Content Area */}
-        <Container maxWidth="xl" sx={{ mt: 2, mb: 10, pb: 6 }}>
-          {/* Horizontal Workflow Stepper */}
-          {currentStep !== 3 && !application?.isFinalApproved && <RoleBasedWorkflowStepper />}
+        {/* Main Content Area - Full Width without bulky bounding box */}
+        <Container maxWidth={false} sx={{ mt: 1.5, mb: 10, pb: 4, px: { xs: 1, sm: 2 } }}>
+          {/* View-Only Mode Banner for PF ID 115019 */}
+          {isReadOnlyUser && (
+            <Paper
+              elevation={0}
+              sx={{
+                p: 1.5,
+                mb: 2,
+                borderRadius: '8px',
+                bgcolor: '#eff6ff',
+                border: '1.5px solid #93c5fd',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1.5,
+              }}
+            >
+              <Typography variant="body2" color="#1d4ed8" fontWeight={700}>
+                ℹ️ Strict View-Only Access Active (PF ID: 115019) &bull; You are in inspection/audit mode. All editing, approvals, rejections, and workflow modifications are disabled. Viewing and document downloads remain active.
+              </Typography>
+            </Paper>
+          )}
 
-          {/* Dynamic Workflow Tabs */}
-          <Paper
-            elevation={0}
-            sx={{
-              p: 3,
-              borderRadius: "16px",
-              border: "1px solid #e2e8f0",
-              backgroundColor: "#ffffff",
-              boxShadow: "0 10px 30px rgba(0,0,0,0.02)",
-            }}
-          >
+          {/* Rejection Details & Workflow Lockout Banner */}
+          {isRejected && (
+            <Paper
+              elevation={0}
+              sx={{
+                p: 2.5,
+                mb: 2,
+                borderRadius: '12px',
+                bgcolor: '#fef2f2',
+                border: '2px solid #ef4444',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 2,
+              }}
+            >
+              <CancelOutlinedIcon sx={{ color: '#dc2626', fontSize: 36, mt: 0.3, flexShrink: 0 }} />
+              <Box flex={1}>
+                <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1} mb={1}>
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <Typography variant="subtitle1" fontWeight={800} color="#991b1b">
+                      APPLICATION REJECTED &bull; WORKFLOW LOCKED
+                    </Typography>
+                    <Chip
+                      label={(application.status || "REJECTED").toUpperCase()}
+                      color="error"
+                      size="small"
+                      sx={{ fontWeight: 800 }}
+                    />
+                  </Box>
+                  <Typography variant="caption" color="#991b1b" fontWeight={700}>
+                    Status: Read-Only Archive (Forward Actions Stopped)
+                  </Typography>
+                </Box>
+                <Grid container spacing={2} sx={{ mt: 0.5, bgcolor: '#ffffff', p: 1.5, borderRadius: '8px', border: '1px solid #fee2e2' }}>
+                  <Grid item xs={12} sm={3}>
+                    <Typography variant="caption" color="text.secondary">Rejected By</Typography>
+                    <Typography variant="body2" fontWeight={700} color="#1e293b">
+                      {application.rejectedBy || application.approvedByCOId || "Central Office User"}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={3}>
+                    <Typography variant="caption" color="text.secondary">Rejected Role / Office</Typography>
+                    <Typography variant="body2" fontWeight={700} color="#1e293b">
+                      {application.rejectedRole || "CO"}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={3}>
+                    <Typography variant="caption" color="text.secondary">Rejection Date</Typography>
+                    <Typography variant="body2" fontWeight={700} color="#1e293b">
+                      {application.rejectedDate ? new Date(application.rejectedDate).toLocaleString() : (application.updatedAt ? new Date(application.updatedAt).toLocaleString() : "N/A")}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={3}>
+                    <Typography variant="caption" color="text.secondary">Operational State</Typography>
+                    <Typography variant="body2" fontWeight={700} color="#dc2626">
+                      Locked &bull; Forwarding Disabled
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Typography variant="caption" color="text.secondary">Reason for Rejection</Typography>
+                    <Typography variant="body2" fontWeight={600} color="#b91c1c" sx={{ bgcolor: '#fff1f2', p: 1.2, borderRadius: '6px', border: '1px solid #fecdd3', mt: 0.5 }}>
+                      {application.reasonOfRejection || "No specific reason provided."}
+                    </Typography>
+                  </Grid>
+                </Grid>
+              </Box>
+            </Paper>
+          )}
+
+          {/* Dynamic Workflow Content */}
+          <Box sx={{ width: "100%", mt: 1 }}>
             <WorkflowTabs />
-          </Paper>
+          </Box>
         </Container>
 
         {/* Sticky Footer */}

@@ -25,8 +25,6 @@ import {
   Select,
   MenuItem,
   Alert,
-  alpha,
-  useTheme,
 } from '@mui/material';
 import {
   Add,
@@ -43,7 +41,7 @@ import { PROJECTION_CAL_DETAILS } from '&src/constants/PaymentAggregratorConstan
 import aggregatorProjections from '&src/services/aggregatorProjections';
 import useStatusWiseAlert from '&src/components/ToastNotifications/useStatusWiseAlert';
 import FullScreenLoader from '&src/components/Loaders/FullScreenLoader';
-import { generateProjectionArray, calculateProjectionDetails } from '&src/utils/calculation';
+import { generateProjectionArray, calculateProjectionDetails, getProjectionsForCustomer } from '&src/utils/calculation';
 import { formatNumber } from '&src/utils';
 import { useDispatch } from 'react-redux';
 import { updateApplicationWorkflow } from '&src/store/applicationFlowSlice';
@@ -64,7 +62,6 @@ const PRESET_CHANNELS = [
 ];
 
 const UpdateProjectionPercentage = ({ customerDetails }) => {
-  const theme = useTheme();
   const dispatch = useDispatch();
   const { errorNotification, successNotification } = useStatusWiseAlert();
 
@@ -88,99 +85,36 @@ const UpdateProjectionPercentage = ({ customerDetails }) => {
   const [newValuePercent, setNewValuePercent] = useState(0);
 
   // ---------------------- Initialize Baseline Projections ----------------------
-  const initializeBaseline = () => {
-    if (PROJECTION_CAL_DETAILS && Array.isArray(PROJECTION_CAL_DETAILS)) {
-      const isLessThan2K = Number(avgTransactionSize) <= 2000;
-      
-      // Parse customer application selected projections if available
-      const rawProjs = customerDetails?.projection;
-      const selectedProjs = rawProjs
-        ? (typeof rawProjs === 'string' ? rawProjs.split('|').map((s) => s.trim().toLowerCase()).filter(Boolean) : [])
-        : [];
-      
-      const hasProjsFilter = selectedProjs.length > 0;
-      const initialized = [];
-      let nextId = 1;
-
-      // Filter standard PROJECTION_CAL_DETAILS based on customer selection if available
-      PROJECTION_CAL_DETAILS.forEach((q) => {
-        const typeLower = q.transactionType.toLowerCase();
-        let shouldInclude = true;
-
-        if (hasProjsFilter) {
-          if (q.isIB) {
-            // Keep IB sub-banks if Internet banking is selected
-            shouldInclude = selectedProjs.some((p) => p.includes('internet') || p.includes('banking') || p.includes('netbanking'));
-          } else if (typeLower.includes('internet') || typeLower.includes('banking')) {
-            shouldInclude = selectedProjs.some((p) => p.includes('internet') || p.includes('banking') || p.includes('netbanking'));
-          } else if (typeLower.includes('upi')) {
-            shouldInclude = selectedProjs.some((p) => p.includes('upi'));
-          } else if (typeLower.includes('debit')) {
-            shouldInclude = selectedProjs.some((p) => p.includes('debit'));
-          } else if (typeLower.includes('credit')) {
-            shouldInclude = selectedProjs.some((p) => p.includes('credit'));
-          } else {
-            shouldInclude = selectedProjs.some((p) => p === typeLower);
-          }
-        }
-
-        if (shouldInclude) {
-          let count = q.transactionCount ? parseInt(q.transactionCount) || 0 : 0;
-          let val = q.transactionValue ? parseInt(q.transactionValue) || 0 : 0;
-
-          // Apply 2K rule if applicable
-          if (q.transactionType === 'Debit card - Master/Visa (Upto 2000)') {
-            count = isLessThan2K ? 40 : 0;
-            val = isLessThan2K ? 25 : 0;
-          } else if (q.transactionType === 'Debit card - Master/Visa (Above 2000)') {
-            count = isLessThan2K ? 0 : 40;
-            val = isLessThan2K ? 0 : 25;
-          }
-
-          initialized.push({
-            id: nextId,
-            order: nextId,
-            transactionType: q.transactionType,
-            transactionCount: count,
-            transactionValue: val,
-            isIB: q.isIB || false,
-            isCustom: false,
-          });
-          nextId++;
-        }
-      });
-
-      // Add any custom projections specified in application form that are not in standard baseline
-      if (rawProjs) {
-        const rawList = typeof rawProjs === 'string' ? rawProjs.split('|').map((s) => s.trim()).filter(Boolean) : [];
-        rawList.forEach((projName) => {
-          const pLower = projName.toLowerCase();
-          const isStandard =
-            pLower.includes('internet') ||
-            pLower.includes('upi') ||
-            pLower.includes('debit') ||
-            pLower.includes('credit');
-
-          if (!isStandard) {
-            const alreadyInList = initialized.some((item) => item.transactionType.toLowerCase() === pLower);
-            if (!alreadyInList) {
-              initialized.push({
-                id: nextId,
-                order: nextId,
-                transactionType: projName,
-                transactionCount: 0,
-                transactionValue: 0,
-                isIB: false,
-                isCustom: false, // from application form, so not dynamically added in step 1
-              });
-              nextId++;
-            }
-          }
+  const initializeBaseline = async () => {
+    if (!applicationId) return;
+    try {
+      const res = await aggregatorProjections.getAllProjections(applicationId, 0);
+      const rawData = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+      if (rawData.length > 0) {
+        const loadedList = rawData.map((p, idx) => {
+          const countNum = parseInt(p.transactionCount, 10) || 0;
+          const valNum = parseInt(p.transactionValue, 10) || 0;
+          return {
+            ...p,
+            id: p.id || idx + 1,
+            transactionCount: countNum,
+            transactionValue: valNum,
+          };
         });
+        setAllCharges(loadedList);
+        return;
       }
-
-      setAllCharges(initialized);
+    } catch (err) {
+      console.warn("Could not fetch existing projections, falling back to default baseline:", err);
     }
+
+    const list = getProjectionsForCustomer(
+      PROJECTION_CAL_DETAILS,
+      customerDetails?.projection,
+      avgTransactionSize,
+      applicationId
+    );
+    setAllCharges(list);
   };
 
   useEffect(() => {
@@ -219,13 +153,32 @@ const UpdateProjectionPercentage = ({ customerDetails }) => {
     }
 
     const nextId = allCharges.length > 0 ? Math.max(...allCharges.map((c) => c.id)) + 1 : 1;
+    const countVal = Math.min(100, Math.max(0, parseInt(newCountPercent, 10) || 0));
+    const valVal = Math.min(100, Math.max(0, parseInt(newValuePercent, 10) || 0));
+
     const newRow = {
       id: nextId,
       order: nextId,
+      applicationId: applicationId || null,
+      aggregatorId: null,
       transactionType: channelName,
-      transactionCount: Math.min(100, Math.max(0, parseInt(newCountPercent, 10) || 0)),
-      transactionValue: Math.min(100, Math.max(0, parseInt(newValuePercent, 10) || 0)),
+      transactionCount: countVal,
+      transactionValue: valVal,
+      transactionTypePercent: `${valVal}%`,
       isIB: false,
+      allow: true,
+      rate: 0,
+      unit: '%',
+      bankUnit: '%',
+      chargesProposed: 0,
+      grossAmount: 0,
+      vendorShare: 0,
+      expectedRevenue: 0,
+      estimatedTransactions: 0,
+      aggregateAmount: 0,
+      isDeleted: false,
+      quoteVersion: 1,
+      revisionRemarks: null,
       isCustom: true,
     };
 
@@ -248,7 +201,6 @@ const UpdateProjectionPercentage = ({ customerDetails }) => {
     if (!parentRows.length) return;
 
     const curTotalCount = parentRows.reduce((sum, r) => sum + (r.transactionCount || 0), 0);
-    const curTotalValue = parentRows.reduce((sum, r) => sum + (r.transactionValue || 0), 0);
 
     let updated = [...allCharges];
 

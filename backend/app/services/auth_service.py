@@ -1,4 +1,4 @@
-from ldap3 import Server, Connection, ALL, NTLM, ALL_ATTRIBUTES
+from ldap3 import Server, Connection, ALL
 from app.core import config
 
 def ldap_authenticate(username: str, password: str) -> bool:
@@ -6,17 +6,15 @@ def ldap_authenticate(username: str, password: str) -> bool:
     Try to authenticate a user against the LDAP server.
     Returns True if successful, False otherwise.
     """
-    user_dn = f"CN={username},{config.LDAP_USER_DN}"  # change this based on your LDAP structure
-    server = Server(config.LDAP_SERVER, get_info=ALL)
+    if not username or not password:
+        return False
 
+    ldap_host = config.LDAP_SERVER or "ldaps://CBI.CO.IN"
     try:
-        # print(f'ladP CONNECTION :{username}', password)
-
-        server = Server('ldaps://CBI.CO.IN', get_info=ALL , use_ssl= True)
+        server = Server(ldap_host, get_info=ALL, use_ssl=ldap_host.startswith("ldaps"), connect_timeout=3)
         user = f'CBI\\{username}'
-        conn = Connection(server,user=user,password=password,auto_bind=True)
-        # print(f'ladP CONNECTION :{conn}')
+        conn = Connection(server, user=user, password=password, auto_bind=True, receive_timeout=3)
         return True
     except Exception as e:
-        print(f"LDAP auth failed for user: {e}")
+        print(f"LDAP auth note for {username}: {e}")
         return False

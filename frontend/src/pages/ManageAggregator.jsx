@@ -40,6 +40,10 @@ import {
   FileDownloadRounded,
   LockPerson,
   MailRounded,
+  LockOpenOutlined,
+  KeyRounded,
+  HistoryRounded,
+  Visibility,
 } from '@mui/icons-material';
 
 import ConfirmationDialogWithReason from '&src/components/Dialog/ConfirmationDialogWithReason';
@@ -51,10 +55,12 @@ import useStatusWiseAlert from '&src/components/ToastNotifications/useStatusWise
 import useAggregatorDetails from '&src/hooks/useAggregatorDetails';
 import useToggle from '&src/hooks/useToggle';
 import ManageAggregatorForm from '&src/modules/ManageAggregrator/ManageAggregatorForm';
+import AggregatorAuditDialog from '&src/modules/ManageAggregrator/AggregatorAuditDialog';
 import manageAggregatorServices from '&src/services/manageAggregator';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import StatusChipOrSelect from '&src/components/StatusChipOrSelect';
+import { isUserAdmin, maskEmail, maskMobile } from '&src/utils';
 
 const ManageAggregator = () => {
   const theme = useTheme();
@@ -63,11 +69,25 @@ const ManageAggregator = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const [open, setOpen] = useState(false);
+  const [isViewMode, setIsViewMode] = useState(false);
   const [aggregatorData, setAggregatorData] = useState(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [selectedKpiFilter, setSelectedKpiFilter] = useState('ALL');
+  const [auditDialogOpen, setAuditDialogOpen] = useState(false);
+  const [selectedAggregatorForAudit, setSelectedAggregatorForAudit] = useState(null);
 
   const { isLoading: showLoader, aggregatorDetails, fetchAllAggregators } = useAggregatorDetails();
+
+  // Admin user verification
+  const userDetails = useMemo(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem('userDetails') || '{}');
+    } catch {
+      return {};
+    }
+  }, []);
+
+  const isAdmin = useMemo(() => isUserAdmin(userDetails), [userDetails]);
 
   // Search & Pagination State
   const [searchQuery, setSearchQuery] = useState('');
@@ -76,12 +96,31 @@ const ManageAggregator = () => {
 
   const handleOpen = () => {
     setAggregatorData(null);
+    setIsViewMode(false);
     setOpen(true);
   };
 
   const handleClose = () => {
     setAggregatorData(null);
+    setIsViewMode(false);
     setOpen(false);
+  };
+
+  const onViewClick = (value) => {
+    setAggregatorData(value);
+    setIsViewMode(true);
+    setOpen(true);
+  };
+
+  const onEditClick = (value) => {
+    setAggregatorData(value);
+    setIsViewMode(false);
+    setOpen(true);
+  };
+
+  const onDeleteClick = (value) => {
+    setAggregatorData(value);
+    setConfirmDialogOpen(true);
   };
 
   const handleDelete = async () => {
@@ -100,6 +139,7 @@ const ManageAggregator = () => {
   };
 
   const handleToggleStatus = async (agg) => {
+    if (!isAdmin) return;
     const currentIsActive = String(agg?.status || '').toLowerCase() === 'active';
     const newStatus = currentIsActive ? 'inactive' : 'active';
     setShowLoader(true);
@@ -118,14 +158,17 @@ const ManageAggregator = () => {
     }
   };
 
-  const onEditClick = (value) => {
-    setAggregatorData(value);
-    setOpen(true);
-  };
-
-  const onDeleteClick = (value) => {
-    setAggregatorData(value);
-    setConfirmDialogOpen(true);
+  const onResendCredentialsClick = async (row) => {
+    setShowLoader(true);
+    try {
+      await manageAggregatorServices.resetCredentials(row.aggregatorId);
+      successNotification(`New temporary password generated & dispatched to ${row.email}`);
+    } catch (error) {
+      console.error('[ERROR] Resend credentials failed:', error);
+      errorNotification(error?.response?.data?.message || 'Failed to dispatch credentials email');
+    } finally {
+      setShowLoader(false);
+    }
   };
 
   // Compute live KPI analytics
@@ -211,6 +254,7 @@ const ManageAggregator = () => {
         'Aggregator Name': row.aggregatorName || 'N/A',
         'Contact Person': row.contactPersonName || 'N/A',
         'Contact Email': row.email || 'N/A',
+        'Alternate Email': row.alternateEmail || 'N/A',
         'Mobile Number': row.mobileNo || 'N/A',
         'Services Enabled': Array.isArray(row.services) ? row.services.join(', ') : row.services || '-',
         'Status': row.status || 'Active',
@@ -276,7 +320,7 @@ const ManageAggregator = () => {
 
       {/* ── Executive PageHeader ── */}
       <SectionHeader
-        showButton
+        showButton={isAdmin}
         title="Manage Payment Aggregators"
         description="Configure approved payment aggregators, authorized contact points, and enabled services."
         icon={<Groups2 />}
@@ -432,6 +476,30 @@ const ManageAggregator = () => {
             }}
           />
 
+          <Tooltip title="View complete system-wide Aggregator Audit Trail" arrow>
+            <Button
+              size="small"
+              variant="outlined"
+              color="primary"
+              startIcon={<HistoryRounded />}
+              onClick={() => {
+                setSelectedAggregatorForAudit(null);
+                setAuditDialogOpen(true);
+              }}
+              sx={{
+                textTransform: 'none',
+                fontWeight: 700,
+                fontSize: '0.82rem',
+                borderRadius: '8px',
+                px: 2,
+                borderColor: '#004990',
+                color: '#004990',
+              }}
+            >
+              Audit Trail
+            </Button>
+          </Tooltip>
+
           <Tooltip title="Export all aggregators as Excel spreadsheet" arrow>
             <Button
               size="small"
@@ -476,7 +544,6 @@ const ManageAggregator = () => {
               <TableCell sx={{ color: '#ffffff', fontWeight: 700, py: 1.5, borderRight: '1px solid rgba(255,255,255,0.25)' }}>Contact Person</TableCell>
               <TableCell sx={{ color: '#ffffff', fontWeight: 700, py: 1.5, borderRight: '1px solid rgba(255,255,255,0.25)' }}>Contact Email</TableCell>
               <TableCell sx={{ color: '#ffffff', fontWeight: 700, py: 1.5, borderRight: '1px solid rgba(255,255,255,0.25)' }}>Mobile Number</TableCell>
-              <TableCell sx={{ color: '#ffffff', fontWeight: 700, py: 1.5, borderRight: '1px solid rgba(255,255,255,0.25)' }}>Services</TableCell>
               <TableCell sx={{ color: '#ffffff', fontWeight: 700, py: 1.5, textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.25)' }}>Status</TableCell>
               <TableCell sx={{ color: '#ffffff', fontWeight: 700, py: 1.5, textAlign: 'center' }}>Actions</TableCell>
             </TableRow>
@@ -487,11 +554,6 @@ const ManageAggregator = () => {
               paginatedAggregators.map((row, index) => {
                 const rowIndex = (page - 1) * rowsPerPage + index;
                 const isUserActive = String(row?.status || '').toLowerCase() === 'active';
-                const servicesText = row?.services
-                  ? Array.isArray(row.services)
-                    ? row.services.join(', ')
-                    : row.services.replace(/\|/g, ', ')
-                  : '-';
 
                 return (
                   <TableRow
@@ -516,80 +578,117 @@ const ManageAggregator = () => {
                       {row.contactPersonName || 'N/A'}
                     </TableCell>
 
-                    <TableCell sx={{ fontSize: '12.5px', color: 'text.secondary' }}>
-                      {row.email || 'N/A'}
+                    <TableCell sx={{ fontSize: '12.5px' }}>
+                      <Typography variant="body2" sx={{ fontSize: '12.5px', color: 'text.primary', fontWeight: 600 }}>
+                        {isAdmin ? (row.email || 'N/A') : (maskEmail(row.email) || 'N/A')}
+                      </Typography>
+                      {row.alternateEmail && row.alternateEmail !== '-' && row.alternateEmail.trim() !== '' && (
+                        <Typography variant="caption" sx={{ fontSize: '11px', color: 'text.secondary', display: 'block', mt: 0.2 }}>
+                          Alt: {isAdmin ? row.alternateEmail : maskEmail(row.alternateEmail)}
+                        </Typography>
+                      )}
                     </TableCell>
 
                     <TableCell sx={{ fontSize: '12.5px', color: 'text.secondary', whiteSpace: 'nowrap' }}>
-                      {row.mobileNo || 'N/A'}
-                    </TableCell>
-
-                    <TableCell sx={{ maxWidth: 220 }}>
-                      <Typography variant="body2" sx={{ fontSize: '12px', color: 'text.primary', wordBreak: 'break-word' }}>
-                        {servicesText}
-                      </Typography>
+                      {isAdmin ? (row.mobileNo || 'N/A') : (maskMobile(row.mobileNo) || 'N/A')}
                     </TableCell>
 
                     <TableCell align="center">
                       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-                        <StatusChipOrSelect value={row.status} type="status" />
-                        <Tooltip title={isUserActive ? 'Active Partner' : 'Inactive Partner'} arrow>
-                          <IconButton size="small" sx={{ p: 0.5 }}>
-                            {isUserActive ? (
-                              <LockOpenOutlined sx={{ color: 'success.main', fontSize: 18 }} />
-                            ) : (
-                              <LockPerson sx={{ color: 'error.main', fontSize: 18 }} />
-                            )}
-                          </IconButton>
-                        </Tooltip>
+                        <Chip
+                          label={isUserActive ? 'Active' : 'Inactive'}
+                          size="small"
+                          onClick={() => (isAdmin ? handleToggleStatus(row) : null)}
+                          sx={{
+                            fontWeight: 700,
+                            fontSize: '11px',
+                            cursor: isAdmin ? 'pointer' : 'default',
+                            bgcolor: isUserActive ? '#dcfce7' : '#f1f5f9',
+                            color: isUserActive ? '#15803d' : '#64748b',
+                            border: `1px solid ${isUserActive ? '#86efac' : '#cbd5e1'}`,
+                            '&:hover': isAdmin ? { opacity: 0.85 } : {},
+                          }}
+                        />
+                        {isAdmin && (
+                          <Tooltip title={isUserActive ? 'Click to Deactivate Aggregator' : 'Click to Activate Aggregator'} arrow>
+                            <Switch
+                              size="small"
+                              checked={isUserActive}
+                              onChange={() => handleToggleStatus(row)}
+                              color="success"
+                            />
+                          </Tooltip>
+                        )}
                       </Box>
                     </TableCell>
 
                     <TableCell align="center">
                       <Stack direction="row" spacing={0.8} justifyContent="center">
-                        <Tooltip title="Send Test Quotation Email" arrow>
+                        {/* 👁️ View Aggregator Details (Available to All) */}
+                        <Tooltip title="View Aggregator Details" arrow>
                           <IconButton
                             size="small"
-                            onClick={() => onTestEmailClick(row)}
-                            sx={{
-                              bgcolor: 'rgba(23, 111, 193, 0.08)',
-                              color: '#176FC1',
-                              '&:hover': { bgcolor: '#176FC1', color: '#fff' },
-                            }}
-                          >
-                            <MailRounded fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-
-                        <Tooltip title="Edit Aggregator" arrow>
-                          <IconButton
-                            size="small"
-                            onClick={() => onEditClick(row)}
+                            onClick={() => onViewClick(row)}
                             sx={{
                               border: '1px solid',
                               borderColor: 'primary.light',
                               color: 'primary.main',
-                              '&:hover': { bgcolor: 'primary.light', color: '#fff' },
+                              bgcolor: 'rgba(23, 111, 193, 0.08)',
+                              '&:hover': { bgcolor: 'primary.main', color: '#fff' },
                             }}
                           >
-                            <EditOutlined fontSize="small" />
+                            <Visibility fontSize="small" />
                           </IconButton>
                         </Tooltip>
 
-                        <Tooltip title="Delete Aggregator" arrow>
-                          <IconButton
-                            size="small"
-                            onClick={() => onDeleteClick(row)}
-                            sx={{
-                              border: '1px solid',
-                              borderColor: 'error.light',
-                              color: 'error.main',
-                              '&:hover': { bgcolor: 'error.light', color: '#fff' },
-                            }}
-                          >
-                            <DeleteOutline fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
+                        {isAdmin && (
+                          <>
+                            <Tooltip title="Resend Portal Login Credentials" arrow>
+                              <IconButton
+                                size="small"
+                                onClick={() => onResendCredentialsClick(row)}
+                                sx={{
+                                  bgcolor: 'rgba(217, 119, 6, 0.08)',
+                                  color: '#D97706',
+                                  border: '1px solid #fde68a',
+                                  '&:hover': { bgcolor: '#D97706', color: '#fff' },
+                                }}
+                              >
+                                <KeyRounded fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+
+                            <Tooltip title="Edit Aggregator" arrow>
+                              <IconButton
+                                size="small"
+                                onClick={() => onEditClick(row)}
+                                sx={{
+                                  border: '1px solid',
+                                  borderColor: 'primary.light',
+                                  color: 'primary.main',
+                                  '&:hover': { bgcolor: 'primary.light', color: '#fff' },
+                                }}
+                              >
+                                <EditOutlined fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+
+                            <Tooltip title="Delete Aggregator" arrow>
+                              <IconButton
+                                size="small"
+                                onClick={() => onDeleteClick(row)}
+                                sx={{
+                                  border: '1px solid',
+                                  borderColor: 'error.light',
+                                  color: 'error.main',
+                                  '&:hover': { bgcolor: 'error.light', color: '#fff' },
+                                }}
+                              >
+                                <DeleteOutline fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          </>
+                        )}
                       </Stack>
                     </TableCell>
                   </TableRow>
@@ -597,7 +696,7 @@ const ManageAggregator = () => {
               })
             ) : (
               <TableRow>
-                <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
+                <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
                   <NoData message={searchQuery ? 'No matching aggregators found' : 'No aggregators available'} />
                 </TableCell>
               </TableRow>
@@ -659,14 +758,21 @@ const ManageAggregator = () => {
         </Box>
       </TableContainer>
 
-      {/* ── Add / Edit Aggregator Modal ── */}
+      {/* ── Add / Edit / View Aggregator Modal ── */}
       <DialogWithHeader
         open={open}
         onClose={handleClose}
         maxWidth="md"
-        headerText={aggregatorData ? 'Edit Payment Aggregator' : 'Add Payment Aggregator'}
+        headerText={
+          isViewMode
+            ? 'View Payment Aggregator'
+            : aggregatorData
+            ? 'Edit Payment Aggregator'
+            : 'Add Payment Aggregator'
+        }
       >
         <ManageAggregatorForm
+          isViewOnly={isViewMode}
           updateDetails={aggregatorData}
           handleClose={handleClose}
           fetchAllAggregators={fetchAllAggregators}
@@ -683,6 +789,13 @@ const ManageAggregator = () => {
         onConfirm={handleDelete}
         title="Delete Aggregator"
         message={`Are you sure you want to delete "${aggregatorData?.aggregatorName}"? This action cannot be undone.`}
+      />
+
+      {/* ── Aggregator Audit Trail Dialog ── */}
+      <AggregatorAuditDialog
+        open={auditDialogOpen}
+        onClose={() => setAuditDialogOpen(false)}
+        aggregator={selectedAggregatorForAudit}
       />
     </Box>
   );

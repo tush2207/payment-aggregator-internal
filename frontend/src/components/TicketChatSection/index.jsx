@@ -2,9 +2,58 @@ import { message } from "&src/assets";
 import { isBO, isCO, user_role } from "&src/constants/PaymentAggregratorConstant";
 import HelpdeskServices from "&src/services/helpdesk";
 import SendIcon from "@mui/icons-material/Send";
-import { Box, IconButton, Paper, TextField, Typography } from "@mui/material";
+import AttachFileRounded from "@mui/icons-material/AttachFileRounded";
+import { Box, IconButton, Paper, TextField, Typography, Tooltip, CircularProgress } from "@mui/material";
 import { useEffect, useRef, useState } from "react";
+import axios from "axios";
 
+// Helper to render message content with clickable attachment links
+const renderMessageContent = (text, isCurrentUser) => {
+    if (!text) return null;
+    const attachmentRegex = /\[Attachment:\s*([^\]]+)\]\(([^)]+)\)/;
+    const match = text.match(attachmentRegex);
+    if (!match) {
+        return <Typography sx={{ fontSize: "14px", lineHeight: 1.4 }}>{text}</Typography>;
+    }
+    const cleanText = text.replace(attachmentRegex, "").trim();
+    const fileName = match[1];
+    const fileUrl = match[2];
+
+    return (
+        <Box>
+            {cleanText && (
+                <Typography sx={{ fontSize: "14px", lineHeight: 1.4, mb: 0.8 }}>
+                    {cleanText}
+                </Typography>
+            )}
+            <Box
+                component="a"
+                href={fileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                download={fileName}
+                sx={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 0.8,
+                    p: "4px 10px",
+                    borderRadius: "6px",
+                    bgcolor: isCurrentUser ? "rgba(255,255,255,0.25)" : "#e2e8f0",
+                    color: isCurrentUser ? "#ffffff" : "#0f172a",
+                    textDecoration: "none",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    "&:hover": {
+                        textDecoration: "underline",
+                        bgcolor: isCurrentUser ? "rgba(255,255,255,0.35)" : "#cbd5e1",
+                    },
+                }}
+            >
+                📎 {fileName}
+            </Box>
+        </Box>
+    );
+};
 
 // ---------- FIXED PARSE FUNCTION ----------
 const parseChatString = (chatStr) => {
@@ -69,7 +118,8 @@ const TicketChatSection = ({ ticketData, openMessegner }) => {
     const { chats, id: ticketId } = ticketData || {}
     const [messages, setMessages] = useState([]);
     const [msg, setMsg] = useState("");
-    console.log(ticketData, openMessegner, 'Check')
+    const [uploadingFile, setUploadingFile] = useState(false);
+    const fileInputRef = useRef(null);
 
     const chatEndRef = useRef(null);
 
@@ -79,21 +129,31 @@ const TicketChatSection = ({ ticketData, openMessegner }) => {
         }
     }, [messages]);
 
-    // // Fetch chat from backend
-    // const fetchChat = async () => {
-    //     if (!ticketId) return;
-
-    //     // Example API response
-    //     const res = {
-    //         data: {
-    //             chats: "Branch: Hello | CO: Noted",
-    //         },
-    //     };
-
-    //     const parsedMessages = parseChatString(res.data?.chats);
-    //     setMessages(parsedMessages);
-    // };
-
+    const handleFileAttach = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setUploadingFile(true);
+        try {
+            const formData = new FormData();
+            formData.append("file", file);
+            const token = sessionStorage.getItem("accessToken");
+            const res = await axios.post("/api/files/upload", formData, {
+                headers: {
+                    "Content-Type": "multipart/form-data",
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+            });
+            if (res?.data?.fileId) {
+                const fileUrl = `/api/files/download/${res.data.fileId}`;
+                setMsg((prev) => (prev ? `${prev} [Attachment: ${file.name}](${fileUrl})` : `[Attachment: ${file.name}](${fileUrl})`));
+            }
+        } catch (err) {
+            console.error("Attachment upload failed:", err);
+        } finally {
+            setUploadingFile(false);
+            if (fileInputRef.current) fileInputRef.current.value = "";
+        }
+    };
 
     // Send Message
     const sendMessage = async () => {
@@ -117,8 +177,6 @@ const TicketChatSection = ({ ticketData, openMessegner }) => {
         // Convert to valid backend string
         const pipeString = convertToPipeString(updatedMessages);
 
-        console.log("DATA SENT TO BACKEND PIPE FORMAT:", pipeString);
-
         // API call
         await HelpdeskServices.updateHelpdesk(ticketId, { chats: pipeString });
 
@@ -138,43 +196,29 @@ const TicketChatSection = ({ ticketData, openMessegner }) => {
 
 
     return (
-        <Box
-            sx={{
-                padding: 2,
-                borderRadius: 3,
-                minHeight: "50vh",
-                display: "flex",
-                flexDirection: "column",
-                background: "#fafafa",
-                border: "1px solid #e0e0e0",
-            }}
-        >
-            {/* CHAT WINDOW */}
-            <Box
-                sx={{
-                    flex: 1,
-                    overflowY: "auto",
-                    mb: 2,
-                    pr: 1,
-                    display: "flex",
-                    flexDirection: "column",
-                }}
-            >
-                {messages?.length === 0 ? (
-                    <Box
+        <Box sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+            {/* HIDDEN FILE INPUT */}
+            <input
+                type="file"
+                ref={fileInputRef}
+                style={{ display: "none" }}
+                onChange={handleFileAttach}
+                accept=".pdf,.png,.jpg,.jpeg,.docx,.doc,.xlsx,.xls"
+            />
+
+            {/* MESSAGE LIST */}
+            <Box sx={{ flex: 1, overflowY: "auto", p: 2 }}>
+                {messages.length === 0 ? (
+                    <Typography
                         sx={{
-                            height: "100%",
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            opacity: 0.6,
+                            color: "#888",
+                            textAlign: "center",
+                            mt: 5,
+                            fontStyle: "italic",
                         }}
                     >
-                        {/* <ChatBubbleOutline sx={{ fontSize: 60, mb: 1 }} /> */}
-                        <img src={message} width={150} />
-                        <Typography fontSize='20px'>No chats yet. Start conversation…</Typography>
-                    </Box>
+                        No messages yet...
+                    </Typography>
                 ) : (
                     messages.map((m, i) => {
                         const isCurrentUserLabel = getLabelFromRole(user_role);
@@ -190,26 +234,27 @@ const TicketChatSection = ({ ticketData, openMessegner }) => {
                                 }}
                             >
                                 <Paper
-                                    elevation={3}
+                                    elevation={1}
                                     sx={{
                                         px: 2,
                                         py: 1.3,
                                         borderRadius: "12px",
-                                        maxWidth: "70%",
-                                        bgcolor: isCurrentUser ? "#1E88E5" : "#eeeeee",
-                                        color: isCurrentUser ? "white" : "black",
+                                        maxWidth: "75%",
+                                        bgcolor: isCurrentUser ? "#176FC1" : "#f1f5f9",
+                                        color: isCurrentUser ? "white" : "#0f172a",
                                         position: "relative",
+                                        border: isCurrentUser ? "none" : "1px solid #e2e8f0",
                                     }}
                                 >
-                                    <Typography sx={{ fontSize: "15px" }}>{m.msg}</Typography>
+                                    {renderMessageContent(m.msg, isCurrentUser)}
 
                                     <Typography
                                         variant="caption"
                                         sx={{
                                             display: "block",
                                             mt: 0.5,
-                                            opacity: 0.7,
-                                            fontSize: "11px",
+                                            opacity: 0.75,
+                                            fontSize: "10.5px",
                                             textAlign: "right",
                                         }}
                                     >
@@ -231,14 +276,30 @@ const TicketChatSection = ({ ticketData, openMessegner }) => {
                     gap: 1,
                     alignItems: "center",
                     borderTop: "1px solid #e0e0e0",
-                    pt: 1,
+                    pt: 1.2,
                 }}
             >
+                <Tooltip title="Attach File / Screenshot">
+                    <IconButton
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploadingFile}
+                        sx={{ color: "#64748b" }}
+                    >
+                        {uploadingFile ? <CircularProgress size={20} /> : <AttachFileRounded />}
+                    </IconButton>
+                </Tooltip>
+
                 <TextField
                     fullWidth
                     size="small"
                     placeholder="Write a message..."
                     value={msg}
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            sendMessage();
+                        }
+                    }}
                     onChange={(e) => setMsg(e.target.value)}
                     sx={{
                         "& .MuiOutlinedInput-root": {
@@ -249,11 +310,13 @@ const TicketChatSection = ({ ticketData, openMessegner }) => {
 
                 <IconButton
                     onClick={sendMessage}
+                    disabled={!msg.trim()}
                     color="primary"
                     sx={{
-                        bgcolor: "#1E88E5",
+                        bgcolor: "#176FC1",
                         color: "white",
-                        "&:hover": { bgcolor: "#1565C0" },
+                        "&:hover": { bgcolor: "#0E4F8D" },
+                        "&.Mui-disabled": { bgcolor: "#cbd5e1", color: "#94a3b8" },
                     }}
                 >
                     <SendIcon />

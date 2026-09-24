@@ -4,6 +4,7 @@ import time
 from datetime import datetime
 from app.database.engine import SessionLocal
 from app.model.models import ApplicationAuditLogInDB
+from app.core.compliance import sanitize_audit_details
 
 class GlobalAuditMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
@@ -31,18 +32,18 @@ class GlobalAuditMiddleware(BaseHTTPMiddleware):
                     app_id = int(p)
                     break
 
-            action = f"{method} {path}"
-            details = f"Status Code: {status_code} | Execution Time: {process_time_ms}ms"
+            action = sanitize_audit_details(f"{method} {path}")
+            details = sanitize_audit_details(f"Status Code: {status_code} | Execution Time: {process_time_ms}ms")
 
             db = SessionLocal()
             try:
                 audit_log = ApplicationAuditLogInDB(
                     applicationId=app_id,
-                    action=action,
+                    action=str(action),
                     stage="API_CALL",
                     performedBy="System/User",
                     userRole="API",
-                    details=details,
+                    details=str(details),
                     ipAddress=client_ip,
                     createdAt=datetime.now()
                 )
@@ -55,3 +56,4 @@ class GlobalAuditMiddleware(BaseHTTPMiddleware):
                 db.close()
 
         return response
+

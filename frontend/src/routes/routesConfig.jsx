@@ -9,6 +9,7 @@ const APPLICATION_ROUTES_URLS = {
   AGGREGRATOR_DASHBOARD: '/aggregrator-dashboard',
   MANAGE_AGGREGRATOR: '/manage-aggregrator',
   HELP_DESK: '/helpdesk',
+  ANNEXURES: '/annexures',
   TEST_FLOW: '/test-flow',
   SERVICE_DOWN: '/service-down',
   MAINTENANCE: '/maintenance',
@@ -25,6 +26,7 @@ const Applications = lazy(() => import('&src/pages/Applications'));
 const ManageAggregator = lazy(() => import('&src/pages/ManageAggregator'));
 const AggregratorDashboard = lazy(() => import('&src/pages/AggregratorDashboard'));
 const HelpDesk = lazy(() => import('&src/pages/HelpDesk'));
+const Annexures = lazy(() => import('&src/pages/Annexures'));
 const TestApplicationFlow = lazy(() => import('&src/pages/TestApplicationFlow'));
 
 // Error & Status Pages
@@ -102,6 +104,11 @@ const PROTECTED_ROUTES = [
     pageTitle: 'Help Desk | Payment Aggregator Portal',
     path: APPLICATION_ROUTES_URLS.HELP_DESK,
     element: <HelpDesk />,
+  },
+  {
+    pageTitle: 'Standard Annexures | Payment Aggregator Portal',
+    path: APPLICATION_ROUTES_URLS.ANNEXURES,
+    element: <Annexures />,
   },
   {
     pageTitle: 'Test Application Flow | Payment Aggregator Portal',

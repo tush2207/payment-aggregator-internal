@@ -117,12 +117,16 @@ export default function RoleBasedWorkflowStepper() {
         connector={<WorkflowConnector />}
       >
         {workflow.map((step, index) => {
-          const isCompleted = index < currentStep;
-          const isActive = index === currentStep;
+          const isRejected = step.status === "rejected";
+          const isCompleted = !isRejected && index < currentStep;
+          const isActive = !isRejected && index === currentStep;
 
           let stepStatusText = "Pending";
           let statusColor = "text.secondary";
-          if (isCompleted) {
+          if (isRejected) {
+            stepStatusText = "Rejected";
+            statusColor = "error.main";
+          } else if (isCompleted) {
             stepStatusText = "Completed";
             statusColor = "success.main";
           } else if (isActive) {
@@ -141,22 +145,27 @@ export default function RoleBasedWorkflowStepper() {
                         width: 48,
                         height: 48,
                         borderRadius: "12px",
-                        background: "#fff",
+                        background: isRejected ? "#fef2f2" : "#fff",
+                        border: isRejected ? "2px solid #ef4444" : "none",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        boxShadow: isCompleted
+                        boxShadow: isRejected
+                          ? "0 0 14px rgba(239, 68, 68, 0.55)"
+                          : isCompleted
                           ? "0 0 12px rgba(23, 111, 193, 0.40)"
                           : isActive
                             ? "0 0 14px rgba(255, 152, 0, 0.60)"
                             : "0 0 8px rgba(0,0,0,0.15)",
-                        transform: isCompleted ? "scale(1.05)" : "scale(0.92)",
+                        transform: isCompleted || isRejected ? "scale(1.05)" : "scale(0.92)",
                         transition: "0.35s ease",
                         animation: isActive ? `${pulseGlow} 2s infinite ease-in-out` : "none",
-                        color: isCompleted ? "#176FC1" : isActive ? "#ff9800" : "#777",
+                        color: isRejected ? "#dc2626" : isCompleted ? "#176FC1" : isActive ? "#ff9800" : "#777",
                         "&:hover": {
                           transform: "scale(1.1)",
-                          boxShadow: "0 0 16px rgba(23, 111, 193, 0.45), 0 4px 8px rgba(0,0,0,0.1)",
+                          boxShadow: isRejected
+                            ? "0 0 18px rgba(239, 68, 68, 0.6)"
+                            : "0 0 16px rgba(23, 111, 193, 0.45), 0 4px 8px rgba(0,0,0,0.1)",
                         },
                       }}
                     >
@@ -174,14 +183,12 @@ export default function RoleBasedWorkflowStepper() {
                 <Box sx={{ textAlign: "center" }}>
                   <Typography
                     variant="subtitle2"
-                    fontWeight={isActive ? 700 : 600}
-                    color={isActive ? "primary.main" : "text.primary"}
+                    fontWeight={isActive || isRejected ? 700 : 600}
+                    color={isRejected ? "error.main" : (isActive ? "primary.main" : "text.primary")}
                     sx={{ fontSize: "11px" }}
                   >
                     {step.name}
                   </Typography>
-
-
 
                   <Typography
                     variant="caption"
@@ -193,10 +200,22 @@ export default function RoleBasedWorkflowStepper() {
                     {stepStatusText}
                   </Typography>
 
+                  {step.remarks && isRejected && (
+                    <Typography
+                      variant="caption"
+                      color="error.main"
+                      fontWeight={600}
+                      display="block"
+                      sx={{ fontSize: "8.5px", mt: 0.2, maxWidth: 120, mx: "auto", overflowWrap: "break-word" }}
+                    >
+                      {step.remarks}
+                    </Typography>
+                  )}
+
                   {step.date && (
                     <Typography
                       variant="caption"
-                      color="success.main"
+                      color={isRejected ? "error.main" : "success.main"}
                       fontWeight={600}
                       display="block"
                       sx={{ fontSize: "9px", mt: 0.2 }}

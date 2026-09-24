@@ -76,3 +76,5 @@ backend/paws_err.log
 backend/paws_out.log
 backend/paws_service.log
 frontend/src.zip
+sent_emails/
+backend/sent_emails/

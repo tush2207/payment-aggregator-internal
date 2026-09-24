@@ -2,13 +2,14 @@ import React, { useState, useMemo, useEffect } from 'react';
 import {
   Paper, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, IconButton, Tooltip, Stack, Pagination,
-  Typography, Box, TextField, MenuItem, Grid, Collapse, Dialog, DialogTitle, DialogContent, DialogActions, Button
+  Typography, Box, TextField, MenuItem, Grid, Collapse, Dialog, DialogTitle, DialogContent, DialogActions, Button,
+  Chip, Menu, ListItemIcon, ListItemText, Divider
 } from '@mui/material';
-import { KeyboardArrowDown, KeyboardArrowUp, Visibility, Edit, Delete, Timeline, FilterList, Download, CancelOutlined, SearchRounded, FileDownloadRounded, FilterAltRounded, RestartAltRounded, AddCircleRounded, PostAddRounded, ArrowForwardRounded, Inventory2Outlined } from '@mui/icons-material';
+import { KeyboardArrowDown, KeyboardArrowUp, Visibility, Edit, Delete, Timeline, FilterList, Download, CancelOutlined, SearchRounded, FileDownloadRounded, FilterAltRounded, RestartAltRounded, AddCircleRounded, PostAddRounded, ArrowForwardRounded, Inventory2Outlined, ArticleOutlined, ForumOutlined, TaskAltRounded, MoreVertRounded, CheckCircleRounded } from '@mui/icons-material';
 import { useDispatch, useSelector } from 'react-redux';
 import { openWorkflowDialog, selectUserRole } from '&src/store/applicationFlowSlice';
 import usePOGenerator from '&src/hooks/usePOGenerator';
-import { formatDateAndTime, formatDateOnly, formatTimeOnly } from '&src/utils';
+import { formatDateAndTime, formatDateOnly, formatTimeOnly, isUserAdmin } from '&src/utils';
 import CenterAlign from '&src/components/CenterAlign';
 import StatusChipOrSelect from '&src/components/StatusChipOrSelect';
 import RoleBasedStepper from '&src/components/RoleBasedStepper';
@@ -17,6 +18,8 @@ import applicationServices from '&src/services/applications';
 import useStatusWiseAlert from '&src/components/ToastNotifications/useStatusWiseAlert';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
+import { useSearchParams } from 'react-router-dom';
+import ApplicationHelpdeskSection from './ApplicationHelpdeskSection';
 
 // Helpers to get current financial year and month dynamically
 const getCurrentFinancialYear = () => {
@@ -73,6 +76,16 @@ export default function ApplicationFlowTable({
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const { generatePO } = usePOGenerator();
 
+  const userDetails = useMemo(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem('userDetails') || '{}');
+    } catch {
+      return {};
+    }
+  }, []);
+
+  const isAdmin = useMemo(() => isUserAdmin(userDetails), [userDetails]);
+
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [selectedRejectApp, setSelectedRejectApp] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
@@ -111,6 +124,86 @@ export default function ApplicationFlowTable({
     }
   };
 
+  const [downloadingSanctionId, setDownloadingSanctionId] = useState(null);
+
+  const handleDownloadSanction = async (customer) => {
+    if (!customer?.applicationId) return;
+    setDownloadingSanctionId(customer.applicationId);
+    try {
+      const response = await applicationServices.generateSanctionLetter(customer.applicationId);
+      const blob = new Blob([response.data || response], {
+        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Sanction_Letter_${customer.applicationId}_${(customer.customerName || 'Merchant').replace(/\s+/g, '_')}.docx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      successNotification && successNotification('Sanction Letter downloaded successfully.');
+    } catch (err) {
+      console.error('Failed to download sanction letter:', err);
+      errorNotification && errorNotification('Failed to generate/download Sanction Letter.');
+    } finally {
+      setDownloadingSanctionId(null);
+    }
+  };
+
+  const [actionMenuAnchor, setActionMenuAnchor] = useState(null);
+  const [actionMenuCustomer, setActionMenuCustomer] = useState(null);
+
+  const handleOpenActionMenu = (event, customer) => {
+    event.stopPropagation();
+    setActionMenuAnchor(event.currentTarget);
+    setActionMenuCustomer(customer);
+  };
+
+  const handleCloseActionMenu = () => {
+    setActionMenuAnchor(null);
+    setActionMenuCustomer(null);
+  };
+
+  // Helper to determine if an application is new (flag or created within 7 days)
+  const isNewApplication = (customer) => {
+    if (customer?.isNew === true || customer?.isNew === 'true' || customer?.isNewCustomer === true) return true;
+    if (!customer?.createdAt) return false;
+    try {
+      const createdDate = new Date(customer.createdAt);
+      const now = new Date();
+      const diffDays = (now - createdDate) / (1000 * 60 * 60 * 24);
+      return diffDays <= 7 && !customer?.isFinalApproved;
+    } catch {
+      return false;
+    }
+  };
+
+  // Helper to determine if fee waiver is requested or applicable
+  const isWaiverApplication = (customer) => {
+    return Boolean(
+      customer?.isWaiver === true ||
+      customer?.isWaiver === 'true' ||
+      customer?.isWaiverRequested === true ||
+      customer?.isWaiverRequested === 'true' ||
+      customer?.waiverApplicable === true ||
+      customer?.waiverApplicable === 'true' ||
+      customer?.isFeeWaiver === true ||
+      customer?.isFeeWaiver === 'true' ||
+      customer?.waiverDetails
+    );
+  };
+
+  // Helper to format Category with Business Category in brackets
+  const getCategoryLabel = (customer) => {
+    const cat = customer?.category || 'General';
+    const bizCat = customer?.businessCategory;
+    if (bizCat && bizCat.trim() && bizCat.toLowerCase() !== cat.toLowerCase()) {
+      return `${cat} (${bizCat})`;
+    }
+    return cat;
+  };
+
   const todayStr = getTodayLocalDateString();
 
   // Pagination state
@@ -137,13 +230,16 @@ export default function ApplicationFlowTable({
   // Sorting state
   const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'desc' });
 
-  // Custom Filter States (defaults to 'all' for all records)
-  const [financialYear, setFinancialYear] = useState('all');
-  const [selectedMonth, setSelectedMonth] = useState('all');
+  // Custom Filter States (defaults to current financial year and month)
+  const [financialYear, setFinancialYear] = useState(getCurrentFinancialYear());
+  const [selectedMonth, setSelectedMonth] = useState(String(new Date().getMonth()));
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [helpdeskModalApp, setHelpdeskModalApp] = useState(null);
+
+  const isFirstRender = React.useRef(true);
 
   // 400ms search debounce
   useEffect(() => {
@@ -153,17 +249,12 @@ export default function ApplicationFlowTable({
     return () => clearTimeout(handler);
   }, [search]);
 
-  // Sync filters back to parent component
+  // Sync debounced search to parent only when search text changes after initial mount
   useEffect(() => {
-    console.log("ApplicationFlowTable sync filters called", {
-      financialYear,
-      selectedMonth,
-      startDate,
-      endDate,
-      search: debouncedSearch,
-      page,
-      rowsPerPage,
-    });
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
     if (onFilterChange) {
       onFilterChange({
         financialYear,
@@ -171,11 +262,34 @@ export default function ApplicationFlowTable({
         startDate,
         endDate,
         search: debouncedSearch,
-        page,
+        page: 1,
         rowsPerPage,
       });
     }
-  }, [financialYear, selectedMonth, startDate, endDate, debouncedSearch, page, rowsPerPage, onFilterChange]);
+  }, [debouncedSearch]);
+
+  const handleFilterUpdate = (newValues) => {
+    const merged = {
+      financialYear,
+      selectedMonth,
+      startDate,
+      endDate,
+      search: debouncedSearch,
+      page,
+      rowsPerPage,
+      ...newValues,
+    };
+    if (newValues.financialYear !== undefined) setFinancialYear(newValues.financialYear);
+    if (newValues.selectedMonth !== undefined) setSelectedMonth(newValues.selectedMonth);
+    if (newValues.startDate !== undefined) setStartDate(newValues.startDate);
+    if (newValues.endDate !== undefined) setEndDate(newValues.endDate);
+    if (newValues.page !== undefined) setPage(newValues.page);
+    if (newValues.rowsPerPage !== undefined) setRowsPerPage(newValues.rowsPerPage);
+
+    if (onFilterChange) {
+      onFilterChange(merged);
+    }
+  };
 
 
 
@@ -203,12 +317,15 @@ export default function ApplicationFlowTable({
   const filteredData = applicationDetails || [];
 
   const handleClearFilters = () => {
-    setFinancialYear('all');
-    setSelectedMonth('all');
-    setStartDate('');
-    setEndDate('');
     setSearch('');
-    setPage(1);
+    handleFilterUpdate({
+      financialYear: 'all',
+      selectedMonth: 'all',
+      startDate: '',
+      endDate: '',
+      search: '',
+      page: 1,
+    });
   };
 
   const handleExportExcel = () => {
@@ -248,14 +365,36 @@ export default function ApplicationFlowTable({
 
   const totalPages = Math.ceil(totalRecords / rowsPerPage) || 1;
 
-  const SortHeader = ({ label, columnKey }) => (
+  const [searchParams] = useSearchParams();
+  const openAppId = searchParams.get('openAppId');
+
+  useEffect(() => {
+    if (openAppId && paginatedData.length > 0) {
+      const targetIdx = paginatedData.findIndex(
+        (c) => String(c.applicationId) === String(openAppId)
+      );
+      if (targetIdx !== -1) {
+        setExpandedRow(targetIdx);
+        setTimeout(() => {
+          const rowElem = document.getElementById(`application-row-${openAppId}`);
+          if (rowElem) {
+            rowElem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 200);
+      }
+    }
+  }, [openAppId, paginatedData]);
+
+  const SortHeader = ({ label, columnKey, align = 'left' }) => (
     <TableCell
+      align={align}
       onClick={() => handleSort(columnKey)}
       sx={{
         cursor: 'pointer',
         color: '#ffffff !important',
         fontWeight: 700,
         userSelect: 'none',
+        textAlign: align,
         '&:hover': {
           color: '#ffffff !important',
           backgroundColor: 'rgba(255, 255, 255, 0.08) !important',
@@ -363,7 +502,7 @@ export default function ApplicationFlowTable({
                     size="small"
                     label="Financial Year"
                     value={financialYear}
-                    onChange={(e) => { setFinancialYear(e.target.value); setPage(1); }}
+                    onChange={(e) => handleFilterUpdate({ financialYear: e.target.value, page: 1 })}
                   >
                     {financialYears.map((fy) => (
                       <MenuItem key={fy} value={fy}>
@@ -381,7 +520,7 @@ export default function ApplicationFlowTable({
                     size="small"
                     label="Month"
                     value={selectedMonth}
-                    onChange={(e) => { setSelectedMonth(e.target.value); setPage(1); }}
+                    onChange={(e) => handleFilterUpdate({ selectedMonth: e.target.value, page: 1 })}
                   >
                     {months.map((m) => (
                       <MenuItem key={m.value} value={m.value}>
@@ -401,7 +540,7 @@ export default function ApplicationFlowTable({
                     InputLabelProps={{ shrink: true }}
                     inputProps={{ max: endDate || todayStr }}
                     value={startDate}
-                    onChange={(e) => { setStartDate(e.target.value); setPage(1); }}
+                    onChange={(e) => handleFilterUpdate({ startDate: e.target.value, page: 1 })}
                   />
                 </Grid>
 
@@ -415,7 +554,7 @@ export default function ApplicationFlowTable({
                     InputLabelProps={{ shrink: true }}
                     inputProps={{ min: startDate || undefined, max: todayStr }}
                     value={endDate}
-                    onChange={(e) => { setEndDate(e.target.value); setPage(1); }}
+                    onChange={(e) => handleFilterUpdate({ endDate: e.target.value, page: 1 })}
                   />
                 </Grid>
 
@@ -477,7 +616,7 @@ export default function ApplicationFlowTable({
               <SortHeader label="App ID" columnKey="applicationId" />
               <SortHeader label="Customer Name" columnKey="customerName" />
               <TableCell sx={{ color: '#ffffff', fontWeight: 700, py: 1.4, px: 1.5, fontSize: '12px', borderRight: '1px solid rgba(255,255,255,0.25)' }}>Branch Details</TableCell>
-              <SortHeader label="Account No" columnKey="accountNo" />
+              <SortHeader label="Account No" columnKey="accountNo" align="center" />
               <SortHeader label="Category" columnKey="category" />
               <SortHeader label="Status" columnKey="status" />
               <TableCell sx={{ color: '#ffffff', fontWeight: 700, py: 1.4, px: 1.5, fontSize: '12px', textAlign: 'center', minWidth: 175, borderRight: '1px solid rgba(255,255,255,0.25)' }}>Actions</TableCell>
@@ -493,7 +632,7 @@ export default function ApplicationFlowTable({
 
                 return (
                   <React.Fragment key={customer.applicationId}>
-                    <TableRow hover selected={isExpanded}>
+                    <TableRow hover selected={isExpanded} id={`application-row-${customer.applicationId}`}>
                       <TableCell sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '12px' }}>{rowIndex + 1}</TableCell>
                       <TableCell sx={{ whiteSpace: 'nowrap' }}>
                         <Typography variant="body2" fontWeight={600} color="text.primary" sx={{ fontSize: '12.5px', lineHeight: 1.3 }}>
@@ -504,7 +643,11 @@ export default function ApplicationFlowTable({
                         </Typography>
                       </TableCell>
                       <TableCell sx={{ fontWeight: 700, fontSize: '12.5px', color: 'text.primary' }}>{customer.applicationId}</TableCell>
-                      <TableCell sx={{ fontWeight: 600, fontSize: '13px', color: 'text.primary' }}>{customer.customerName}</TableCell>
+                      <TableCell sx={{ fontWeight: 600, fontSize: '13px', color: 'text.primary', minWidth: 160 }}>
+                        <Typography variant="body2" fontWeight={600} color="text.primary" sx={{ fontSize: '13px', lineHeight: 1.3 }}>
+                          {customer.customerName}
+                        </Typography>
+                      </TableCell>
                       <TableCell sx={{ minWidth: 175, py: 1.2 }}>
                         <Typography variant="body2" fontWeight={700} color="#0E4F8D" sx={{ fontSize: '13px', lineHeight: 1.3, mb: 0.3 }}>
                           {customer.branchName || 'N/A'}
@@ -540,172 +683,317 @@ export default function ApplicationFlowTable({
                           </Typography>
                         </Box>
                       </TableCell>
-                      <TableCell>{customer.accountNo}</TableCell>
-                      <TableCell>
-                        {customer.category && customer.category !== 'N/A' && customer.category !== ''
-                          ? customer.category
-                          : (customer.integrateWith?.includes('edu') || customer.customerName?.toLowerCase().includes('college') || customer.customerName?.toLowerCase().includes('institute')
-                              ? 'Education & Training'
-                              : customer.customerName?.toLowerCase().includes('tech') || customer.customerName?.toLowerCase().includes('edge')
-                                ? 'Information Technology'
-                                : customer.customerName?.toLowerCase().includes('real')
-                                  ? 'Construction & Real Estate'
-                                  : 'General Services')}
+                      <TableCell sx={{ minWidth: 110, py: 1, textAlign: 'center' }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 0.3 }}>
+                          {customer.accountNo && customer.accountNo !== 'NA' && customer.accountNo !== 'N/A' ? (
+                            <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '12px', fontWeight: 600, color: '#1e293b', textAlign: 'center' }}>
+                              {customer.accountNo}
+                            </Typography>
+                          ) : (
+                            <Chip
+                              label="New"
+                              size="small"
+                              sx={{
+                                height: 20,
+                                fontSize: '10px',
+                                fontWeight: 700,
+                                bgcolor: '#dcfce7',
+                                color: '#15803d',
+                                border: '1px solid #86efac',
+                                borderRadius: '4px',
+                                px: 0.4
+                              }}
+                            />
+                          )}
+                          <Box sx={{ display: 'flex', gap: 0.4, justifyContent: 'center', flexWrap: 'wrap' }}>
+                            {isWaiverApplication(customer) && (
+                              <Tooltip title="Fee Waiver Requested / Applicable" arrow placement="top">
+                                <Chip
+                                  label="WAIVER"
+                                  size="small"
+                                  sx={{
+                                    height: 17,
+                                    fontSize: '9px',
+                                    fontWeight: 800,
+                                    bgcolor: '#fef3c7',
+                                    color: '#b45309',
+                                    border: '1px solid #fcd34d',
+                                    px: 0.2
+                                  }}
+                                />
+                              </Tooltip>
+                            )}
+                          </Box>
+                        </Box>
                       </TableCell>
-                      <TableCell>
+                      <TableCell sx={{ minWidth: 150, py: 1.2 }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.4 }}>
+                          <Chip
+                            label={customer.category || 'General'}
+                            size="small"
+                            sx={{
+                              height: 22,
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              bgcolor: customer.category === 'Govt' ? '#eff6ff' : '#f8fafc',
+                              color: customer.category === 'Govt' ? '#1d4ed8' : '#334155',
+                              border: customer.category === 'Govt' ? '1px solid #bfdbfe' : '1px solid #e2e8f0',
+                              borderRadius: '5px'
+                            }}
+                          />
+                          {customer.businessCategory && (
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                fontSize: '11px',
+                                fontWeight: 600,
+                                color: '#0E4F8D',
+                                lineHeight: 1.25,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 0.4
+                              }}
+                            >
+                              <span style={{ color: '#94a3b8', fontSize: '9px' }}>●</span>
+                              {customer.businessCategory}
+                            </Typography>
+                          )}
+                        </Box>
+                      </TableCell>
+                      <TableCell sx={{ py: 1, px: 1 }}>
                         <CenterAlign>
                           <StatusChipOrSelect value={deriveApplicationStatus(customer)} type="workflow" />
                         </CenterAlign>
                       </TableCell>
-                      <TableCell sx={{ minWidth: 165, py: 1, px: 1 }}>
-                        <Stack direction="row" spacing={0.6} alignItems="center" justifyContent="center">
-                          {/* 👁️ Always available View Application Button */}
-                          <Tooltip title="View Application Details" arrow placement="top">
-                            <IconButton
-                              size="small"
-                              onClick={() => onView ? onView(customer) : dispatch(openWorkflowDialog(customer))}
-                              sx={{
-                                p: '4px',
-                                border: '1px solid #cbd5e1',
-                                borderRadius: '6px',
-                                bgcolor: '#f8fafc',
-                                color: '#0E4F8D',
-                                '&:hover': { bgcolor: '#f1f5f9', color: '#176FC1' }
-                              }}
-                            >
-                              <Visibility sx={{ fontSize: 16 }} />
-                            </IconButton>
-                          </Tooltip>
+                      <TableCell sx={{ minWidth: 175, py: 1, px: 1, whiteSpace: 'nowrap' }}>
+                        <Stack direction="row" spacing={0.6} alignItems="center" justifyContent="center" sx={{ flexWrap: 'nowrap' }}>
+                          {/* 👁️ Available View Application Button — Only shown when NOT (CO and Admin) */}
+                          {!(userRole === 'CO' && isAdmin) && (
+                            <Tooltip title="View Application Details" arrow placement="top">
+                              <IconButton
+                                size="small"
+                                onClick={() => onView ? onView(customer) : dispatch(openWorkflowDialog(customer))}
+                                sx={{
+                                  width: 28,
+                                  height: 28,
+                                  p: '4px',
+                                  border: '1px solid #cbd5e1',
+                                  borderRadius: '6px',
+                                  bgcolor: '#f8fafc',
+                                  color: '#0E4F8D',
+                                  '&:hover': { bgcolor: '#f1f5f9', color: '#176FC1' }
+                                }}
+                              >
+                                <Visibility sx={{ fontSize: 16 }} />
+                              </IconButton>
+                            </Tooltip>
+                          )}
 
+                          {/* Role-based action buttons */}
                           {(() => {
-                            const { isVerificationPending, isInitialApproved, isViewMode } = getActionButtons(customer);
-                            const showQuoteEvaluationBtn = customer?.isQuoteAddedPA === true && customer?.isMarkUpAddedCO === true && !customer?.isQuoteAcceptRO && !customer?.isFinalApproved;
-                            const showCostBenefitBtn = customer?.isFinalApproved === true;
-                            const showDownloadPOBtn = customer?.isFinalApproved === true && isCO;
-                            const showCOVerifyBtn = isCO && customer?.isReviewByRO === true && !customer?.isReviewByCO;
-                            const showProcessFlowBtn = isCO && customer?.isReviewByRO === true && customer?.isReviewByCO === true;
-                            const canCOReject = isCO && customer?.status !== 'rejected' && !customer?.isFinalApproved;
+                            // Non-admin CO users have strict View-Only access
+                            if (userRole === 'CO' && !isAdmin) {
+                              return null;
+                            }
 
-                            return (
-                              <>
-                                {showCostBenefitBtn && isCO ? (
+                            const isRejected = customer?.status?.toLowerCase()?.includes('reject') || Boolean(customer?.reasonOfRejection);
+                            const isCOApproved = Boolean(customer?.isReviewByCO);
+                            const roApproved = customer?.isReviewByRO === true;
+                            const zoApproved = customer?.isReviewByZO === true;
+
+                            if (isRejected) {
+                              const reason = customer?.reasonOfRejection || "Application was rejected by Central Office";
+                              return (
+                                <Tooltip
+                                  title={
+                                    <Box sx={{ p: 0.5, maxWidth: 220 }}>
+                                      <Typography variant="caption" sx={{ fontWeight: 700, display: "block", color: "#fca5a5" }}>
+                                        Rejection Reason
+                                      </Typography>
+                                      <Typography variant="caption" sx={{ display: "block", color: "#ffffff", mt: 0.3, lineHeight: 1.3 }}>
+                                        {reason}
+                                      </Typography>
+                                    </Box>
+                                  }
+                                  arrow
+                                  placement="top"
+                                >
+                                  <Chip
+                                    icon={<CancelOutlined sx={{ fontSize: "14px !important", color: "#dc2626 !important" }} />}
+                                    label="Rejected"
+                                    size="small"
+                                    sx={{
+                                      height: 26,
+                                      fontSize: "11px",
+                                      fontWeight: 700,
+                                      bgcolor: "#fee2e2",
+                                      color: "#dc2626",
+                                      border: "1px solid #fca5a5",
+                                      cursor: "pointer",
+                                      "& .MuiChip-label": { px: 0.8 }
+                                    }}
+                                  />
+                                </Tooltip>
+                              );
+                            }
+
+                            // ── PRE-CO APPROVAL FLOW (Open ApplicationForm till CO approval) ──
+                            if (!isCOApproved) {
+                              const canROVerify = userRole === 'RO' && !roApproved;
+                              const canZOVerify = userRole === 'ZO' && roApproved && !zoApproved;
+                              const canCOVerify = isAdmin && roApproved && zoApproved;
+
+                              if (canROVerify) {
+                                return (
+                                  <Tooltip title="Verify and review application details as Regional Office" arrow placement="top">
+                                    <Button
+                                      size="small"
+                                      sx={{ height: "28px", textTransform: "none", fontSize: "11px", fontWeight: 700, px: 1.4, whiteSpace: "nowrap", borderRadius: "6px" }}
+                                      variant="contained"
+                                      color="primary"
+                                      onClick={() => onVerify ? onVerify(customer) : (onView && onView(customer))}
+                                    >
+                                      Verify (RO)
+                                    </Button>
+                                  </Tooltip>
+                                );
+                              }
+
+                              if (canZOVerify) {
+                                return (
+                                  <Tooltip title="Verify and review application details as Zonal Office" arrow placement="top">
+                                    <Button
+                                      size="small"
+                                      sx={{ height: "28px", textTransform: "none", fontSize: "11px", fontWeight: 700, px: 1.4, whiteSpace: "nowrap", borderRadius: "6px" }}
+                                      variant="contained"
+                                      color="primary"
+                                      onClick={() => onVerify ? onVerify(customer) : (onView && onView(customer))}
+                                    >
+                                      Verify (ZO)
+                                    </Button>
+                                  </Tooltip>
+                                );
+                              }
+
+                              if (canCOVerify) {
+                                return (
                                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                    <Tooltip title="View Cost Benefit Analysis" arrow placement="top">
+                                    <Tooltip title="Verify and review application details as Central Office" arrow placement="top">
+                                      <Button
+                                        size="small"
+                                        sx={{ height: "28px", textTransform: "none", fontSize: "11px", fontWeight: 700, px: 1.4, whiteSpace: "nowrap", borderRadius: "6px" }}
+                                        variant="contained"
+                                        color="primary"
+                                        onClick={() => onVerify ? onVerify(customer) : (onView && onView(customer))}
+                                      >
+                                        Verify (CO)
+                                      </Button>
+                                    </Tooltip>
+                                    <Tooltip title="Reject application" arrow placement="top">
                                       <Button
                                         size="small"
                                         variant="outlined"
-                                        color="secondary"
-                                        startIcon={<Timeline />}
-                                        sx={{ height: "27px", textTransform: "none", fontSize: "10.5px", fontWeight: 700, px: 1, whiteSpace: "nowrap", borderRadius: "6px" }}
-                                        onClick={() => dispatch(openWorkflowDialog(customer))}
+                                        color="error"
+                                        startIcon={<CancelOutlined sx={{ fontSize: 14 }} />}
+                                        sx={{ height: "28px", textTransform: "none", fontSize: "11px", fontWeight: 600, px: 1, whiteSpace: "nowrap", borderRadius: "6px" }}
+                                        onClick={() => handleOpenRejectModal(customer)}
                                       >
-                                        Cost Benefit Analysis
+                                        Reject
                                       </Button>
                                     </Tooltip>
-                                    {showDownloadPOBtn && (
-                                      <Tooltip title="Download PO" arrow placement="top">
-                                        <IconButton
-                                          size="small"
-                                          color="success"
-                                          onClick={() => generatePO({
-                                            applicationId: customer.applicationId,
-                                            aggregatorId: customer.finalizedAggregatorId,
-                                            customerName: customer.customerName,
-                                            isFinalApproved: customer.isFinalApproved,
-                                          })}
-                                        >
-                                          <Download fontSize="small" />
-                                        </IconButton>
-                                      </Tooltip>
-                                    )}
                                   </Box>
-                                ) :
-                                  showQuoteEvaluationBtn && isRO ? (
-                                    <Tooltip title="Evaluate submitted quotes from payment aggregators and propose final markup charges" arrow placement="top">
+                                );
+                              }
+
+                              return null;
+                            }
+
+                            // ── POST-CO APPROVAL FLOW ──
+                            if (userRole === 'RO' && customer?.isMarkUpAddedCO === true && !customer?.isQuoteAcceptRO) {
+                              return (
+                                <Tooltip title="Evaluate submitted quotes from payment aggregators and propose final markup charges" arrow placement="top">
+                                  <Button
+                                    size="small"
+                                    variant="contained"
+                                    color="warning"
+                                    startIcon={<Timeline sx={{ fontSize: 14 }} />}
+                                    sx={{ height: "28px", textTransform: "none", fontSize: "11px", fontWeight: 600, px: 1.2, whiteSpace: "nowrap", borderRadius: "6px" }}
+                                    onClick={() => dispatch(openWorkflowDialog(customer))}
+                                  >
+                                    Quote Evaluation
+                                  </Button>
+                                </Tooltip>
+                              );
+                            }
+
+                            if (isAdmin) {
+                              const showQuoteEvaluationBtn = customer?.isQuoteAddedPA === true && customer?.isMarkUpAddedCO === true && !customer?.isQuoteAcceptRO && !customer?.isFinalApproved;
+                              const showCostBenefitBtn = customer?.isFinalApproved === true;
+                              const showDownloadPOBtn = customer?.isFinalApproved === true;
+                              const canCOReject = customer?.status !== 'rejected' && !customer?.isFinalApproved;
+
+                              return (
+                                <>
+                                  {showCostBenefitBtn ? (
+                                    <Tooltip title="View application flow actions & documents" arrow placement="top">
                                       <Button
-                                        fullWidth
                                         size="small"
                                         variant="contained"
-                                        color="warning"
-                                        startIcon={<Timeline />}
-                                        sx={{ height: "27px", textTransform: "none", fontSize: "11px", fontWeight: 700, whiteSpace: "nowrap", borderRadius: "6px" }}
-                                        onClick={() => dispatch(openWorkflowDialog(customer))}
+                                        color="success"
+                                        startIcon={<TaskAltRounded sx={{ fontSize: 15 }} />}
+                                        endIcon={<KeyboardArrowDown sx={{ fontSize: 13 }} />}
+                                        sx={{
+                                          height: "28px",
+                                          textTransform: "none",
+                                          fontSize: "11px",
+                                          fontWeight: 700,
+                                          px: 1.2,
+                                          whiteSpace: "nowrap",
+                                          borderRadius: "6px",
+                                          bgcolor: "#059669",
+                                          boxShadow: "none",
+                                          "&:hover": { bgcolor: "#047857" }
+                                        }}
+                                        onClick={(e) => handleOpenActionMenu(e, customer)}
                                       >
-                                        Quote Evaluation
+                                        Application Flow
                                       </Button>
                                     </Tooltip>
-                                  ) :
-                                    showCOVerifyBtn && onVerify ? (
-                                      <Tooltip title="Verify application details and documents" arrow placement="top">
-                                        <Button
-                                          fullWidth
-                                          size="small"
-                                          sx={{ height: "27px", textTransform: "none", fontSize: "11px", fontWeight: 700, whiteSpace: "nowrap", borderRadius: "6px" }}
-                                          variant="outlined"
-                                          onClick={() => onVerify && onVerify(customer)}
-                                        >
-                                          Verify
-                                        </Button>
-                                      </Tooltip>
-                                    ) : showProcessFlowBtn ? (
+                                  ) : (
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                       <Tooltip title="View or update the progress of this payment aggregator application flow" arrow placement="top">
                                         <Button
-                                          fullWidth
                                           size="small"
                                           variant="outlined"
                                           color="secondary"
-                                          startIcon={<Timeline />}
-                                          sx={{ height: "27px", textTransform: "none", fontSize: "11px", fontWeight: 700, whiteSpace: "nowrap", borderRadius: "6px" }}
+                                          startIcon={<Timeline sx={{ fontSize: 14 }} />}
+                                          sx={{ height: "28px", textTransform: "none", fontSize: "11px", fontWeight: 600, px: 1.2, whiteSpace: "nowrap", borderRadius: "6px" }}
                                           onClick={() => dispatch(openWorkflowDialog(customer))}
                                         >
                                           Process Flow
                                         </Button>
                                       </Tooltip>
-                                    ) : isInitialApproved && isCO ? (
-                                      <Tooltip title="View or update the progress of this payment aggregator application flow" arrow placement="top">
-                                        <Button
-                                          fullWidth
-                                          size="small"
-                                          variant="outlined"
-                                          color="secondary"
-                                          startIcon={<Timeline />}
-                                          sx={{ height: "27px", textTransform: "none", fontSize: "11px", fontWeight: 700, whiteSpace: "nowrap", borderRadius: "6px" }}
-                                          onClick={() => dispatch(openWorkflowDialog(customer))}
-                                        >
-                                          Process Flow
-                                        </Button>
-                                      </Tooltip>
-                                    ) : isVerificationPending && onVerify && (userRole === "RO" || userRole === "ZO") ? (
-                                      <Tooltip title="Verify the customer's application details and uploaded documents" arrow placement="top">
-                                        <Button
-                                          fullWidth
-                                          size="small"
-                                          sx={{ height: "27px", textTransform: "none", fontSize: "11px", fontWeight: 700, whiteSpace: "nowrap", borderRadius: "6px" }}
-                                          variant="outlined"
-                                          onClick={() => onVerify && onVerify(customer)}
-                                        >
-                                          Verify
-                                        </Button>
-                                      </Tooltip>
-                                    ) : null}
+                                      {canCOReject && (
+                                        <Tooltip title="CO can reject application at any stage in the flow" arrow placement="top">
+                                          <Button
+                                            size="small"
+                                            variant="outlined"
+                                            color="error"
+                                            startIcon={<CancelOutlined sx={{ fontSize: 14 }} />}
+                                            sx={{ height: "28px", textTransform: "none", fontSize: "11px", fontWeight: 600, px: 1, whiteSpace: "nowrap", borderRadius: "6px" }}
+                                            onClick={() => handleOpenRejectModal(customer)}
+                                          >
+                                            Reject
+                                          </Button>
+                                        </Tooltip>
+                                      )}
+                                    </Box>
+                                  )}
+                                </>
+                              );
+                            }
 
-                                {canCOReject && (
-                                  <Tooltip title="CO can reject application at any stage in the flow" arrow placement="top">
-                                    <Button
-                                      fullWidth
-                                      size="small"
-                                      variant="outlined"
-                                      color="error"
-                                      startIcon={<CancelOutlined />}
-                                      sx={{ height: "25px", textTransform: "none", fontSize: "10.5px", fontWeight: 700, px: 1, whiteSpace: "nowrap", borderRadius: "6px" }}
-                                      onClick={() => handleOpenRejectModal(customer)}
-                                    >
-                                      Reject
-                                    </Button>
-                                  </Tooltip>
-                                )}
-                              </>
-                            );
+                            return null;
                           })()}
                         </Stack>
                       </TableCell>
@@ -716,13 +1004,6 @@ export default function ApplicationFlowTable({
                               {isExpanded ? <KeyboardArrowUp color="primary" fontSize="small" /> : <KeyboardArrowDown fontSize="small" />}
                             </IconButton>
                           </Tooltip>
-                          {onDelete && (
-                            <Tooltip title="Delete">
-                              <IconButton size="small" color="error" onClick={() => onDelete(customer)}>
-                                <Delete fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                          )}
                         </Stack>
                       </TableCell>
                     </TableRow>
@@ -778,8 +1059,8 @@ export default function ApplicationFlowTable({
                       }}
                     >
                       <svg width="44" height="44" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M20 7H4C2.89543 7 2 7.89543 2 9V19C2 20.1046 2.89543 21 4 21H20C21.1046 21 22 20.1046 22 19V9C22 7.89543 21.1046 7 20 7Z" stroke="#0E4F8D" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                        <path d="M16 21V5C16 3.89543 15.1046 3 14 3H10C8.89543 3 8 3.89543 8 5V21" stroke="#0284c7" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M20 7H4C2.89543 7 2 7.89543 2 9V19C2 20.1046 2.89543 21 4 21H20C21.1046 21 22 20.1046 22 19V9C22 7.89543 21.1046 7 20 7Z" stroke="#0E4F8D" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M16 21V5C16 3.89543 15.1046 3 14 3H10C8.89543 3 8 3.89543 8 5V21" stroke="#0284c7" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                         <circle cx="12" cy="14" r="2" fill="#176FC1" />
                       </svg>
                       <Box
@@ -999,7 +1280,7 @@ export default function ApplicationFlowTable({
             select
             size="small"
             value={rowsPerPage}
-            onChange={(e) => { setRowsPerPage(parseInt(e.target.value)); setPage(1); }}
+            onChange={(e) => handleFilterUpdate({ rowsPerPage: parseInt(e.target.value, 10), page: 1 })}
             sx={{ width: 80 }}
           >
             {[5, 10, 25, 50].map((size) => (
@@ -1012,7 +1293,7 @@ export default function ApplicationFlowTable({
         <Pagination
           count={totalPages}
           page={page}
-          onChange={(e, val) => setPage(val)}
+          onChange={(e, val) => handleFilterUpdate({ page: val })}
           color="primary"
           shape="rounded"
           variant="outlined"
@@ -1048,6 +1329,87 @@ export default function ApplicationFlowTable({
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* 🔹 ALL ACTIONS CONTEXT MENU */}
+      <Menu
+        anchorEl={actionMenuAnchor}
+        open={Boolean(actionMenuAnchor)}
+        onClose={handleCloseActionMenu}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        PaperProps={{
+          elevation: 4,
+          sx: {
+            borderRadius: '8px',
+            minWidth: 230,
+            py: 0.5,
+            border: '1px solid #e2e8f0',
+            boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)'
+          }
+        }}
+      >
+        <MenuItem
+          onClick={() => {
+            const cust = actionMenuCustomer;
+            handleCloseActionMenu();
+            if (onView) onView(cust);
+            else dispatch(openWorkflowDialog(cust));
+          }}
+          sx={{ fontSize: '12.5px', py: 1, gap: 1.2 }}
+        >
+          <ListItemIcon sx={{ minWidth: 24, color: '#0E4F8D' }}>
+            <Visibility fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="View Application Details" primaryTypographyProps={{ fontSize: '12.5px', fontWeight: 600 }} />
+        </MenuItem>
+
+        <MenuItem
+          onClick={() => {
+            const cust = actionMenuCustomer;
+            handleCloseActionMenu();
+            dispatch(openWorkflowDialog(cust));
+          }}
+          sx={{ fontSize: '12.5px', py: 1, gap: 1.2 }}
+        >
+          <ListItemIcon sx={{ minWidth: 24, color: '#7c3aed' }}>
+            <Timeline fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Cost Benefit Analysis" primaryTypographyProps={{ fontSize: '12.5px', fontWeight: 600 }} />
+        </MenuItem>
+
+        <MenuItem
+          onClick={() => {
+            const cust = actionMenuCustomer;
+            handleCloseActionMenu();
+            generatePO({
+              applicationId: cust?.applicationId,
+              aggregatorId: cust?.finalizedAggregatorId,
+              customerName: cust?.customerName,
+              isFinalApproved: cust?.isFinalApproved,
+            });
+          }}
+          sx={{ fontSize: '12.5px', py: 1, gap: 1.2 }}
+        >
+          <ListItemIcon sx={{ minWidth: 24, color: '#16a34a' }}>
+            <Download fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Download Purchase Order (PO)" primaryTypographyProps={{ fontSize: '12.5px', fontWeight: 600 }} />
+        </MenuItem>
+
+        <MenuItem
+          onClick={() => {
+            const cust = actionMenuCustomer;
+            handleCloseActionMenu();
+            handleDownloadSanction(cust);
+          }}
+          sx={{ fontSize: '12.5px', py: 1, gap: 1.2 }}
+        >
+          <ListItemIcon sx={{ minWidth: 24, color: '#2563eb' }}>
+            <ArticleOutlined fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Download Sanction Letter (.docx)" primaryTypographyProps={{ fontSize: '12.5px', fontWeight: 600 }} />
+        </MenuItem>
+      </Menu>
     </Box>
   );
 }

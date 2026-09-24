@@ -44,10 +44,12 @@ const getActiveStepIndex = (app) => {
   const isAccept = Boolean(app.isQuoteAcceptRO);
   const isFinal = Boolean(app.isFinalApproved);
 
+  const acceptanceRequired = app.customerAcceptanceRequired !== false;
+
   if (!isProj) return 0; // Step 1: Update Projection
   if (!isAgg) return 1;  // Step 2: Add Aggregator
   if (!isMarkup) return 2; // Step 3: Add Markup
-  if (!isAccept) return 3; // Step 4: Quote Acceptance
+  if (acceptanceRequired && !isAccept) return 3; // Step 4: Quote Acceptance (Skipped if waived)
   if (!isFinal) return 4;  // Step 5: PO Details
   return 5; // All steps completed
 };
@@ -56,49 +58,53 @@ const getActiveStepIndex = (app) => {
 const getWorkflowSteps = (app) => {
   if (!app) return [];
   const activeIdx = getActiveStepIndex(app);
+  const isWaived = app.customerAcceptanceRequired === false;
 
-  return [
+  const isRejected = app.status === "rejected" || Boolean(app.reasonOfRejection);
+
+  const steps = [
     {
       name: "Update Projection",
       role: "CO",
-      status: activeIdx > 0 ? "completed" : "active",
+      status: activeIdx > 0 ? "completed" : (activeIdx === 0 && isRejected ? "rejected" : "active"),
       completedDate: activeIdx > 0 ? (app.approvedByCODate || app.updatedAt || app.createdAt) : null,
-      remarks: activeIdx > 0 ? "Projections/charges updated successfully" : null,
+      remarks: activeIdx === 0 && isRejected ? (app.reasonOfRejection || "Rejected by Central Office") : (activeIdx > 0 ? "Projections/charges updated successfully" : null),
       userName: activeIdx > 0 ? "Central Officer (CO)" : null,
     },
     {
       name: "Add Aggregator",
       role: "CO",
-      status: activeIdx > 1 ? "completed" : (activeIdx === 1 ? "active" : "pending"),
+      status: activeIdx > 1 ? "completed" : (activeIdx === 1 ? (isRejected ? "rejected" : "active") : "pending"),
       completedDate: activeIdx > 1 ? (app.approvedByCODate || app.updatedAt || app.createdAt) : null,
-      remarks: activeIdx > 1 ? "Sent to aggregators for quotes" : null,
+      remarks: activeIdx === 1 && isRejected ? (app.reasonOfRejection || "Rejected by Central Office") : (activeIdx > 1 ? "Sent to aggregators for quotes" : null),
       userName: activeIdx > 1 ? "Central Officer (CO)" : null,
     },
     {
       name: "Add Markup",
       role: "CO",
-      status: activeIdx > 2 ? "completed" : (activeIdx === 2 ? "active" : "pending"),
+      status: activeIdx > 2 ? "completed" : (activeIdx === 2 ? (isRejected ? "rejected" : "active") : "pending"),
       completedDate: activeIdx > 2 ? (app.quoteReviewCODate || app.updatedAt || app.createdAt) : null,
-      remarks: activeIdx > 2 ? "Markup/charges proposed" : null,
+      remarks: activeIdx === 2 && isRejected ? (app.reasonOfRejection || "Rejected by Central Office") : (activeIdx > 2 ? "Markup/charges proposed" : null),
       userName: activeIdx > 2 ? "Central Officer (CO)" : null,
     },
     {
-      name: "Quote Acceptance",
-      role: "RO",
-      status: activeIdx > 3 ? "completed" : (activeIdx === 3 ? "active" : "pending"),
-      completedDate: activeIdx > 3 ? (app.quoteAcceptRODate || app.updatedAt || app.createdAt) : null,
-      remarks: activeIdx > 3 ? "Quotation accepted by customer" : (app.reasonOfRejection ? `Rejected: ${app.reasonOfRejection}` : null),
-      userName: activeIdx > 3 ? `Regional Head (RO)` : null,
+      name: isWaived ? "Customer Acceptance (Waived)" : "Quote Acceptance",
+      role: isWaived ? "CO" : "RO",
+      status: isWaived ? "completed" : (activeIdx > 3 ? "completed" : (activeIdx === 3 ? (isRejected ? "rejected" : "active") : "pending")),
+      completedDate: isWaived ? (app.quoteReviewCODate || app.updatedAt || app.createdAt) : (activeIdx > 3 ? (app.quoteAcceptRODate || app.updatedAt || app.createdAt) : null),
+      remarks: isWaived ? "Customer Acceptance: Waived by Central Office" : (activeIdx === 3 && isRejected ? (app.reasonOfRejection || "Rejected by Central Office") : (activeIdx > 3 ? "Quotation accepted by customer" : null)),
+      userName: isWaived ? "Central Officer (CO)" : (activeIdx > 3 ? `Regional Head (RO)` : null),
     },
     {
       name: "PO Details",
       role: "CO",
-      status: activeIdx > 4 ? "completed" : (activeIdx === 4 ? "active" : "pending"),
+      status: activeIdx > 4 ? "completed" : (activeIdx === 4 ? (isRejected ? "rejected" : "active") : "pending"),
       completedDate: activeIdx > 4 ? (app.finalApprovedDate || app.updatedAt || app.createdAt) : null,
-      remarks: activeIdx > 4 ? "Purchase Order generated and finalized" : null,
+      remarks: activeIdx === 4 && isRejected ? (app.reasonOfRejection || "Rejected by Central Office") : (activeIdx > 4 ? "Purchase Order generated and finalized" : null),
       userName: activeIdx > 4 ? "Central Officer (CO)" : null,
     }
   ];
+  return steps;
 };
 
 const initialState = {

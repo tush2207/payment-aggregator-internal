@@ -1,35 +1,46 @@
+"""
+Central Bank of India - Payment Aggregator Portal
+Official Standard Purchase Order (PO) Generator (.docx)
+"""
+
 import io
 from datetime import date
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 from docx import Document
-from docx.shared import Pt, Inches
+from docx.shared import Pt, Inches, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.oxml import OxmlElement
-from docx.oxml.ns import qn
+from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ALIGN_VERTICAL
+from docx.oxml import OxmlElement, parse_xml
+from docx.oxml.ns import qn, nsdecls
+
 
 class PurchaseOrderService:
-
-    FONT_NORMAL = Pt(11)
-    FONT_HEADER = Pt(14)
-    PAGE_MARGIN = Inches(1)
+    FONT_FAMILY = "Calibri"
+    FONT_NORMAL = Pt(10)
+    FONT_SUBTITLE = Pt(11)
+    FONT_TITLE = Pt(12)
+    PAGE_MARGIN = Inches(0.75)
 
     def __init__(self):
-        self.static_path = Path(__file__).resolve().parent.parent / "static"
+        self.logo_path = Path(__file__).resolve().parent.parent / "assets" / "centralbanklogo.png"
 
-    def generate_purchase_order(self, po_data: Dict[str, Any], logo_path: str = None) -> bytes:
+    def generate_purchase_order(self, data: Dict[str, Any], logo_path: Optional[str] = None) -> bytes:
         doc = Document()
         self._setup_page_margins(doc)
 
-        if logo_path:
-            self._add_logo(doc, logo_path)
-        self._add_header(doc)
-        self._add_meta(doc, po_data)
-        self._add_address_section(doc, po_data)
-        self._add_po_table(doc, po_data)
-        self._add_note_section(doc, po_data)
-        # self._add_signature_section(doc)
+        actual_logo = logo_path or (str(self.logo_path) if self.logo_path.exists() else None)
+        if actual_logo:
+            self._add_logo(doc, actual_logo)
+
+        self._add_department_header(doc)
+        self._add_meta(doc, data)
+        self._add_recipient_and_subject(doc, data)
+        self._add_intro_paragraph(doc, data)
+        self._add_charges_table(doc, data)
+        self._add_notes_and_instructions(doc, data)
+        self._add_signatory(doc, data)
 
         stream = io.BytesIO()
         doc.save(stream)
@@ -39,7 +50,7 @@ class PurchaseOrderService:
     # -------------------------------------------------------------
     # PAGE SETUP
     # -------------------------------------------------------------
-    def _setup_page_margins(self, doc):
+    def _setup_page_margins(self, doc: Document):
         for section in doc.sections:
             section.top_margin = self.PAGE_MARGIN
             section.bottom_margin = self.PAGE_MARGIN
@@ -49,286 +60,409 @@ class PurchaseOrderService:
     # -------------------------------------------------------------
     # LOGO
     # -------------------------------------------------------------
-    def _add_logo(self, doc, logo_path):
+    def _add_logo(self, doc: Document, logo_path: str):
         p = doc.add_paragraph()
+        p.paragraph_format.space_before = Pt(0)
+        p.paragraph_format.space_after = Pt(2)
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
         run = p.add_run()
-        run.add_picture(logo_path, width=Inches(3))
+        run.add_picture(logo_path, width=Inches(3.2))
 
     # -------------------------------------------------------------
-    # HEADER
+    # DEPARTMENT HEADER
     # -------------------------------------------------------------
-    def _add_header(self, doc):
+    def _add_department_header(self, doc: Document):
         p = doc.add_paragraph()
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        run = p.add_run("Digital Payment & Transaction Banking Department, Central Office")
+        p.paragraph_format.space_before = Pt(2)
+        p.paragraph_format.space_after = Pt(6)
+
+        run = p.add_run("Neo Banking & Emerging Technologies Department, Central Office")
         run.bold = True
-        run.font.size = self.FONT_HEADER
+        run.font.name = self.FONT_FAMILY
+        run.font.size = self.FONT_SUBTITLE
+        run.font.color.rgb = RGBColor(15, 23, 42)
 
-        # Border above & below
-        self._add_paragraph_border(p)
+        self._add_paragraph_border(p, top=True, bottom=True)
 
-    def _add_paragraph_border(self, paragraph):
-        p = paragraph._p
-        pPr = p.get_or_add_pPr()
+    def _add_paragraph_border(self, paragraph, top=True, bottom=True):
+        pPr = paragraph._p.get_or_add_pPr()
         borders = OxmlElement("w:pBdr")
-
-        for border_type in ["top", "bottom"]:
-            border = OxmlElement(f"w:{border_type}")
-            border.set(qn("w:val"), "single")
-            border.set(qn("w:sz"), "8")
-            border.set(qn("w:space"), "1")
-            border.set(qn("w:color"), "000000")
-            borders.append(border)
-
+        if top:
+            b_top = OxmlElement("w:top")
+            b_top.set(qn("w:val"), "single")
+            b_top.set(qn("w:sz"), "6")
+            b_top.set(qn("w:space"), "2")
+            b_top.set(qn("w:color"), "000000")
+            borders.append(b_top)
+        if bottom:
+            b_bottom = OxmlElement("w:bottom")
+            b_bottom.set(qn("w:val"), "single")
+            b_bottom.set(qn("w:sz"), "6")
+            b_bottom.set(qn("w:space"), "2")
+            b_bottom.set(qn("w:color"), "000000")
+            borders.append(b_bottom)
         pPr.append(borders)
 
     # -------------------------------------------------------------
-    # META INFORMATION
+    # META (CO Ref & Date)
     # -------------------------------------------------------------
-    
-    def _add_meta(self, doc, data):
+    def _add_meta(self, doc: Document, data: Dict[str, Any]):
         table = doc.add_table(rows=1, cols=2)
+        table.alignment = WD_TABLE_ALIGNMENT.CENTER
         table.autofit = True
 
-        # Remove borders
-        tbl = table._tbl
-        # LEFT → CO/DP&TB/FY
+        fy = data.get("currentFinancialYear", "2026-27")
+        current_date_str = data.get("currentDate") or date.today().strftime("%d/%m/%Y")
+        if "-" in current_date_str:
+            parts = current_date_str.split("-")
+            if len(parts) == 3 and len(parts[0]) == 2:
+                current_date_str = f"{parts[0]}/{parts[1]}/{parts[2]}"
+
         left_cell = table.rows[0].cells[0]
         p_left = left_cell.paragraphs[0]
-        run_left = p_left.add_run(f"CO/DP&TB/{data.get('currentFinancialYear', '')}")
+        p_left.paragraph_format.space_after = Pt(4)
+        run_left = p_left.add_run(f"CO: NB&ET: {fy}:")
         run_left.bold = True
-        run_left.font.size = self.FONT_NORMAL
+        run_left.font.name = self.FONT_FAMILY
+        run_left.font.size = Pt(10.5)
 
-        # RIGHT → Date
         right_cell = table.rows[0].cells[1]
         p_right = right_cell.paragraphs[0]
+        p_right.paragraph_format.space_after = Pt(4)
         p_right.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-        run_right = p_right.add_run(f"Date: {data.get('currentDate', '')}")
+        run_right = p_right.add_run(f"Date: {current_date_str}")
         run_right.bold = True
-        run_right.font.size = self.FONT_NORMAL
+        run_right.font.name = self.FONT_FAMILY
+        run_right.font.size = Pt(10.5)
+
+    # -------------------------------------------------------------
+    # RECIPIENT & SUBJECT
+    # -------------------------------------------------------------
+    def _add_recipient_and_subject(self, doc: Document, data: Dict[str, Any]):
+        agg_name = data.get("finalizedAggregatorName") or data.get("aggregatorName") or "Zaakpay"
+        legal_agg_name = data.get("legalAggregatorName") or (f"M/s {agg_name}" if not agg_name.startswith("M/s") else agg_name)
+        agg_addr = data.get("location") or data.get("aggregatorAddress") or "102, First Floor, Block B Pegasus One,\nGolf Course Road, Gurugram, Haryana 122003"
+
+        p_rec = doc.add_paragraph()
+        p_rec.paragraph_format.space_before = Pt(6)
+        p_rec.paragraph_format.space_after = Pt(8)
         
-    # -------------------------------------------------------------
-    # ADDRESS SECTION
-    # -------------------------------------------------------------
-    def _add_address_section(self, doc, data):
+        run_agg = p_rec.add_run(f"{legal_agg_name}\n{agg_addr}\n")
+        run_agg.bold = True
+        run_agg.font.name = self.FONT_FAMILY
+        run_agg.font.size = Pt(10)
 
-        table = doc.add_table(rows=2, cols=3)
-        table.autofit = True
+        p_sub = doc.add_paragraph()
+        p_sub.paragraph_format.space_before = Pt(4)
+        p_sub.paragraph_format.space_after = Pt(8)
 
-        # Remove borders
-        tbl = table._tbl
-        left_cell = table.rows[0].cells[0]
-        p_left = left_cell.paragraphs[0]
-        run_left = p_left.add_run(data.get('aggregatorName', ''))
-        run_left.bold = True
-        run_left.font.size = self.FONT_NORMAL
+        cust_name = data.get("customerName", "Merchant Entity")
+        acct_no = str(data.get("accountNo", "N/A") or "N/A")
+        branch_name = data.get("branchName", "Main")
+        region_name = data.get("regionName", "Mumbai")
+        city_loc = data.get("branchLocation") or data.get("location") or region_name or "Mumbai"
+        if region_name and not region_name.endswith("Region") and not region_name.endswith("Office"):
+            ro_disp = f"Regional Office- {region_name}"
+        else:
+            ro_disp = region_name
 
-        left_cell = table.rows[1].cells[0]
-        p_left = left_cell.paragraphs[0]
-        run_left = p_left.add_run(data.get('location', ''))
-        run_left.bold = True
-        run_left.font.size = self.FONT_NORMAL
-        # doc.add_paragraph("")  # spacing
+        sub_text = f"Reg: Payment Aggregator Services to M/s {cust_name}, {city_loc} (Account Number {acct_no}) Branch- {branch_name}, {ro_disp}."
+        run_sub = p_sub.add_run(sub_text)
+        run_sub.bold = True
+        run_sub.underline = True
+        run_sub.font.name = self.FONT_FAMILY
+        run_sub.font.size = Pt(10.5)
+
     # -------------------------------------------------------------
-    # PURCHASE ORDER TABLE
+    # INTRO PARAGRAPH
     # -------------------------------------------------------------
-    def _add_po_table(self, doc, data):
+    def _add_intro_paragraph(self, doc: Document, data: Dict[str, Any]):
+        cust_name = data.get("customerName", "Merchant Entity")
+        region_name = data.get("regionName", "Mumbai")
+
+        p = doc.add_paragraph()
+        p.paragraph_format.space_before = Pt(4)
+        p.paragraph_format.space_after = Pt(6)
+        p.paragraph_format.line_spacing = 1.15
+
+        r1 = p.add_run(
+            f"We are pleased to inform you that your commercial proposal for providing Payment Aggregator Services "
+            f"to M/s {cust_name}, Regional Office {region_name} has been approved. We are hereby placing the "
+            f"Purchase Order for providing the said services to M/s {cust_name}, with the applicable charges structure "
+            f"and other terms and conditions as under-"
+        )
+        r1.font.name = self.FONT_FAMILY
+        r1.font.size = Pt(10)
+
+    # -------------------------------------------------------------
+    # 5-COLUMN STANDARD CHARGES TABLE
+    # -------------------------------------------------------------
+    def _add_charges_table(self, doc: Document, data: Dict[str, Any]):
         table = doc.add_table(rows=0, cols=5)
         table.style = "Table Grid"
+        table.alignment = WD_TABLE_ALIGNMENT.CENTER
 
-        # ---------------------------------------
-        # HEADER ROW
-        # ---------------------------------------
-        header = table.add_row().cells
-        headers = [
-            "Sl No",
+        col_widths = [Inches(0.55), Inches(2.2), Inches(1.3), Inches(1.85), Inches(1.3)]
+
+        agg_short = data.get("aggregatorShortName") or data.get("finalizedAggregatorName") or data.get("aggregatorName") or "Aggregator"
+        if " " in agg_short:
+            agg_short = agg_short.split()[0]
+        agg_col_header = f"Commission share of\nM/s {agg_short}"
+
+        hdr_row = table.add_row()
+        hdr_titles = [
+            "Sl\nNo",
             "Item",
-            "Charges recovered from customer",
-            "Commission shares",
-            "Bank’s Share",
+            "Charges\nrecovered\nfrom\ncustomer",
+            agg_col_header,
+            "Bank's Share"
         ]
-        for i, text in enumerate(headers):
-            header[i].text = text
+        for idx, text in enumerate(hdr_titles):
+            cell = hdr_row.cells[idx]
+            cell.text = text
+            self._format_cell(cell, bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, size=Pt(9.5), bg_color="F8FAFC")
 
-        # ---------------------------------------
-        # ROW 1 – System Integration Fees
-        # ---------------------------------------
-        r1 = table.add_row().cells
-        r1[0].text = "1"
-        r1[1].text = "System Integration Fees"
-        r1[2].text = "NA"
-        r1[3].text = "NA"
-        r1[4].text = "NA"
+        def add_row(sl_no, item, charges, comm_share, bank_share, item_bold=False):
+            r = table.add_row()
+            cells = r.cells
+            cells[0].text = str(sl_no)
+            cells[1].text = str(item)
+            cells[2].text = str(charges)
+            cells[3].text = str(comm_share)
+            cells[4].text = str(bank_share)
 
-        # ---------------------------------------
-        # ROW 2 – PAN
-        # ---------------------------------------
-        r2 = table.add_row().cells
-        r2[0].text = "2"
-        r2[1].text = "PAN"
-        r2[2].text = "NA"
-        r2[3].text = "NA"
-        r2[4].text = "NA"
+            self._format_cell(cells[0], align=WD_ALIGN_PARAGRAPH.CENTER, size=Pt(9.5))
+            self._format_cell(cells[1], align=WD_ALIGN_PARAGRAPH.LEFT, bold=item_bold, size=Pt(9.5))
+            self._format_cell(cells[2], align=WD_ALIGN_PARAGRAPH.CENTER, size=Pt(9.5))
+            self._format_cell(cells[3], align=WD_ALIGN_PARAGRAPH.CENTER, size=Pt(9.5))
+            self._format_cell(cells[4], align=WD_ALIGN_PARAGRAPH.CENTER, size=Pt(9.5))
+            return cells
 
-        # ---------------------------------------
-        # SECTION HEADER – Net Banking
-        # ---------------------------------------
-        nb = table.add_row().cells
-        nb[0].merge(nb[-1])
-        nb[0].text = "Net Banking Transactions"
+        def add_section_header(title):
+            r = table.add_row()
+            cell = r.cells[0]
+            cell.merge(r.cells[4])
+            cell.text = title
+            self._format_cell(cell, bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, size=Pt(9.5), bg_color="FFFFFF")
 
-        # ---------------------------------------
-        # ROW 3 – Net Banking Rates
-        # ---------------------------------------
-        r3 = table.add_row().cells
-        r3[0].text = "3"
-        r3[1].text = "Net Banking"
-        r3[2].text = str(data.get("ibChargePurposed", ""))
+        # 1. System Integration Fees
+        add_row("1", "System\nIntegration Fees", "NA", "NA", "NA")
 
-        r3[3].text = (
-            f"SBI ₹ {data.get('sbiRate','')}/-\n"
-            f"HDFC ₹ {data.get('hdfcRate','')}/-\n"
-            f"ICICI ₹ {data.get('iciciRate','')}/-\n"
-            f"AXIS ₹ {data.get('axisRate','')}/-\n"
-            f"Other banks ₹ {data.get('othersRate','')}/-"
-        )
+        # 2. AMC
+        add_row("2", "AMC", "NA", "NA", "NA")
 
-        r3[4].text = (
-            f"SBI ₹ {data.get('sbiBankShare','')}/-\n"
-            f"HDFC ₹ {data.get('hdfcBankShare','')}/-\n"
-            f"ICICI ₹ {data.get('iciciBankShare','')}/-\n"
-            f"AXIS ₹ {data.get('axisBankShare','')}/-\n"
-            f"Other banks ₹ {data.get('othersBankShare','')}/-"
-        )
+        sl_no = 3
 
-        # ---------------------------------------
-        # SECTION HEADER – Credit Card
-        # ---------------------------------------
-        cc = table.add_row().cells
-        cc[0].merge(cc[-1])
-        cc[0].text = "Credit Card Transactions"
+        # Net Banking Transactions
+        if data.get("hasNetBanking", True):
+            add_section_header("Net Banking Transactions")
+            ib_charge = self._fmt_val(data.get("ibChargePurposed", "2.50%"), is_rate=True, default="2.50%")
+            hdfc_rate = self._fmt_val(data.get("hdfcRate", "1.60%"), is_rate=True, default="1.60%")
+            sbi_rate = self._fmt_val(data.get("sbiRate", "1.20%"), is_rate=True, default="1.20%")
+            others_rate = self._fmt_val(data.get("othersRate", "0.60%"), is_rate=True, default="0.60%")
 
-        # ---------------------------------------
-        # ROW 4 – Credit Card Rates
-        # ---------------------------------------
-        r4 = table.add_row().cells
-        r4[0].text = "4"
-        r4[1].text = "Visa/MasterCard/Rupay (Domestic)"
-        r4[2].text = f"{data.get('cdChargePurposed','')}%"
-        r4[3].text = f"{data.get('cdRate','')}%"
-        r4[4].text = f"{data.get('cdBankShare','')}%"
+            hdfc_bshare = self._fmt_val(data.get("hdfcBankShare", "0.90%"), is_rate=True, default="0.90%")
+            sbi_bshare = self._fmt_val(data.get("sbiBankShare", "1.30%"), is_rate=True, default="1.30%")
+            others_bshare = self._fmt_val(data.get("othersBankShare", "1.90%"), is_rate=True, default="1.90%")
 
-        # ---------------------------------------
-        # SECTION HEADER – Debit Card
-        # ---------------------------------------
-        dc = table.add_row().cells
-        dc[0].merge(dc[-1])
-        dc[0].text = "Debit Card Transactions"
+            comm_nb = f"HDFC/ICICI- {hdfc_rate}\nSBI/AXIS/Kotak- {sbi_rate}\nAll other banks-{others_rate}"
+            bshare_nb = f"HDFC/ICICI- {hdfc_bshare}\nSBI/AXIS/Kotak- {sbi_bshare}\nAll other banks-\n{others_bshare}"
 
-        # ---------------------------------------
-        # ROW 5 – Upto 2000
-        # ---------------------------------------
-        r5 = table.add_row().cells
-        r5[0].text = "5"
-        r5[1].text = "Upto ₹2000"
-        r5[2].text = f"{data.get('ddupto2kChargePurposed','')}%"
-        r5[3].text = f"{data.get('ddupto2kRate','')}%"
-        r5[4].text = f"{data.get('ddupto2kBankShare','')}%"
+            add_row(str(sl_no), "Net Banking", ib_charge, comm_nb, bshare_nb)
+            sl_no += 1
 
-        # ---------------------------------------
-        # ROW – Above 2000
-        # ---------------------------------------
-        r6 = table.add_row().cells
-        r6[0].text = ""
-        r6[1].text = "Above ₹2000"
-        r6[2].text = f"{data.get('ddabove2kChargePurposed','')}%"
-        r6[3].text = f"{data.get('ddabove2kRate','')}%"
-        r6[4].text = f"{data.get('ddabove2kBankShare','')}%"
+        # Credit Card Transactions
+        if data.get("hasCreditCard", True) or data.get("hasAmex", True):
+            add_section_header("Credit Card Transactions")
+            has_header_num = False
+            if data.get("hasCreditCard", True):
+                cd_charge = self._fmt_val(data.get("cdChargePurposed", "1.75%"), is_rate=True, default="1.75%")
+                cd_rate = self._fmt_val(data.get("cdRate", "1.25%"), is_rate=True, default="1.25%")
+                cd_bshare = self._fmt_val(data.get("cdBankShare", "0.50%"), is_rate=True, default="0.50%")
+                add_row(str(sl_no), "Visa/MasterCard/\nRupay (domestic)", cd_charge, cd_rate, cd_bshare)
+                has_header_num = True
 
-        # ---------------------------------------
-        # ROW – Rupay Domestic
-        # ---------------------------------------
-        r7 = table.add_row().cells
-        r7[0].text = ""
-        r7[1].text = "Rupay Card (Domestic)"
-        r7[2].text = "Nil"
-        r7[3].text = "Nil"
-        r7[4].text = "NA"
+            if data.get("hasAmex", True):
+                amex_charge = self._fmt_val(data.get("amexChargePurposed", "1.85%"), is_rate=True, default="1.85%")
+                amex_rate = self._fmt_val(data.get("amexRate", "1.35%"), is_rate=True, default="1.35%")
+                amex_bshare = self._fmt_val(data.get("amexBankShare", "0.50%"), is_rate=True, default="0.50%")
+                add_row("" if has_header_num else str(sl_no), "Amex/Diner", amex_charge, amex_rate, amex_bshare)
 
-        # ---------------------------------------
-        # ROW – UPI
-        # ---------------------------------------
-        r8 = table.add_row().cells
-        r8[0].text = "6"
-        r8[1].text = "UPI"
-        r8[2].text = "Nil"
-        r8[3].text = "Nil"
-        r8[4].text = "NA"
+            sl_no += 1
 
-        # ---- Font Size Fix ----
+        # Debit Card Transactions
+        if data.get("hasDebitCard", True):
+            add_section_header("Debit Card Transactions")
+            r_dc_sub = table.add_row()
+            c_dc = r_dc_sub.cells[0]
+            c_dc.merge(r_dc_sub.cells[4])
+            c_dc.text = "Visa/MasterCard (Domestic)"
+            self._format_cell(c_dc, bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, size=Pt(9.5))
+
+            has_dc_num = False
+            if data.get("hasDebitUpto2k", True):
+                ddupto_charge = self._fmt_val(data.get("ddupto2kChargePurposed", "0.40%"), is_rate=True, default="0.40%")
+                ddupto_rate = self._fmt_val(data.get("ddupto2kRate", "0.25%"), is_rate=True, default="0.25%")
+                ddupto_bshare = self._fmt_val(data.get("ddupto2kBankShare", "0.15%"), is_rate=True, default="0.15%")
+                add_row(str(sl_no), "Upto 2000", ddupto_charge, ddupto_rate, ddupto_bshare)
+                has_dc_num = True
+
+            if data.get("hasDebitAbove2k", True):
+                ddabove_charge = self._fmt_val(data.get("ddabove2kChargePurposed", "0.90%"), is_rate=True, default="0.90%")
+                ddabove_rate = self._fmt_val(data.get("ddabove2kRate", "0.75%"), is_rate=True, default="0.75%")
+                ddabove_bshare = self._fmt_val(data.get("ddabove2kBankShare", "0.25%"), is_rate=True, default="0.25%")
+                add_row("" if has_dc_num else str(sl_no), "Above 2000", ddabove_charge, ddabove_rate, ddabove_bshare)
+                has_dc_num = True
+
+            if data.get("hasRupayDebit", True):
+                add_row("" if has_dc_num else str(sl_no), "Rupay Card\n(Domestic)", "Nil", "Nil", "NA")
+
+            sl_no += 1
+
+        # UPI
+        if data.get("hasUpi", True):
+            add_row(str(sl_no), "UPI", "Nil", "Nil", "NA")
+            sl_no += 1
+
+        # Wallet
+        if data.get("hasWallet", True):
+            w_charge = self._fmt_val(data.get("walletChargePurposed", "1.60%"), is_rate=True, default="1.60%")
+            w_rate = self._fmt_val(data.get("walletRate", "1.50%"), is_rate=True, default="1.50%")
+            w_bshare = self._fmt_val(data.get("walletBankShare", "0.10%"), is_rate=True, default="0.10%")
+            add_row(str(sl_no), "Wallet", w_charge, w_rate, w_bshare)
+            sl_no += 1
+
+        # NEFT/RTGS/Challan
+        if data.get("hasNeft", True):
+            neft_charge = self._fmt_val(data.get("neftChargePurposed", "₹ 7/-"), is_rate=False, default="₹ 7/-")
+            neft_rate = self._fmt_val(data.get("neftRate", "₹ 5/-"), is_rate=False, default="₹ 5/-")
+            neft_bshare = self._fmt_val(data.get("neftBankShare", "₹ 2/-"), is_rate=False, default="₹ 2/-")
+            add_row(str(sl_no), "NEFT/RTGS/Cha\nllan", neft_charge, neft_rate, neft_bshare)
+            sl_no += 1
+
+        # International Cards
+        if data.get("hasIntl", True):
+            intl_charge = self._fmt_val(data.get("intlChargePurposed", "2.60%"), is_rate=True, default="2.60%")
+            intl_rate = self._fmt_val(data.get("intlRate", "2.50%"), is_rate=True, default="2.50%")
+            intl_bshare = self._fmt_val(data.get("intlBankShare", "0.10%"), is_rate=True, default="0.10%")
+            add_row(str(sl_no), "International\nCards", intl_charge, intl_rate, intl_bshare)
+            sl_no += 1
+
+        # EMI
+        if data.get("hasEmi", True):
+            emi_charge = self._fmt_val(data.get("emiChargePurposed", "1.95%"), is_rate=True, default="1.95%")
+            emi_rate = self._fmt_val(data.get("emiRate", "1.85%"), is_rate=True, default="1.85%")
+            emi_bshare = self._fmt_val(data.get("emiBankShare", "0.10%"), is_rate=True, default="0.10%")
+            add_row(str(sl_no), "EMI", emi_charge, emi_rate, emi_bshare)
+            sl_no += 1
+
         for row in table.rows:
-            for cell in row.cells:
-                for p in cell.paragraphs:
-                    for run in p.runs:
-                        run.font.size = Pt(11)
-    # -------------------------------------------------------------
-    # NOTES
-    # -------------------------------------------------------------
-    
-    def _add_note_section(self, doc, data):
-        doc.add_paragraph()  # spacing
-        # -------------------------
-        # MAIN NOTE LINE
-        # -------------------------
-        p = doc.add_paragraph()
-        run = p.add_run("Note - The above charges are exclusive of taxes.")
-        run.font.size = self.FONT_NORMAL
+            for idx, width in enumerate(col_widths):
+                if idx < len(row.cells):
+                    row.cells[idx].width = width
 
-        # -------------------------
-        # ITALIC MDR NOTE
-        # -------------------------
-        p1 = doc.add_paragraph()
-        run1 = p1.add_run(
-            "MDR on Debit card transactions are regulated by RBI and can't be more than "
-            "0.40% for transaction amount up to Rs. 2000 & 0.90% above Rs. 2000. "
-            "Charges for UPI and Rupay Debit Card have been waived by Govt."
+    def _format_cell(self, cell, bold=False, align=WD_ALIGN_PARAGRAPH.LEFT, size=Pt(9.5), bg_color=None):
+        cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+        for p in cell.paragraphs:
+            p.alignment = align
+            p.paragraph_format.space_before = Pt(2)
+            p.paragraph_format.space_after = Pt(2)
+            p.paragraph_format.line_spacing = 1.05
+            for run in p.runs:
+                run.bold = bold
+                run.font.name = self.FONT_FAMILY
+                run.font.size = size
+                run.font.color.rgb = RGBColor(0, 0, 0)
+
+        if bg_color:
+            shading_xml = f'<w:shd {nsdecls("w")} w:fill="{bg_color}"/>'
+            cell._tc.get_or_add_tcPr().append(parse_xml(shading_xml))
+
+    def _fmt_val(self, val, is_rate=True, default="0.00%"):
+        if val is None or str(val).strip() in ("", "0", "0.0", "0%", "0.0%", "0.00%", "NA", "None"):
+            return default
+        s = str(val).strip()
+        if is_rate:
+            try:
+                num = float(s.replace("%", "").replace("₹", "").strip())
+                if num == 0.0:
+                    return default
+                return f"{num:.2f}%"
+            except Exception:
+                return f"{s}%" if not s.endswith("%") else s
+        else:
+            if not s.startswith("₹"):
+                return f"₹ {s}/-" if not s.endswith("/-") else f"₹ {s}"
+            return s
+
+    # -------------------------------------------------------------
+    # NOTES & INSTRUCTIONS
+    # -------------------------------------------------------------
+    def _add_notes_and_instructions(self, doc: Document, data: Dict[str, Any]):
+        p_note = doc.add_paragraph()
+        p_note.paragraph_format.space_before = Pt(8)
+        p_note.paragraph_format.space_after = Pt(4)
+        r_n = p_note.add_run("Note - The above charges are exclusive of taxes.")
+        r_n.bold = True
+        r_n.font.name = self.FONT_FAMILY
+        r_n.font.size = Pt(10)
+
+        p_rbi = doc.add_paragraph()
+        p_rbi.paragraph_format.space_before = Pt(3)
+        p_rbi.paragraph_format.space_after = Pt(4)
+        p_rbi.paragraph_format.line_spacing = 1.15
+        r_rbi = p_rbi.add_run(
+            "MDR on Debit card transactions are regulated by RBI and can’t be more than 0.40% for transaction "
+            "amount upto Rs. 2000/- & 0.90% for transaction amount above Rs. 2000/- upper cap. Similarly the "
+            "charges for UPI and Rupay Debit Card have also been waived by Govt."
         )
-        run1.italic = True
-        run1.font.size = self.FONT_NORMAL
+        r_rbi.font.name = self.FONT_FAMILY
+        r_rbi.font.size = Pt(10)
 
-        # -------------------------
-        # ADDITIONAL NOTE
-        # -------------------------
-        p2 = doc.add_paragraph(
+        p_fee = doc.add_paragraph()
+        p_fee.paragraph_format.space_before = Pt(3)
+        p_fee.paragraph_format.space_after = Pt(4)
+        p_fee.paragraph_format.line_spacing = 1.15
+        r_fee = p_fee.add_run(
             "There will be no charges levied on UPI and Rupay debit card transaction as platform fee."
         )
-        for run in p2.runs:
-            run.font.size = self.FONT_NORMAL
+        r_fee.font.name = self.FONT_FAMILY
+        r_fee.font.size = Pt(10)
 
-        # doc.add_paragraph()  # spacing
+        rcc_name = data.get("rccContactPersonName") or "MERPHIA PAULIN"
+        rcc_email = data.get("rccMailId") or "rtcccoim@centralbank.bank.in"
+        rcc_mob = str(data.get("rccMobileNo") or "9444274683")
 
-        # -------------------------
-        # CONTACT DETAILS
-        # -------------------------
-        contact = doc.add_paragraph()
-        contact_run = contact.add_run(
-            "Please ensure to complete the necessary integration within 7 days after the date of issuance of this PO. " f"Kindly communicate with Mail - {data.get('rccMailId','')}, " f"Mobile Number - {data.get('rccMobileNo','')}, " f"Contact Person - {data.get('rccContactPersonName','')}."
+        p_coord = doc.add_paragraph()
+        p_coord.paragraph_format.space_before = Pt(4)
+        p_coord.paragraph_format.space_after = Pt(12)
+        p_coord.paragraph_format.line_spacing = 1.15
+        r_coord = p_coord.add_run(
+            f"Please ensure to complete the necessary integration within 7 days after the date of issuance of this PO. "
+            f"Kindly communicate with {rcc_name}, Email id- {rcc_email} @Mobile {rcc_mob} for the necessary integration."
         )
-        contact_run.font.size = self.FONT_NORMAL
+        r_coord.font.name = self.FONT_FAMILY
+        r_coord.font.size = Pt(10)
 
-        doc.add_paragraph()  # spacing before signature
+    # -------------------------------------------------------------
+    # SIGNATORY
+    # -------------------------------------------------------------
+    def _add_signatory(self, doc: Document, data: Dict[str, Any]):
+        p = doc.add_paragraph()
+        p.paragraph_format.space_before = Pt(18)
+        p.paragraph_format.space_after = Pt(4)
 
-        # -------------------------
-        # SIGNATURE (RIGHT ALIGNED)
-        # -------------------------
-        sig = doc.add_paragraph()
-        sig.alignment = WD_ALIGN_PARAGRAPH.LEFT     
+        person = data.get("authorisedPersonName") or "Roshan Singh"
+        desig = data.get("authorisedPersonDesignation") or "Chief Manager"
 
-        run_sig1 = sig.add_run(f"{data.get('authorisedPersonName','')}\n")
-        run_sig1.bold = True
-        run_sig1.font.size = self.FONT_NORMAL
+        r1 = p.add_run(f"({person})\n")
+        r1.bold = True
+        r1.font.name = self.FONT_FAMILY
+        r1.font.size = Pt(10.5)
 
-        run_sig2 = sig.add_run(f"{data.get('authorisedPersonDesignation','')}")
-        run_sig2.font.size = self.FONT_NORMAL
+        r2 = p.add_run(f"{desig}")
+        r2.bold = True
+        r2.font.name = self.FONT_FAMILY
+        r2.font.size = Pt(10.5)
 

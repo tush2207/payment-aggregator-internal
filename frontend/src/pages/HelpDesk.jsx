@@ -39,6 +39,7 @@ import {
   Add,
   FilterAltOffRounded,
   FileDownloadRounded,
+  AttachFileRounded,
 } from '@mui/icons-material';
 
 import ConfirmationDialogWithReason from '&src/components/Dialog/ConfirmationDialogWithReason';
@@ -490,10 +491,12 @@ const ManageHelpDesk = () => {
             <TableRow sx={{ background: 'linear-gradient(90deg, #0E4F8D 0%, #176FC1 50%, #0E4F8D 100%)', borderBottom: '2px solid #062545' }}>
               <TableCell sx={{ color: '#ffffff', fontWeight: 700, width: 50, py: 1.5, borderRight: '1px solid rgba(255,255,255,0.25)' }}>#</TableCell>
               <TableCell sx={{ color: '#ffffff', fontWeight: 700, py: 1.5, borderRight: '1px solid rgba(255,255,255,0.25)' }}>Created At</TableCell>
+              <TableCell sx={{ color: '#ffffff', fontWeight: 700, py: 1.5, textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.25)' }}>App ID</TableCell>
               <TableCell sx={{ color: '#ffffff', fontWeight: 700, py: 1.5, borderRight: '1px solid rgba(255,255,255,0.25)' }}>Ticket / Issue</TableCell>
               <TableCell sx={{ color: '#ffffff', fontWeight: 700, py: 1.5, borderRight: '1px solid rgba(255,255,255,0.25)' }}>Account No</TableCell>
               <TableCell sx={{ color: '#ffffff', fontWeight: 700, py: 1.5, borderRight: '1px solid rgba(255,255,255,0.25)' }}>Customer Name</TableCell>
               <TableCell sx={{ color: '#ffffff', fontWeight: 700, py: 1.5, borderRight: '1px solid rgba(255,255,255,0.25)' }}>Description</TableCell>
+              <TableCell sx={{ color: '#ffffff', fontWeight: 700, py: 1.5, textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.25)' }}>Attachment</TableCell>
               <TableCell sx={{ color: '#ffffff', fontWeight: 700, py: 1.5, textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.25)' }}>Priority</TableCell>
               <TableCell sx={{ color: '#ffffff', fontWeight: 700, py: 1.5, textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.25)' }}>Status</TableCell>
               <TableCell sx={{ color: '#ffffff', fontWeight: 700, py: 1.5, textAlign: 'center' }}>Actions</TableCell>
@@ -527,6 +530,25 @@ const ManageHelpDesk = () => {
                       </Typography>
                     </TableCell>
 
+                    <TableCell align="center">
+                      {row.applicationNo ? (
+                        <Chip
+                          label={`#${row.applicationNo}`}
+                          size="small"
+                          sx={{
+                            fontWeight: 700,
+                            fontSize: '11.5px',
+                            bgcolor: '#e0f2fe',
+                            color: '#0369a1',
+                            border: '1px solid #bae6fd',
+                            borderRadius: '6px',
+                          }}
+                        />
+                      ) : (
+                        <Typography variant="caption" color="text.secondary">-</Typography>
+                      )}
+                    </TableCell>
+
                     <TableCell>
                       <Typography variant="body2" fontWeight={700} color="#0E4F8D" sx={{ fontSize: '13px' }}>
                         {row.ticketName || 'N/A'}
@@ -534,17 +556,53 @@ const ManageHelpDesk = () => {
                     </TableCell>
 
                     <TableCell sx={{ fontSize: '12.5px', color: 'text.secondary', whiteSpace: 'nowrap' }}>
-                      {row.accountNo || 'N/A'}
+                      {row.accountNo ? row.accountNo : '-'}
                     </TableCell>
 
                     <TableCell sx={{ fontWeight: 600, fontSize: '12.5px', color: 'text.primary' }}>
                       {row.customerName || 'N/A'}
                     </TableCell>
 
-                    <TableCell sx={{ maxWidth: 260 }}>
+                    <TableCell sx={{ maxWidth: 220 }}>
                       <Typography variant="body2" sx={{ fontSize: '12px', color: 'text.secondary', wordBreak: 'break-word' }}>
                         {row.description || 'N/A'}
                       </Typography>
+                    </TableCell>
+
+                    <TableCell align="center">
+                      {row.attachmentUrl ? (
+                        <Tooltip title={`Download ${row.attachmentName || 'Attachment'}`} arrow>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            href={row.attachmentUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            download={row.attachmentName || 'attachment'}
+                            startIcon={<AttachFileRounded sx={{ fontSize: 13 }} />}
+                            sx={{
+                              height: 24,
+                              fontSize: '10.5px',
+                              textTransform: 'none',
+                              py: 0,
+                              px: 0.8,
+                              borderRadius: '4px',
+                              borderColor: '#93c5fd',
+                              color: '#1d4ed8',
+                              bgcolor: '#eff6ff',
+                              maxWidth: 110,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              '&:hover': { bgcolor: '#dbeafe' },
+                            }}
+                          >
+                            {row.attachmentName || 'File'}
+                          </Button>
+                        </Tooltip>
+                      ) : (
+                        <Typography variant="caption" color="text.disabled">-</Typography>
+                      )}
                     </TableCell>
 
                     <TableCell align="center">

@@ -3,11 +3,12 @@ import { getMethod, postMethod, putMethod, deleteMethod } from "./axiosConfig";
 
 const applicationServices = {
   // 🔹 Get all applications
-  getAllApplications: async ({ zoneId, page, search, status, category, createdAt, financialYear, month, startDate, endDate, pageSize, branchId, regionId, exportType, config } = {}) => {
-    console.log('getAllApplicationsprops', zoneId, page, search, status, category, createdAt, financialYear, month, startDate, endDate, pageSize, branchId, regionId, exportType)
+  getAllApplications: async ({ zoneId, page, search, status, category, createdAt, financialYear, month, startDate, endDate, pageSize, branchId, regionId, exportType, userRole, config } = {}) => {
+    console.log('getAllApplicationsprops', zoneId, page, search, status, category, createdAt, financialYear, month, startDate, endDate, pageSize, branchId, regionId, exportType, userRole)
 
     try {
-      const response = await getMethod(ApiUrls.GET_ALL_APPLICATIONS(zoneId, page, search, status, category, createdAt, financialYear, month, startDate, endDate, pageSize, branchId, regionId, exportType), config);
+      const response = await getMethod(ApiUrls.GET_ALL_APPLICATIONS(zoneId, page, search, status, category, createdAt, financialYear, month, startDate, endDate, pageSize, branchId, regionId, exportType, userRole), config);
+
       if (response && response.data) {
         const mapApp = (app) => {
           if (!app) return app;
@@ -136,14 +137,14 @@ const applicationServices = {
     }
   },
 
-  generatePO: async (applicationId, aggregatorId, data, config) => {
-
+  generatePO: async (applicationId, aggregatorId, data, config = {}) => {
     try {
-      console.log(applicationId, aggregatorId, data, config, 'generatePO')
-      const response = await getMethod(ApiUrls.GENERATE_PO(applicationId, aggregatorId), data, {
-        ...config,
+      console.log(applicationId, aggregatorId, data, config, 'generatePO');
+      const mergedConfig = {
+        ...(typeof config === 'object' ? config : {}),
         responseType: "blob",
-      });
+      };
+      const response = await getMethod(ApiUrls.GENERATE_PO(applicationId, aggregatorId), mergedConfig);
       return response;
     } catch (error) {
       console.error(`Error in ${ApiUrls.GENERATE_PO(applicationId, aggregatorId)}:`, error);
@@ -172,6 +173,59 @@ const applicationServices = {
     }
   },
 
+  // 🔹 Download Editable Sanction Letter (.docx)
+  generateSanctionLetter: async (applicationId, config) => {
+    try {
+      const response = await getMethod(ApiUrls.GENERATE_SANCTION_LETTER(applicationId), {
+        ...config,
+        responseType: "blob",
+      });
+      return response;
+    } catch (error) {
+      console.error(`Error in ${ApiUrls.GENERATE_SANCTION_LETTER(applicationId)}:`, error);
+      throw error;
+    }
+  },
+
+  // 🔹 Resend PO Email to Finalized Aggregator
+  resendPOEmail: async (applicationId, config) => {
+    try {
+      return await postMethod(ApiUrls.RESEND_PO_EMAIL(applicationId), {}, config);
+    } catch (error) {
+      console.error(`Error in ${ApiUrls.RESEND_PO_EMAIL(applicationId)}:`, error);
+      throw error;
+    }
+  },
+
+  // 🔹 Mark single notification as read
+  markNotificationRead: async (notifId, config) => {
+    try {
+      return await putMethod(ApiUrls.MARK_NOTIFICATION_READ(notifId), {}, config);
+    } catch (error) {
+      console.error(`Error in ${ApiUrls.MARK_NOTIFICATION_READ(notifId)}:`, error);
+    }
+  },
+
+  // 🔹 Mark all notifications as read
+  markAllNotificationsRead: async (params, config) => {
+    try {
+      return await postMethod(ApiUrls.MARK_ALL_NOTIFICATIONS_READ, {}, { params, ...config });
+    } catch (error) {
+      console.error(`Error in ${ApiUrls.MARK_ALL_NOTIFICATIONS_READ}:`, error);
+    }
+  },
+
+  // 🔹 Request quote negotiation
+  requestNegotiation: async (applicationId, data, config) => {
+    try {
+      return await postMethod(ApiUrls.REQUEST_QUOTE_NEGOTIATION(applicationId), data, config);
+    } catch (error) {
+      console.error(`Error in ${ApiUrls.REQUEST_QUOTE_NEGOTIATION(applicationId)}:`, error);
+      throw error;
+    }
+  },
+
 };
 
 export default applicationServices;
+

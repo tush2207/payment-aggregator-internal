@@ -185,10 +185,70 @@ export const getVerifyButtonProps = (status) => {
 };
 
 export function sortAggregatorsByQuote(aggregators) {
-  return [...aggregators].sort((a, b) => a.totalQuote - b.totalQuote);
+  if (!Array.isArray(aggregators)) return [];
+  return [...aggregators].sort((a, b) => {
+    const shareA = Number(a.totalVendorShare || 0);
+    const shareB = Number(b.totalVendorShare || 0);
+    const rateA = Number(a.sumOfRate || 0);
+    const rateB = Number(b.sumOfRate || 0);
+    const hasA = shareA > 0 || (a.status === "submitted" && rateA > 0);
+    const hasB = shareB > 0 || (b.status === "submitted" && rateB > 0);
+
+    // Both have submitted quotes: lowest vendor share first (L1, L2, L3...)
+    if (hasA && hasB) {
+      if (shareA !== shareB) {
+        return shareA - shareB;
+      }
+      return (a.aggregatorId || 0) - (b.aggregatorId || 0);
+    }
+    // Aggregator with submitted quote comes before unquoted/pending
+    if (hasA && !hasB) return -1;
+    if (!hasA && hasB) return 1;
+
+    // Both unquoted: sort stably by aggregatorId
+    return (a.aggregatorId || 0) - (b.aggregatorId || 0);
+  });
 }
 
 // Function to encode the data in base64
 export const encodeBase64 = (data) => {
   return window.btoa(unescape(encodeURIComponent(data)));
 };
+
+// RBI & Admin Permissions Config
+export const ADMIN_USERS = ['139822', '115019', 'CE25000014', '138922'];
+
+export const isUserAdmin = (userDetails) => {
+  let user = userDetails;
+  if (!user) {
+    try {
+      const stored = sessionStorage.getItem('userDetails');
+      if (stored) user = JSON.parse(stored);
+    } catch {
+      user = null;
+    }
+  }
+  const currentUserId = String(
+    user?.pfId ||
+    user?.EmployeeId ||
+    user?.employeeId ||
+    user?.pfNumber ||
+    sessionStorage.getItem('userId') ||
+    ''
+  ).trim();
+
+  const userRole = String(
+    user?.role ||
+    user?.LocationType ||
+    sessionStorage.getItem('role') ||
+    ''
+  ).toUpperCase().trim();
+
+  if (user?.isAdmin === true) return true;
+  if (ADMIN_USERS.includes(currentUserId)) return true;
+  if (userRole === 'ADMIN') return true;
+  return false;
+};
+
+export { maskPAN, maskBankAccount, maskMobile, maskEmail } from './masking';
+

@@ -16,6 +16,7 @@ const ManageAggregatorForm = ({
   fetchAllAggregators,
   handleClose,
   formClosed,
+  isViewOnly = false,
 } = {}) => {
   const { errorNotification, successNotification } = useStatusWiseAlert();
   const [isLoading, setLoading] = useState(false);
@@ -92,8 +93,9 @@ const ManageAggregatorForm = ({
           <Grid item xs={12}>
             <FormField
               required
+              disabled={isViewOnly}
               name="aggregatorName"
-              label="Organozation Name (Aggregator Name)"
+              label="Organization Name (Aggregator Name)"
               value={values.aggregatorName}
               onChange={handleChange}
               onBlur={handleBlur}
@@ -102,10 +104,11 @@ const ManageAggregatorForm = ({
             />
           </Grid>
 
-          {/* Email */}
+          {/* Contact Person Name */}
           <Grid item xs={12}>
-          <FormField
+            <FormField
               required
+              disabled={isViewOnly}
               name="contactPersonName"
               label="Contact Person Name"
               value={values.contactPersonName}
@@ -116,9 +119,11 @@ const ManageAggregatorForm = ({
             />
           </Grid>
 
+          {/* Email */}
           <Grid item xs={12}>
             <EmailField
               required
+              disabled={isViewOnly}
               name="email"
               label="Contact Person Email Id"
               value={values.email}
@@ -129,10 +134,25 @@ const ManageAggregatorForm = ({
             />
           </Grid>
 
+          {/* Alternate Email */}
+          <Grid item xs={12}>
+            <EmailField
+              disabled={isViewOnly}
+              name="alternateEmail"
+              label="Alternate Email Id (Optional)"
+              value={values.alternateEmail}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              error={touched.alternateEmail && Boolean(errors.alternateEmail)}
+              helperText={touched.alternateEmail && errors.alternateEmail}
+            />
+          </Grid>
+
           {/* Mobile Number */}
           <Grid item xs={12}>
             <MobileNoField
               required
+              disabled={isViewOnly}
               name="mobileNo"
               label="Mobile Number"
               value={values.mobileNo}
@@ -148,6 +168,7 @@ const ManageAggregatorForm = ({
             <TextAreaField
               fullWidth
               required
+              disabled={isViewOnly}
               name="location"
               label="Address"
               multiline
@@ -160,15 +181,9 @@ const ManageAggregatorForm = ({
             />
           </Grid>
           <Grid item xs={12}>
-            {/* <ChipInput
-              label="Add Service"
-              placeholder="Enter a service"
-              value={values.services}
-              onChange={(val) => setFieldValue('services', val)}
-            /> */}
-
             <AutocompleteDropdown
-              label="Add Service"
+              disabled={isViewOnly}
+              label="Services"
               name="services"
               multiple
               options={PAYMENT_PROJECTIONS}
@@ -182,29 +197,46 @@ const ManageAggregatorForm = ({
             />
           </Grid>
           {/* Buttons */}
-          <Grid item xs={12} md={4} />
-          <Grid item xs={12} md={4}>
-            {!updateDetails?.aggregatorId && <Button
-              fullWidth
-              type="button"
-              variant="outlined"
-              onClick={() => resetForm()}
-              disabled={isLoading}
-            >
-              Reset
-            </Button>}
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <Button
-              fullWidth
-              type="submit"
-              variant="contained"
-              color="primary"
-              disabled={isLoading}
-            >
-              Submit
-            </Button>
-          </Grid>
+          {isViewOnly ? (
+            <Grid item xs={12} display="flex" justifyContent="flex-end" mt={1}>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleClose}
+                sx={{ px: 4, borderRadius: '8px', textTransform: 'none' }}
+              >
+                Close
+              </Button>
+            </Grid>
+          ) : (
+            <>
+              <Grid item xs={12} md={4} />
+              <Grid item xs={12} md={4}>
+                {!updateDetails?.aggregatorId && (
+                  <Button
+                    fullWidth
+                    type="button"
+                    variant="outlined"
+                    onClick={() => resetForm()}
+                    disabled={isLoading}
+                  >
+                    Reset
+                  </Button>
+                )}
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <Button
+                  fullWidth
+                  type="submit"
+                  variant="contained"
+                  color="primary"
+                  disabled={isLoading}
+                >
+                  Submit
+                </Button>
+              </Grid>
+            </>
+          )}
         </Grid>
       </form>
       {isLoading && <FullScreenLoader />}

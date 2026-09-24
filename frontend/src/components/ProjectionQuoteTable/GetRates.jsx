@@ -28,7 +28,6 @@ const GetRates = ({
     openModal,
     setOpenModal
 }) => {
-    let serialNo = 0;
     const { applicationId } = applicationDetails || {};
     const { errorNotification, successNotification } = useStatusWiseAlert();
 
@@ -170,13 +169,15 @@ const GetRates = ({
 
                     <TableBody>
                         {rateDetails?.length ? (
-                            rateDetails.map((row, i) => {
-                                if (!row.isIB) serialNo += 1;
+                            (() => {
+                                let parentCounter = 0;
+                                return rateDetails.map((row, i) => {
+                                    const srNo = !row.isIB ? ++parentCounter : "";
 
-                                return (
-                                    <TableRow key={row.id}>
-                                        <TableCell>{!row.isIB ? serialNo : ""}</TableCell>
-                                        <TableCell width="50%">{row.transactionType}</TableCell>
+                                    return (
+                                        <TableRow key={row.id || i}>
+                                            <TableCell>{srNo}</TableCell>
+                                            <TableCell width="50%">{row.transactionType}</TableCell>
 
                                         {row.allow ? (
                                             <TableCell>
@@ -234,8 +235,8 @@ const GetRates = ({
                                             <TableCell />
                                         )}
                                     </TableRow>
-                                )
-                            })
+                                );
+                            })()
                         ) : (
                             <TableRow>
                                 <TableCell colSpan={3} align="center">

@@ -13,12 +13,9 @@ import TextFieldLabel from "&src/components/Label";
 import FullScreenLoader from "&src/components/Loaders/FullScreenLoader";
 import {
   BUSINESS_CATEGORIES,
+  ENTITY_BUSINESS_CATEGORIES,
   CONSENT_TEXT,
   CONSENT_TEXT_FOR_BR,
-  isBO,
-  isCO,
-  isRO,
-  isZO,
   PAYMENT_PROJECTIONS,
   user_role,
 } from "&src/constants/PaymentAggregratorConstant";
@@ -45,7 +42,15 @@ import {
   alpha,
   TextField,
 } from "@mui/material";
-import { Add as AddIcon, Close as CloseIcon } from "@mui/icons-material";
+import {
+  Add as AddIcon,
+  Close as CloseIcon,
+  AccountBalanceRounded,
+  ContactMailRounded,
+  LanguageRounded,
+  AssessmentRounded,
+  FolderSharedRounded,
+} from "@mui/icons-material";
 import useStatusWiseAlert from "&src/components/ToastNotifications/useStatusWiseAlert";
 import useApplicationForm from "&src/hooks/useApplicationForm";
 
@@ -57,6 +62,34 @@ const PROJECTION_PRESETS = [
   "BNPL & EMI Payments",
   "Custom Channel",
 ];
+
+const FormSectionHeader = ({ icon, title, subtitle }) => (
+  <Grid item xs={12} sx={{ mt: 1.5, mb: 0.5 }}>
+    <Box sx={{ pb: 1, borderBottom: "2px solid #e2e8f0", display: "flex", alignItems: "center", gap: 1.2 }}>
+      <Box sx={{
+        width: 30,
+        height: 30,
+        borderRadius: "8px",
+        bgcolor: "#eff6ff",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        color: "#176FC1",
+        flexShrink: 0,
+      }}>
+        {icon}
+      </Box>
+      <Box>
+        <Typography variant="subtitle2" fontWeight={800} color="#0E4F8D" sx={{ fontSize: "0.92rem", lineHeight: 1.2 }}>
+          {title}
+        </Typography>
+        <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.75rem", display: "block" }}>
+          {subtitle}
+        </Typography>
+      </Box>
+    </Box>
+  </Grid>
+);
 
 const ApplicationForm = ({ updateDetails, handleClose, formClosed, fetchAllApplications }) => {
   let message = "";
@@ -75,8 +108,18 @@ const ApplicationForm = ({ updateDetails, handleClose, formClosed, fetchAllAppli
   } = useApplicationForm({ updateDetails, handleClose, formClosed, fetchAllApplications });
 
   const { values, errors, touched, handleChange, handleBlur, handleSubmit, setFieldValue, resetForm, setFieldTouched } = formik;
-  const approvedByCO = updateDetails?.isReviewByCO;
-  const disabled = user_role !== 'CO' && updateDetails?.applicationId || approvedByCO;
+  const currentRole = sessionStorage.getItem('role') || user_role || 'CO';
+  const isBO = currentRole === 'BO';
+  const isRO = currentRole === 'RO';
+  const isZO = currentRole === 'ZO';
+  const isCO = currentRole === 'CO' || currentRole === 'ADMIN';
+
+  const approvedByCO = Boolean(updateDetails?.isReviewByCO);
+  const isExistingApp = Boolean(updateDetails?.applicationId || values?.applicationId);
+  const isAdminViewMode = currentRole === 'ADMIN' || sessionStorage.getItem('adminViewMode') === 'true';
+
+  // Disabled when reviewing an existing application for audit/higher tiers or when already approved by CO
+  const disabled = isAdminViewMode || (isExistingApp && isBO && Boolean(updateDetails?.isApplicationSubmittedBR)) || Boolean(approvedByCO);
 
   // ── Dynamic Projections Options State ──
   const [projectionOptions, setProjectionOptions] = useState(() => {
@@ -125,11 +168,80 @@ const ApplicationForm = ({ updateDetails, handleClose, formClosed, fetchAllAppli
     <>
       <form onSubmit={handleSubmit} noValidate>
         <Grid container spacing={2}>
+          {/* Admin View Mode Notice Banner */}
+          {isAdminViewMode && (
+            <Grid item xs={12}>
+              <Alert severity="info" sx={{ borderRadius: "8px", bgcolor: "#eff6ff", color: "#1e40af", border: "1px solid #bfdbfe", py: 0.8 }}>
+                🔒 <strong>Admin View Mode (Read-Only Audit):</strong> You are reviewing this application in central admin view. All applications across branches are visible. Operational actions (Submit / Approve / Reject) are restricted to designated office roles.
+              </Alert>
+            </Grid>
+          )}
+
+          {/* ── Section 1: Customer & Entity Profile ── */}
+          <FormSectionHeader
+            icon={<AccountBalanceRounded sx={{ fontSize: 18 }} />}
+            title="1. Customer & Entity Profile"
+            subtitle="Customer onboarding category, institution name, Central Bank of India account details, and address."
+          />
+
           {/* User Type */}
           <Grid item xs={12}>
-            <RadioGroup row name="userType" value={values?.userType || "existing"} onChange={handleChange}>
+            <RadioGroup
+              row
+              name="userType"
+              value={values?.userType || "existing"}
+              onChange={(e) => {
+                handleChange(e);
+                if (e.target.value === "new") {
+                  setFieldValue("accountNo", "");
+                  setFieldValue("averageBalance", "");
+                  setFieldValue("accountBalanceToday", "");
+                  setFieldTouched("accountNo", false, false);
+                  setFieldTouched("averageBalance", false, false);
+                  setFieldTouched("accountBalanceToday", false, false);
+                }
+              }}
+            >
               <FormControlLabel value="existing" control={<Radio />} label="Existing Customer" disabled={disabled} />
+              <FormControlLabel value="new" control={<Radio />} label="New Customer" disabled={disabled} />
             </RadioGroup>
+
+            {/* Informative Guidance Banner */}
+            <Box sx={{ mt: 1 }}>
+              {values?.userType === "new" ? (
+                <Alert
+                  severity="info"
+                  sx={{
+                    borderRadius: "8px",
+                    fontSize: "0.82rem",
+                    py: 0.5,
+                    px: 1.5,
+                    bgcolor: "#f0fdf4",
+                    color: "#166534",
+                    border: "1px solid #bbf7d0",
+                    "& .MuiAlert-icon": { color: "#16a34a" }
+                  }}
+                >
+                  <strong>New Merchant Onboarding:</strong> Account number is optional. Projections and merchant details can be submitted directly. A Central Bank of India current account will be opened/linked during final sanctioning.
+                </Alert>
+              ) : (
+                <Alert
+                  severity="info"
+                  sx={{
+                    borderRadius: "8px",
+                    fontSize: "0.82rem",
+                    py: 0.5,
+                    px: 1.5,
+                    bgcolor: "#eff6ff",
+                    color: "#1e40af",
+                    border: "1px solid #bfdbfe",
+                    "& .MuiAlert-icon": { color: "#2563eb" }
+                  }}
+                >
+                  <strong>Existing Bank Customer:</strong> Account number is mandatory to verify relationship, customer profile, and historical banking balances with Central Bank of India.
+                </Alert>
+              )}
+            </Box>
           </Grid>
 
           {/* Customer Name */}
@@ -147,21 +259,19 @@ const ApplicationForm = ({ updateDetails, handleClose, formClosed, fetchAllAppli
           </Grid>
 
           {/* Account No */}
-          {values?.userType !== "new" && (
-            <Grid item xs={12} sm={6}>
-              <NumberField
-                required
-                disabled={disabled}
-                name="accountNo"
-                label="Account Number"
-                value={values?.accountNo || ""}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                error={touched?.accountNo && Boolean(errors?.accountNo)}
-                helperText={touched?.accountNo && errors?.accountNo}
-              />
-            </Grid>
-          )}
+          <Grid item xs={12} sm={6}>
+            <NumberField
+              required={values?.userType !== "new"}
+              disabled={disabled}
+              name="accountNo"
+              label={values?.userType === "new" ? "Account Number (Optional)" : "Account Number"}
+              value={values?.accountNo || ""}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              error={Boolean(touched?.accountNo && errors?.accountNo)}
+              helperText={touched?.accountNo && errors?.accountNo ? errors?.accountNo : ""}
+            />
+          </Grid>
 
           {/* Category */}
           <Grid item xs={12} sm={6}>
@@ -179,20 +289,45 @@ const ApplicationForm = ({ updateDetails, handleClose, formClosed, fetchAllAppli
             />
           </Grid>
 
-          {/* Portal / URL / Integrate With */}
+          {/* Business Category */}
           <Grid item xs={12} sm={6}>
-            <FormField
-              required
+            <AutocompleteDropdown
+              name="businessCategory"
+              label="Business Category"
               disabled={disabled}
-              name="integrateWith"
-              label="Portal / URL / Integrate With"
-              value={values?.integrateWith || ""}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              error={touched?.integrateWith && Boolean(errors?.integrateWith)}
-              helperText={touched?.integrateWith && errors?.integrateWith}
+              options={ENTITY_BUSINESS_CATEGORIES}
+              value={values?.businessCategory || ""}
+              setFieldValue={setFieldValue}
+              handleBlur={handleBlur}
+              touched={touched}
+              errors={errors}
+              required
             />
           </Grid>
+
+          {/* Address */}
+          <Grid item xs={12}>
+            <TextAreaField
+              required
+              disabled={disabled}
+              name="address"
+              label="Operating Address"
+              multiline
+              rows={2}
+              value={values?.address || ""}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              error={touched?.address && Boolean(errors?.address)}
+              helperText={touched?.address && errors?.address}
+            />
+          </Grid>
+
+          {/* ── Section 2: Contact & Communication Coordinates ── */}
+          <FormSectionHeader
+            icon={<ContactMailRounded sx={{ fontSize: 18 }} />}
+            title="2. Contact & Authorized Coordinates"
+            subtitle="Official contact details for correspondence, commercial quotation dispatches, and operational alerts."
+          />
 
           {/* Email */}
           <Grid item xs={12} sm={6}>
@@ -224,37 +359,87 @@ const ApplicationForm = ({ updateDetails, handleClose, formClosed, fetchAllAppli
             />
           </Grid>
 
-          {/* Financial Inputs */}
-          <Grid item xs={12} sm={6}>
-            <NumberField
+          {/* ── Section 3: Web Portal & Technical Integration ── */}
+          <FormSectionHeader
+            icon={<LanguageRounded sx={{ fontSize: 18 }} />}
+            title="3. Web Portal & Technical Integration"
+            subtitle="Merchant website, app checkout URL, or host environment for Payment Gateway integration."
+          />
+
+          {/* Portal / URL / Integrate With */}
+          <Grid item xs={12}>
+            <FormField
               required
               disabled={disabled}
-              name="averageBalance"
-              label="Average Balance (Last 6 Months)"
-              type="number"
-              value={values?.averageBalance || ""}
+              name="integrateWith"
+              label="Portal / URL / Integrate With"
+              value={values?.integrateWith || ""}
               onChange={handleChange}
               onBlur={handleBlur}
-              error={touched?.averageBalance && Boolean(errors?.averageBalance)}
-              helperText={touched?.averageBalance && errors?.averageBalance}
+              error={touched?.integrateWith && Boolean(errors?.integrateWith)}
+              helperText={touched?.integrateWith && errors?.integrateWith}
             />
           </Grid>
 
-          <Grid item xs={12} sm={6}>
-            <NumberField
-              required
+          {/* ── Section 4: Commercial Projections & Banking Business ── */}
+          <FormSectionHeader
+            icon={<AssessmentRounded sx={{ fontSize: 18 }} />}
+            title="4. Commercial Projections & Banking Business"
+            subtitle="Channel breakdown, expected transaction volumes, ticket sizes, and deposit relationship."
+          />
+
+          {/* Payment Projections - Full Length */}
+          <Grid item xs={12}>
+            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 0.5 }}>
+              <TextFieldLabel label="Payment Projections" required />
+              {!disabled && (
+                <Button
+                  size="small"
+                  variant="outlined"
+                  color="primary"
+                  startIcon={<AddIcon sx={{ fontSize: 13 }} />}
+                  onClick={() => setAddProjModalOpen(true)}
+                  sx={{
+                    textTransform: "none",
+                    fontWeight: 700,
+                    fontSize: "0.74rem",
+                    py: 0.2,
+                    px: 1,
+                    borderRadius: "6px",
+                    borderColor: "#176FC1",
+                    color: "#176FC1",
+                    whiteSpace: "nowrap",
+                    "&:hover": { bgcolor: alpha("#176FC1", 0.08) }
+                  }}
+                >
+                  Add Projection
+                </Button>
+              )}
+            </Box>
+            <AutocompleteDropdown
+              label=""
               disabled={disabled}
-              name="accountBalanceToday"
-              label="Account Balance as on Today"
-              type="number"
-              value={values?.accountBalanceToday || ""}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              error={touched?.accountBalanceToday && Boolean(errors?.accountBalanceToday)}
-              helperText={touched?.accountBalanceToday && errors?.accountBalanceToday}
+              name="projection"
+              multiple
+              limitTags={10}
+              options={projectionOptions}
+              value={
+                values?.projection
+                  ? (Array.isArray(values.projection) ? values.projection : values.projection.split("|").map(s => s.trim()).filter(Boolean))
+                  : []
+              }
+              setFieldValue={(name, newValue) => {
+                setFieldValue("projection", Array.isArray(newValue) ? newValue.join("|") : newValue);
+              }}
+              setFieldTouched={setFieldTouched}
+              handleBlur={handleBlur}
+              touched={touched}
+              errors={errors}
+              required
             />
           </Grid>
 
+          {/* Expected No. of Transactions (Yearly) */}
           <Grid item xs={12} sm={6}>
             <NumberField
               required
@@ -265,11 +450,12 @@ const ApplicationForm = ({ updateDetails, handleClose, formClosed, fetchAllAppli
               value={values?.avgTransactionYearly || ""}
               onChange={handleChange}
               onBlur={handleBlur}
-              error={touched?.avgTransactionYearly && Boolean(errors?.avgTransactionYearly)}
-              helperText={touched?.avgTransactionYearly && errors?.avgTransactionYearly}
+              error={Boolean(touched?.avgTransactionYearly && errors?.avgTransactionYearly)}
+              helperText={touched?.avgTransactionYearly && errors?.avgTransactionYearly ? errors?.avgTransactionYearly : ""}
             />
           </Grid>
 
+          {/* Average Ticket Size */}
           <Grid item xs={12} sm={6}>
             <NumberField
               required
@@ -280,76 +466,49 @@ const ApplicationForm = ({ updateDetails, handleClose, formClosed, fetchAllAppli
               value={values?.avgTransactionSize || ""}
               onChange={handleChange}
               onBlur={handleBlur}
-              error={touched?.avgTransactionSize && Boolean(errors?.avgTransactionSize)}
-              helperText={touched?.avgTransactionSize && errors?.avgTransactionSize}
+              error={Boolean(touched?.avgTransactionSize && errors?.avgTransactionSize)}
+              helperText={touched?.avgTransactionSize && errors?.avgTransactionSize ? errors?.avgTransactionSize : ""}
             />
           </Grid>
 
-          {/* Payment Projections */}
-          <Grid item xs={12}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
-              <TextFieldLabel label="Payment Projections" required />
-              {!disabled && (
-                <Button
-                  size="small"
-                  variant="outlined"
-                  color="primary"
-                  startIcon={<AddIcon />}
-                  onClick={() => setAddProjModalOpen(true)}
-                  sx={{
-                    textTransform: 'none',
-                    fontWeight: 700,
-                    fontSize: '0.78rem',
-                    py: 0.3,
-                    px: 1.2,
-                    borderRadius: '6px',
-                    borderColor: '#176FC1',
-                    color: '#176FC1',
-                    '&:hover': { bgcolor: alpha('#176FC1', 0.08) }
-                  }}
-                >
-                  Add New Projection
-                </Button>
-              )}
-            </Box>
-            <AutocompleteDropdown
-              label=""
+          {/* Average Balance */}
+          <Grid item xs={12} sm={6}>
+            <NumberField
+              required={values?.userType !== "new"}
               disabled={disabled}
-              name="projection"
-              multiple
-              options={projectionOptions}
-              value={
-                values?.projection
-                  ? (Array.isArray(values.projection) ? values.projection : values.projection.split("|").map(s => s.trim()).filter(Boolean))
-                  : []
-              }
-              setFieldValue={(name, newValue) => {
-                setFieldValue('projection', Array.isArray(newValue) ? newValue.join("|") : newValue);
-              }}
-              setFieldTouched={setFieldTouched}
-              handleBlur={handleBlur}
-              touched={touched}
-              errors={errors}
-              required
-            />
-          </Grid>
-
-          {/* Address */}
-          <Grid item xs={12}>
-            <TextAreaField
-              required
-              disabled={disabled}
-              name="address"
-              label="Address"
-              multiline
-              rows={2}
-              value={values?.address || ""}
+              name="averageBalance"
+              label="Average Balance (Last 6 Months)"
+              type="number"
+              value={values?.averageBalance || ""}
               onChange={handleChange}
               onBlur={handleBlur}
-              error={touched?.address && Boolean(errors?.address)}
-              helperText={touched?.address && errors?.address}
+              error={Boolean(values?.userType !== "new" && touched?.averageBalance && errors?.averageBalance)}
+              helperText={values?.userType !== "new" && touched?.averageBalance && errors?.averageBalance ? errors?.averageBalance : ""}
             />
           </Grid>
+
+          {/* Account Balance as on Today */}
+          <Grid item xs={12} sm={6}>
+            <NumberField
+              required={values?.userType !== "new"}
+              disabled={disabled}
+              name="accountBalanceToday"
+              label="Account Balance as on Today"
+              type="number"
+              value={values?.accountBalanceToday || ""}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              error={Boolean(values?.userType !== "new" && touched?.accountBalanceToday && errors?.accountBalanceToday)}
+              helperText={values?.userType !== "new" && touched?.accountBalanceToday && errors?.accountBalanceToday ? errors?.accountBalanceToday : ""}
+            />
+          </Grid>
+
+          {/* ── Section 5: Compliance & Verification Documents ── */}
+          <FormSectionHeader
+            icon={<FolderSharedRounded sx={{ fontSize: 18 }} />}
+            title="5. Compliance & Verification Documents"
+            subtitle="Mandatory KYC documentation, customer onboarding forms, and internal hierarchy recommendations."
+          />
 
           {/* File Uploads */}
           <Grid item xs={12}>
@@ -442,56 +601,120 @@ const ApplicationForm = ({ updateDetails, handleClose, formClosed, fetchAllAppli
           </Grid>
           {/* Consent + Action Buttons */}
           {(() => {
-            let shouldShow = true;
-            if (approvedByCO) {
-              shouldShow = false;
-            }
-            if (isBO && updateDetails?.isApplicationSubmittedBR) {
-              shouldShow = false;
-            }
-            if (isRO && updateDetails?.isReviewByRO) {
-              shouldShow = false;
-            }
-            if (isZO && updateDetails?.isReviewByZO && updateDetails?.isReviewByRO) {
-              shouldShow = false;
-            }
-            if ((isCO && updateDetails?.isReviewByCO && updateDetails?.isReviewByRO) || isCO && updateDetails?.isReviewByCO && updateDetails?.isReviewByZO && updateDetails?.isReviewByRO) {
-              shouldShow = false;
+            // Case 1: If application is rejected
+            const isRejected = updateDetails?.status?.toLowerCase()?.includes('reject') || Boolean(updateDetails?.reasonOfRejection);
+            if (isRejected) {
+              return (
+                <Grid item xs={12}>
+                  <Alert severity="error" sx={{ mb: 1, fontWeight: 600 }}>
+                    This application has been rejected. Reason: {updateDetails?.reasonOfRejection || 'Rejected during review'}
+                  </Alert>
+                </Grid>
+              );
             }
 
-            if (isZO && updateDetails?.isReviewByRO === null) {
-              message = `Application Approval is pending by RO`
-              shouldShow = false;
+            const roApproved = Boolean(updateDetails?.isReviewByRO);
+            const zoApproved = Boolean(updateDetails?.isReviewByZO);
+            const coApproved = Boolean(updateDetails?.isReviewByCO);
+
+            // Case 2: For existing submitted applications, check hierarchy
+            if (isExistingApp) {
+              // If Branch Office opens an existing submitted application
+              if (isBO) {
+                return (
+                  <Grid item xs={12}>
+                    <Alert severity="info" sx={{ mb: 1, fontWeight: 600 }}>
+                      Application has been submitted by Branch. It is currently under review by Regional Office (RO).
+                    </Alert>
+                  </Grid>
+                );
+              }
+
+              // If Regional Office (RO)
+              if (isRO) {
+                if (roApproved) {
+                  return (
+                    <Grid item xs={12}>
+                      <Alert severity="success" sx={{ mb: 1, fontWeight: 600 }}>
+                        Application has been approved by Regional Office (RO). Currently pending higher tier review.
+                      </Alert>
+                    </Grid>
+                  );
+                }
+              }
+
+              // If Zonal Office (ZO)
+              if (isZO) {
+                if (!roApproved) {
+                  return (
+                    <Grid item xs={12}>
+                      <Alert severity="info" sx={{ mb: 1, fontWeight: 600 }}>
+                        Application Approval is pending with Regional Office (RO). Zonal Office review will unlock after RO approval.
+                      </Alert>
+                    </Grid>
+                  );
+                }
+                if (zoApproved) {
+                  return (
+                    <Grid item xs={12}>
+                      <Alert severity="success" sx={{ mb: 1, fontWeight: 600 }}>
+                        Application has been approved by Zonal Office (ZO). Currently pending Central Office review.
+                      </Alert>
+                    </Grid>
+                  );
+                }
+              }
+
+              // If Central Office (CO) or Admin
+              if (isCO) {
+                if (coApproved) {
+                  return (
+                    <Grid item xs={12}>
+                      <Alert severity="success" sx={{ mb: 1, fontWeight: 600 }}>
+                        Application has been approved by Central Office (CO).
+                      </Alert>
+                    </Grid>
+                  );
+                }
+                if (!roApproved) {
+                  return (
+                    <Grid item xs={12}>
+                      <Alert severity="info" sx={{ mb: 1, fontWeight: 600 }}>
+                        Application Approval is pending with Regional Office (RO). Central Office review will unlock after RO approval.
+                      </Alert>
+                    </Grid>
+                  );
+                }
+                // When roApproved is true, CO can directly approve (ZO is optional)!
+              }
             }
 
-            console.log('shouldShow', shouldShow, updateDetails)
-            return shouldShow ? (
+            // Case 3: Action Buttons (Submit for new application, Approve/Reject for reviewers)
+            return (
               <>
-                {/* Consent */}
-                {/* {user_role !== "CO" && ( */}
+                {/* Consent Checkbox */}
                 <Grid item xs={12}>
                   <FormControlLabel
-                    sx={{
-                      mb: 1
-                    }}
+                    sx={{ mb: 1 }}
                     control={
                       <Checkbox
                         checked={consentChecked}
                         onChange={(e) => setConsentChecked(e.target.checked)}
                       />
                     }
-                    label={isBO ? CONSENT_TEXT_FOR_BR : CONSENT_TEXT}
+                    label={isBO || !isExistingApp ? CONSENT_TEXT_FOR_BR : CONSENT_TEXT}
                   />
-                  {isBO && <Typography variant="caption" color='text.secondary'>
-                    <b>Note:</b> Please review all Information carefully before submitting. This action is irreversible.
-                  </Typography>}
+                  {(isBO || !isExistingApp) && (
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                      <b>Note:</b> Please review all information carefully before submitting. This action is irreversible.
+                    </Typography>
+                  )}
                 </Grid>
-                {/* )} */}
 
                 {/* Action Buttons */}
-                <Grid item xs={4} />
-                <Grid item xs={4}>
-                  {isBO && !values?.applicationId && (
+                <Grid item xs={12} sm={4} />
+                <Grid item xs={6} sm={4}>
+                  {!isExistingApp || isBO ? (
                     <Button
                       fullWidth
                       type="button"
@@ -500,8 +723,7 @@ const ApplicationForm = ({ updateDetails, handleClose, formClosed, fetchAllAppli
                     >
                       Reset
                     </Button>
-                  )}
-                  {!isBO && (
+                  ) : (
                     <Button
                       fullWidth
                       variant="outlined"
@@ -513,21 +735,18 @@ const ApplicationForm = ({ updateDetails, handleClose, formClosed, fetchAllAppli
                     </Button>
                   )}
                 </Grid>
-                <Grid item xs={4}>
-                  {isBO && (
+                <Grid item xs={6} sm={4}>
+                  {!isExistingApp || isBO ? (
                     <Button
                       fullWidth
                       type="submit"
                       variant="contained"
                       color="primary"
-                      disabled={(user_role !== "CO" && !consentChecked)
-                        || updateDetails?.isReviewByCO
-                      }
+                      disabled={!consentChecked || Boolean(updateDetails?.isReviewByCO)}
                     >
                       Submit
                     </Button>
-                  )}
-                  {!isBO && (
+                  ) : (
                     <Button
                       fullWidth
                       variant="contained"
@@ -540,46 +759,10 @@ const ApplicationForm = ({ updateDetails, handleClose, formClosed, fetchAllAppli
                   )}
                 </Grid>
               </>
-            ) : null;
+            );
           })()}
 
 
-          {/* Consent */}
-          {/* {user_role !== "CO" && (
-            <Grid item xs={12}>
-              <FormControlLabel
-                control={<Checkbox checked={consentChecked} onChange={(e) => setConsentChecked(e.target.checked)} />}
-                label={isBO ? CONSENT_TEXT_FOR_BR : CONSENT_TEXT}
-              />
-            </Grid>
-          )} */}
-
-          {/* Action Buttons */}
-          {/* <Grid item xs={4} />
-          <Grid item xs={4}>
-            {isBO && !values?.applicationId && (
-              <Button fullWidth type="button" variant="outlined" onClick={() => resetForm()}>
-                Reset
-              </Button>
-            )}
-            {(!isBO && user_role !== "CO") && (
-              <Button fullWidth variant="outlined" color="error" onClick={() => setConfirmDialogOpen(true)} disabled={!consentChecked}>
-                Reject
-              </Button>
-            )}
-          </Grid>
-          <Grid item xs={4}>
-            {isBO && (
-              <Button fullWidth type="submit" variant="contained" color="primary" disabled={!consentChecked}>
-                Submit
-              </Button>
-            )}
-            {(!isBO && user_role !== "CO") && (
-              <Button fullWidth variant="contained" color="success" onClick={() => handleAction(values, "approve")} disabled={!consentChecked}>
-                Approve
-              </Button>
-            )}
-          </Grid> */}
           {message && updateDetails?.isReviewByRO === null && <Grid item xs={12}>
             <Typography align="center" variant="subtitle1" color='error'>
               {message}

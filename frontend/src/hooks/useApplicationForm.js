@@ -18,11 +18,42 @@ const useApplicationForm = ({
 }) => {
   // ⬇️ Get user details from session storage
   const userDetails = useMemo(() => {
-    const stored = sessionStorage.getItem('userDetails');
-    return stored && JSON.parse(stored);
+    try {
+      const stored = sessionStorage.getItem('userDetails');
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
   }, []);
 
-  const { branchId, regionId, zoneId } = userDetails || {};
+  const zoneName =
+    userDetails?.zoneName ||
+    userDetails?.Zone_Name ||
+    userDetails?.zone ||
+    (userDetails?.zoneId && userDetails.zoneId !== 0 && userDetails.zoneId !== '00000'
+      ? `Zone ${userDetails.zoneId}`
+      : '');
+
+  const regionName =
+    userDetails?.regionName ||
+    userDetails?.Region_Name ||
+    userDetails?.region ||
+    (userDetails?.regionId && userDetails.regionId !== 0
+      ? `Region ${userDetails.regionId}`
+      : '');
+
+  const branchName =
+    userDetails?.branchName ||
+    userDetails?.Branch_Name ||
+    userDetails?.branch ||
+    (userDetails?.branchId && userDetails.branchId !== 0
+      ? `Branch ${userDetails.branchId}`
+      : '');
+
+  const branchId = userDetails?.branchId || userDetails?.Locationid || null;
+  const regionId = userDetails?.regionId || userDetails?.RegionId || null;
+  const zoneId = userDetails?.zoneId || userDetails?.ZoneId || null;
+  const currentRole = sessionStorage.getItem('role') || user_role || userDetails?.role || 'CO';
 
   const { errorNotification, successNotification } = useStatusWiseAlert();
   const [isLoading, setIsLoading] = useState(false);
@@ -33,7 +64,7 @@ const useApplicationForm = ({
   // ---------------- FORM HANDLING ----------------
   const formik = useFormik({
     initialValues: APPLICATION_FORM_VALUES,
-    validationSchema: applicationFormSchema(user_role),
+    validationSchema: applicationFormSchema(currentRole),
     validateOnBlur: true,
     validateOnChange: true,
     onSubmit: async (values) => {
@@ -47,7 +78,7 @@ const useApplicationForm = ({
     },
   });
 
-  const { values, resetForm, setValues, setFieldError, errors, setFieldTouched } = formik;
+  const { resetForm, setValues } = formik;
 
   // ---------------- EFFECTS ----------------
   useEffect(() => {
@@ -69,9 +100,12 @@ const useApplicationForm = ({
         avgTransactionSize: updateDetails.avgTransactionSize !== null && updateDetails.avgTransactionSize !== undefined ? String(updateDetails.avgTransactionSize) : "",
         kycFile: updateDetails.kycFile || null,
         customerApplicationFile: updateDetails.customerApplicationFile || null,
+        branchName: updateDetails.branchName || userDetails?.branchName || "",
+        regionName: updateDetails.regionName || userDetails?.regionName || "",
+        zoneName: updateDetails.zoneName || userDetails?.zoneName || "",
       });
     }
-  }, [updateDetails]);
+  }, [updateDetails, userDetails]);
 
 
   console.log(formClosed, 'formClosed');
@@ -88,10 +122,13 @@ const useApplicationForm = ({
     totalAnnualTransaction: values?.avgTransactionYearly * values?.avgTransactionSize,
     totalBankCollection: values?.avgTransactionYearly * values?.avgTransactionSize,
     aggregateDepositAmt: values?.avgTransactionYearly * values?.avgTransactionSize,
-    createdByBRId: values?.applicationId ? values?.createdByBRId : user_Id,
-    branchId: values?.applicationId ? values?.branchId : branchId,
-    regionId: values?.applicationId ? values?.regionId : regionId,
-    zoneId: values?.applicationId ? values?.zoneId : zoneId
+    createdByBRId: values?.applicationId ? values?.createdByBRId : (user_Id || userDetails?.userId || userDetails?.id || userDetails?.employeeId),
+    branchId: values?.applicationId ? values?.branchId : (branchId ?? userDetails?.branchId),
+    regionId: values?.applicationId ? values?.regionId : (regionId ?? userDetails?.regionId),
+    zoneId: values?.applicationId ? values?.zoneId : (zoneId ?? userDetails?.zoneId),
+    branchName: values?.branchName || (values?.applicationId ? values?.branchName : branchName) || userDetails?.branchName || "",
+    regionName: values?.regionName || (values?.applicationId ? values?.regionName : regionName) || userDetails?.regionName || "",
+    zoneName: values?.zoneName || (values?.applicationId ? values?.zoneName : zoneName) || userDetails?.zoneName || "",
   });
 
   const addOrUpdate = async (values) => {
@@ -105,7 +142,7 @@ const useApplicationForm = ({
         : await applicationServices.addApplication(payload);
 
       if (response?.status === 200 || response?.status === 201) {
-        fetchAllApplications();
+        fetchAllApplications(response?.data);
         handleClose();
         resetForm();
         successNotification(
@@ -142,29 +179,30 @@ const useApplicationForm = ({
 
     if (isReject) payload.reasonOfRejection = reasonOfRejection;
 
-    switch (user_role) {
+    switch (currentRole) {
       case "RO":
-        payload.rhRecommendationFile = values?.rhRecommendationFile
+        payload.rhRecommendationFile = values?.rhRecommendationFile;
         payload.isReviewByRO = isApprove;
         payload.status = isApprove
           ? WORK_FLOW_OPTIONS.APPROVED_BY_RO
           : WORK_FLOW_OPTIONS.REJECTED_BY_RO;
-        payload.approvedByROId = user_Id;
+        payload.approvedByROId = user_Id || userDetails?.userId || userDetails?.id || userDetails?.employeeId;
         break;
       case "ZO":
-        payload.zhRecommendationFile = values?.zhRecommendationFile
+        payload.zhRecommendationFile = values?.zhRecommendationFile;
         payload.isReviewByZO = isApprove;
         payload.status = isApprove
           ? WORK_FLOW_OPTIONS.APPROVED_BY_ZO
           : WORK_FLOW_OPTIONS.REJECTED_BY_ZO;
-        payload.approvedByZOId = user_Id;
+        payload.approvedByZOId = user_Id || userDetails?.userId || userDetails?.id || userDetails?.employeeId;
         break;
       case "CO":
+      case "ADMIN":
         payload.isReviewByCO = isApprove;
         payload.status = isApprove
           ? WORK_FLOW_OPTIONS.APPROVED_BY_CO
           : WORK_FLOW_OPTIONS.REJECTED_BY_CO;
-        payload.approvedByCOId = user_Id;
+        payload.approvedByCOId = user_Id || userDetails?.userId || userDetails?.id || userDetails?.employeeId;
         break;
       default:
         break;

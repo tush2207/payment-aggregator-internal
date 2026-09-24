@@ -63,9 +63,11 @@ const FileUploadOrView = ({
   }, [value]);
 
   const canCurrentUserManage = () => {
-    if (isBO && allowBRFiles.includes(name)) return true;
-    if (isRO && allowROFiles.includes(name)) return true;
-    if (isZO && allowZOFiles.includes(name)) return true;
+    const currentRole = sessionStorage.getItem('role') || 'CO';
+    if (currentRole === 'CO' || currentRole === 'ADMIN') return true;
+    if (currentRole === 'BO' && allowBRFiles.includes(name)) return true;
+    if (currentRole === 'RO' && allowROFiles.includes(name)) return true;
+    if (currentRole === 'ZO' && allowZOFiles.includes(name)) return true;
     return false;
   };
 

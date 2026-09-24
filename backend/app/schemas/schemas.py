@@ -14,22 +14,31 @@ class TokenData(BaseModel):
 
 class DevLoginRequest(BaseModel):
     username: str
+    password: Optional[str] = None
+    role: Optional[str] = None
 
 class PaymentAggregator(BaseModel):
     aggregatorId : int
     aggregatorName : str
-    createdAt : str = None
-    endDate : str
+    createdAt : Optional[str] = None
+    endDate : Optional[str] = None
     isDeleted : bool = False
     applicationId : int
-    totalEstimatedTransactions: float
-    totalAggregateAmount: float
-    totalGrossAmount: float
-    totalVendorShare: float
-    totalExpectedRevenue: float
-    status : str
+    totalEstimatedTransactions: Optional[float] = 0.0
+    totalAggregateAmount: Optional[float] = 0.0
+    totalGrossAmount: Optional[float] = 0.0
+    totalVendorShare: Optional[float] = 0.0
+    totalExpectedRevenue: Optional[float] = 0.0
+    status : Optional[str] = "pending"
     quoteStatus: Optional[str] = None
-    sumOfRate : float
+    sumOfRate : Optional[float] = 0.0
+    email: Optional[str] = None
+    avgTransactionYearly: Optional[float] = None
+    avgTransactionSize: Optional[float] = None
+    category: Optional[str] = None
+
+    class Config:
+        extra = "allow"
 
 class PaymentAggregatorUpdate(BaseModel):
     aggregatorCode: Optional[int] = None
@@ -54,7 +63,9 @@ class ManageAggregator(BaseModel):
     mobileNo : int
     location : str
     services : str
-    isDeleted : bool
+    alternateEmail : Optional[str] = None
+    status : Optional[str] = "active"
+    isDeleted : bool = False
     
 class ManageAggregatorUpdate(BaseModel):
     aggregatorName : Optional[str] = None
@@ -63,6 +74,8 @@ class ManageAggregatorUpdate(BaseModel):
     mobileNo : Optional[int] = None
     location : Optional[str] = None
     services : Optional[str] = None
+    alternateEmail : Optional[str] = None
+    status : Optional[str] = None
     isDeleted : Optional[bool] = False
     
 class Applications(BaseModel):
@@ -75,6 +88,14 @@ class Applications(BaseModel):
     address: Optional[str] = None
     integrateWith: Optional[str] = None
     category: Optional[str] = None
+    businessCategory: Optional[str] = None
+    customerAcceptanceRequired: Optional[bool] = True
+    poMailStatus: Optional[str] = None
+    poMailSentAt: Optional[Any] = None
+    poMailRecipient: Optional[str] = None
+    rejectedBy: Optional[str] = None
+    rejectedRole: Optional[str] = None
+    rejectedDate: Optional[Any] = None
     avgTransactionYearly: Optional[Any] = None
     avgTransactionSize: Optional[Any] = None 
     accountBalanceToday: Optional[Any] = None
@@ -142,6 +163,14 @@ class ApplicationsUpdate(BaseModel):
     address: Optional[str] = None
     integrateWith: Optional[str] = None
     category: Optional[str] = None
+    businessCategory: Optional[str] = None
+    customerAcceptanceRequired: Optional[bool] = None
+    poMailStatus: Optional[str] = None
+    poMailSentAt: Optional[Any] = None
+    poMailRecipient: Optional[str] = None
+    rejectedBy: Optional[str] = None
+    rejectedRole: Optional[str] = None
+    rejectedDate: Optional[Any] = None
     avgTransactionYearly: Optional[Any] = None
     avgTransactionSize: Optional[Any] = None
     accountBalanceToday: Optional[Any] = None
@@ -151,6 +180,11 @@ class ApplicationsUpdate(BaseModel):
     rhRecommendationFile: Optional[Any] = None
     zhRecommendationFile: Optional[Any] = None
     customerAcceptanceFile: Optional[Any] = None
+    currentQuoteVersion: Optional[int] = None
+    isNegotiationRequested: Optional[bool] = None
+    negotiationRemarks: Optional[str] = None
+    negotiationRequestedBy: Optional[str] = None
+    negotiationRequestedDate: Optional[Any] = None
     kycFile: Optional[Any] = None
     isApplicationSubmittedBR: Optional[bool] = None
     isReviewByRO: Optional[bool] = None
@@ -199,27 +233,35 @@ class ApplicationsUpdate(BaseModel):
     finalApprovedDate: Optional[Any] = None
 
 class ProjectionDetails(BaseModel):
-    transactionCount : Any
-    transactionValue : Any
-    transactionType : str
-    transactionTypePercent : Any
-    isIB : bool
-    estimatedTransactions : float
-    aggregateAmount : float
-    rate : float
-    unit : str
-    chargesProposed : float
-    grossAmount : float
-    vendorShare : float
-    expectedRevenue : float
-    isDeleted : Optional[bool] = False
-    applicationId : Optional[int] = None
-    aggregatorId : Optional[int] = None
-    order : Optional[int] = None
-    allow : bool = False
-    bankUnit: str
+    id: Optional[Any] = None
+    transactionCount: Optional[Any] = None
+    transactionValue: Optional[Any] = None
+    transactionType: Optional[str] = None
+    transactionTypePercent: Optional[Any] = None
+    isIB: Optional[bool] = False
+    estimatedTransactions: Optional[Any] = 0.0
+    aggregateAmount: Optional[Any] = 0.0
+    rate: Optional[Any] = 0.0
+    unit: Optional[str] = "₹"
+    chargesProposed: Optional[Any] = 0.0
+    grossAmount: Optional[Any] = 0.0
+    vendorShare: Optional[Any] = 0.0
+    expectedRevenue: Optional[Any] = 0.0
+    isDeleted: Optional[bool] = False
+    applicationId: Optional[int] = None
+    aggregatorId: Optional[int] = None
+    order: Optional[Any] = None
+    allow: Optional[bool] = False
+    bankUnit: Optional[str] = "₹"
+    quoteVersion: Optional[int] = 1
+    revisionRemarks: Optional[str] = None
+
+    class Config:
+        extra = "allow"
 
 class ProjectionDetailsUpdate(BaseModel):
+    quoteVersion: Optional[int] = None
+    revisionRemarks: Optional[str] = None
     transactionCount: Optional[str] = None
     transactionValue: Optional[str] = None
     transactionType: Optional[str] = None
@@ -242,19 +284,21 @@ class ProjectionDetailsUpdate(BaseModel):
 
 class HelpDeskBase(BaseModel):
     ticketName: str
-    customerName: str
-    branchName: str
-    zoneName: str
-    regionName: str
-    accountNo: int
+    customerName: Optional[str] = "Customer"
+    branchName: Optional[str] = None
+    zoneName: Optional[str] = None
+    regionName: Optional[str] = None
+    accountNo: Optional[Any] = None
     customerEmail: Optional[str] = None
-    customerMobileNo: Optional[int] = None
-    description: str
-    priority : str
-    status : str
-    applicationNo: int
+    customerMobileNo: Optional[Any] = None
+    description: Optional[str] = ""
+    priority : Optional[str] = "Medium"
+    status : Optional[str] = "Open"
+    applicationNo: Optional[int] = None
     chats: Optional[str] = None
     remark: Optional[str] = None
+    attachmentUrl: Optional[str] = None
+    attachmentName: Optional[str] = None
 
 class HelpDeskUpdate(BaseModel):
     ticketName: Optional[str] = None
@@ -262,15 +306,17 @@ class HelpDeskUpdate(BaseModel):
     branchName: Optional[str] = None
     zoneName: Optional[str] = None
     regionName: Optional[str] = None
-    accountNo: Optional[int] = None
+    accountNo: Optional[Any] = None
     applicationNo: Optional[int] = None
     chats: Optional[str] = None
     customerEmail: Optional[str] = None
-    customerMobileNo: Optional[int] = None
+    customerMobileNo: Optional[Any] = None
     description: Optional[str] = None
     priority : Optional[str] = None
     status : Optional[str] = None
     remark: Optional[str] = None
+    attachmentUrl: Optional[str] = None
+    attachmentName: Optional[str] = None
 
 class HelpDeskCreate(HelpDeskBase):
     pass
@@ -294,3 +340,19 @@ class AuditLogResponse(AuditLogCreate):
     createdAt: Optional[Any] = None
     class Config:
         from_attributes = True
+
+class AggregatorAuditLogCreate(BaseModel):
+    aggregatorId: Optional[int] = None
+    aggregatorName: Optional[str] = None
+    action: str
+    performedBy: Optional[str] = None
+    userRole: Optional[str] = "ADMIN"
+    details: Optional[str] = None
+    ipAddress: Optional[str] = None
+
+class AggregatorAuditLogResponse(AggregatorAuditLogCreate):
+    id: int
+    createdAt: Optional[Any] = None
+    class Config:
+        from_attributes = True
+

@@ -58,11 +58,38 @@ const aggregatorProjections = {
     }
   },
 
-  resendQuoteEmail: async (applicationId, aggregatorId, config) => {
+  resendQuoteEmail: async (applicationId, aggregatorId, payload = {}, config) => {
     try {
-      return await postMethod(ApiUrls.RESEND_QUOTE_EMAIL(applicationId, aggregatorId), {}, config);
+      return await postMethod(ApiUrls.RESEND_QUOTE_EMAIL(applicationId, aggregatorId), payload, config);
     } catch (error) {
       console.error(`Error in RESEND_QUOTE_EMAIL:`, error);
+      throw error;
+    }
+  },
+
+  getQuoteVersions: async (applicationId, aggregatorId, config) => {
+    try {
+      return await getMethod(ApiUrls.GET_QUOTE_VERSIONS(applicationId, aggregatorId), config);
+    } catch (error) {
+      console.error(`Error in GET_QUOTE_VERSIONS:`, error);
+      throw error;
+    }
+  },
+
+  getQuoteVersionDetails: async (applicationId, aggregatorId, version, config) => {
+    try {
+      return await getMethod(ApiUrls.GET_QUOTE_VERSION_DETAILS(applicationId, aggregatorId, version), config);
+    } catch (error) {
+      console.error(`Error in GET_QUOTE_VERSION_DETAILS:`, error);
+      throw error;
+    }
+  },
+
+  compareQuoteVersions: async (applicationId, aggregatorId, v1, v2, config) => {
+    try {
+      return await getMethod(ApiUrls.COMPARE_QUOTE_VERSIONS(applicationId, aggregatorId, v1, v2), config);
+    } catch (error) {
+      console.error(`Error in COMPARE_QUOTE_VERSIONS:`, error);
       throw error;
     }
   },

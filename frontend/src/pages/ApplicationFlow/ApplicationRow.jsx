@@ -1,5 +1,5 @@
 import React, { Fragment, memo, useState, useCallback } from 'react';
-import { TableRow, TableCell, Typography, Box, IconButton, Tooltip, Menu, MenuItem, alpha } from '@mui/material';
+import { TableRow, TableCell, Typography, Box, IconButton, Tooltip, Menu, MenuItem, alpha, Chip } from '@mui/material';
 import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownRounded';
 import KeyboardArrowUpRoundedIcon from '@mui/icons-material/KeyboardArrowUpRounded';
 import MoreVertRoundedIcon from '@mui/icons-material/MoreVertRounded';
@@ -92,19 +92,54 @@ const ApplicationRow = memo(
                     <TableCell>{formatDateAndTime(application.createdAt)}</TableCell>
                     <TableCell>{application.applicationId}</TableCell>
                     <TableCell>{application.customerName}</TableCell>
-                    <EndAlignedCell textAlign='start' format={false}>
-                        {application.accountNo}
+                    <EndAlignedCell textAlign='center' format={false}>
+                        {application.accountNo && application.accountNo !== 'NA' && application.accountNo !== 'N/A' ? (
+                            application.accountNo
+                        ) : (
+                            <Chip
+                                label="New"
+                                size="small"
+                                sx={{
+                                    height: 20,
+                                    fontSize: '10px',
+                                    fontWeight: 700,
+                                    bgcolor: '#dcfce7',
+                                    color: '#15803d',
+                                    border: '1px solid #86efac',
+                                    borderRadius: '4px',
+                                    px: 0.4
+                                }}
+                            />
+                        )}
                     </EndAlignedCell>
                     <TableCell>
-                        {application.category && application.category !== 'N/A' && application.category !== ''
-                          ? application.category
-                          : (application.integrateWith?.includes('edu') || application.customerName?.toLowerCase().includes('college') || application.customerName?.toLowerCase().includes('institute')
-                              ? 'Education & Training'
-                              : application.customerName?.toLowerCase().includes('tech') || application.customerName?.toLowerCase().includes('edge')
-                                ? 'Information Technology'
-                                : application.customerName?.toLowerCase().includes('real')
-                                  ? 'Construction & Real Estate'
-                                  : 'General Services')}
+                        <Box display="flex" flexDirection="column" gap={0.3}>
+                            <Typography variant="body2" sx={{ fontSize: '13px' }}>
+                                {application.category && application.category !== 'N/A' && application.category !== ''
+                                  ? application.category
+                                  : (application.integrateWith?.includes('edu') || application.customerName?.toLowerCase().includes('college') || application.customerName?.toLowerCase().includes('institute')
+                                      ? 'Education & Training'
+                                      : application.customerName?.toLowerCase().includes('tech') || application.customerName?.toLowerCase().includes('edge')
+                                        ? 'Information Technology'
+                                        : application.customerName?.toLowerCase().includes('real')
+                                          ? 'Construction & Real Estate'
+                                          : 'General Services')}
+                            </Typography>
+                            {application.businessCategory && (
+                                <Chip
+                                    label={application.businessCategory}
+                                    size="small"
+                                    sx={{
+                                        fontSize: '10px',
+                                        height: '18px',
+                                        alignSelf: 'flex-start',
+                                        bgcolor: application.businessCategory === 'Government' ? 'rgba(46, 125, 50, 0.1)' : 'rgba(23, 111, 193, 0.1)',
+                                        color: application.businessCategory === 'Government' ? '#2e7d32' : '#176fc1',
+                                        fontWeight: 700,
+                                    }}
+                                />
+                            )}
+                        </Box>
                     </TableCell>
                     <EndAlignedCell textAlign='start'>
                         {application.avgTransactionYearly}

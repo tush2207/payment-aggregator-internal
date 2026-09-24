@@ -91,10 +91,10 @@ const CBIConnector = styled(StepConnector)(({ theme }) => ({
   },
   [`&.${stepConnectorClasses.completed} .${stepConnectorClasses.line}`]: {
     opacity: 1,
-    background: 'linear-gradient(270deg, #176FC1, #2E7D32, #176FC1)',
+    background: 'linear-gradient(90deg, #16a34a, #22c55e)',
     backgroundSize: '200% 200%',
     animation: `${flowingLine} 3s ease infinite`,
-    boxShadow: '0 0 12px rgba(46, 125, 50, 0.4)',
+    boxShadow: '0 0 12px rgba(22, 163, 74, 0.5)',
   },
 }));
 
@@ -200,18 +200,24 @@ export default function RoleBasedStepper({
                 height: 48,
                 borderRadius: '12px',
                 overflow: 'hidden',
-                background: '#fff',
+                background: isCompleted ? 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)' : '#fff',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                border: isFilterSelected ? '2.5px solid #2E7D32' : '1px solid #e2e8f0',
-                boxShadow: isFilterSelected
-                  ? '0 0 16px rgba(46, 125, 50, 0.55)'
+                border: isFilterSelected
+                  ? '2.5px solid #16a34a'
                   : isCompleted
-                  ? '0 0 12px rgba(23, 111, 193, 0.40)'
+                  ? '2px solid #16a34a'
                   : isCurrentStep
-                  ? '0 0 14px rgba(255, 152, 0, 0.60)'
-                  : '0 0 8px rgba(0,0,0,0.12)',
+                  ? '2px solid #f59e0b'
+                  : '1px solid #e2e8f0',
+                boxShadow: isFilterSelected
+                  ? '0 0 16px rgba(22, 163, 74, 0.55)'
+                  : isCompleted
+                  ? '0 0 14px rgba(22, 163, 74, 0.40)'
+                  : isCurrentStep
+                  ? '0 0 14px rgba(245, 158, 11, 0.60)'
+                  : '0 0 8px rgba(0,0,0,0.10)',
                 transform: isFilterSelected ? 'scale(1.12)' : isCompleted ? 'scale(1.04)' : 'scale(0.92)',
                 transition: 'all 0.3s ease',
                 animation: isFilterSelected
@@ -221,15 +227,15 @@ export default function RoleBasedStepper({
                   : 'none',
 
                 color: isFilterSelected
-                  ? '#2E7D32'
+                  ? '#15803d'
                   : isCompleted
-                  ? '#176FC1'
+                  ? '#15803d'
                   : isCurrentStep
-                  ? '#ff9800'
+                  ? '#d97706'
                   : '#777',
                 '&:hover': {
                   transform: 'scale(1.12)',
-                  boxShadow: '0 0 16px rgba(23, 111, 193, 0.45), 0 4px 8px rgba(0,0,0,0.1)',
+                  boxShadow: isCompleted ? '0 0 16px rgba(22, 163, 74, 0.55)' : '0 0 16px rgba(23, 111, 193, 0.45)',
                 },
               }}
             >
@@ -289,7 +295,7 @@ export default function RoleBasedStepper({
               fontSize="11px"
               fontWeight={700}
               sx={{
-                color: isFilterSelected ? '#2E7D32' : isCompleted ? '#176FC1' : '#555',
+                color: isFilterSelected ? '#15803d' : isCompleted ? '#15803d' : isCurrentStep ? '#d97706' : '#555',
                 minHeight: 28,
                 display: 'flex',
                 alignItems: 'center',
@@ -298,8 +304,8 @@ export default function RoleBasedStepper({
                 lineHeight: 1.25,
                 transition: '0.3s',
                 '&:hover': {
-                  color: isFilterSelected ? '#2E7D32' : '#176FC1',
-                  textShadow: isFilterSelected ? '0 0 4px rgba(46, 125, 50, 0.35)' : '0 0 4px rgba(23, 111, 193, 0.35)',
+                  color: isFilterSelected || isCompleted ? '#16a34a' : '#176FC1',
+                  textShadow: isFilterSelected || isCompleted ? '0 0 4px rgba(22, 163, 74, 0.35)' : '0 0 4px rgba(23, 111, 193, 0.35)',
                 },
               }}
             >

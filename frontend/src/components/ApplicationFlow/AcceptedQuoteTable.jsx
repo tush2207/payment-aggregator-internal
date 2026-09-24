@@ -2,6 +2,7 @@ import { centralbanklogo } from "&src/assets";
 import {
   ACCEPTED_PROJECTION_COLUMNS_FOR_RO,
   isRO,
+  isAdmin,
   user_Id
 } from "&src/constants/PaymentAggregratorConstant";
 import aggregatorProjections from "&src/services/aggregatorProjections";
@@ -10,18 +11,21 @@ import { PERCENTAGE, formatNumber } from "&src/utils";
 import { calculateTotals } from "&src/utils/calculation";
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
-import { Download, InfoOutlined } from "@mui/icons-material";
+import { Download, InfoOutlined, Visibility, VisibilityOff } from "@mui/icons-material";
 import { useDispatch } from "react-redux";
 import { fetchApplicationDetails, closeWorkflowDialog } from "&src/store/applicationFlowSlice";
 import {
   Box,
   Button,
   Checkbox,
+  Chip,
   Container,
   Divider,
   FormControlLabel,
   Grid,
   Paper,
+  Radio,
+  RadioGroup,
   Table,
   TableBody,
   TableCell,
@@ -74,23 +78,44 @@ const AcceptedQuotationTable = ({ quoteDetails }) => {
         </TableHead>
         <TableBody>
           {quoteDetails?.length ? (
-            quoteDetails.map((row, idx) => {
-              const isSubBank = row.isIB;
-              return (
-                <TableRow key={idx} sx={{ "&:hover": { bgcolor: "#f8fafc" } }}>
-                  <TableCell sx={{ ...cellSx, textAlign: "center" }}>
-                    {idx + 1}
-                  </TableCell>
-                  <TableCell sx={{ ...cellSx, pl: isSubBank ? 5 : 2, fontStyle: isSubBank ? "italic" : "normal", fontWeight: isSubBank ? 500 : 700 }}>
-                    {row.transactionType}
-                    {row.transactionTypePercent && isSubBank ? ` (${row.transactionTypePercent})` : ""}
-                  </TableCell>
-                  <TableCell sx={{ ...cellSx, textAlign: "center", fontWeight: 700 }}>
-                    {row.allow ? (row.unit === PERCENTAGE ? `${row.chargesProposed}${PERCENTAGE}` : `${row.chargesProposed}`) : ""}
-                  </TableCell>
-                </TableRow>
-              );
-            })
+            (() => {
+              let parentCounter = 0;
+              return quoteDetails.map((row, idx) => {
+                const isSubBank = row.isIB;
+                const srNo = !isSubBank ? ++parentCounter : "";
+                const isAllowed = row.allow === undefined || row.allow === null || row.allow === true || row.allow === 1 || row.allow === "true" || row.allow === "1";
+                const unitDisplay = row.bankUnit || row.unit || PERCENTAGE;
+                const isPct = unitDisplay === PERCENTAGE || unitDisplay === "%" || unitDisplay === "Percentage";
+                const hasCharges = row.chargesProposed !== undefined && row.chargesProposed !== null && row.chargesProposed !== "" && !isNaN(Number(row.chargesProposed));
+                const numCharges = hasCharges ? Number(row.chargesProposed) : null;
+
+                let chargesDisplay = "—";
+                if (isAllowed) {
+                  if (numCharges !== null && numCharges > 0) {
+                    chargesDisplay = isPct ? `${row.chargesProposed}%` : `₹${row.chargesProposed}`;
+                  } else if (numCharges === 0 && row.rate && Number(row.rate) > 0) {
+                    chargesDisplay = isPct ? `${row.rate}%` : `₹${row.rate}`;
+                  } else if (numCharges !== null) {
+                    chargesDisplay = isPct ? `${row.chargesProposed}%` : `₹${row.chargesProposed}`;
+                  }
+                }
+
+                return (
+                  <TableRow key={idx} sx={{ "&:hover": { bgcolor: "#f8fafc" } }}>
+                    <TableCell sx={{ ...cellSx, textAlign: "center" }}>
+                      {srNo}
+                    </TableCell>
+                    <TableCell sx={{ ...cellSx, pl: isSubBank ? 5 : 2, fontStyle: isSubBank ? "italic" : "normal", fontWeight: isSubBank ? 500 : 700 }}>
+                      {row.transactionType}
+                      {row.transactionTypePercent && isSubBank ? ` (${row.transactionTypePercent})` : ""}
+                    </TableCell>
+                    <TableCell sx={{ ...cellSx, textAlign: "center", fontWeight: 700 }}>
+                      {chargesDisplay}
+                    </TableCell>
+                  </TableRow>
+                );
+              });
+            })()
           ) : (
             <TableRow>
               <TableCell colSpan={3} align="center" sx={cellSx}>
@@ -162,7 +187,9 @@ const AcceptedQuoteTable = ({ customer, applicationId }) => {
   const { errorNotification, successNotification } = useStatusWiseAlert();
   const [customerAcceptanceFile, setCustomerAcceptanceFile] = useState(customer?.customerAcceptanceFile);
   const [rhRecommendationFile, setRhRecommendationFile] = useState(customer?.rhRecommendationFile);
+  const [isWaived, setIsWaived] = useState(customer?.customerAcceptanceRequired === false);
 
+  const isRejected = customer?.status?.toLowerCase()?.includes('reject') || Boolean(customer?.reasonOfRejection) || Boolean(customer?.rejectedDate);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [showQuotation, setShowQuotation] = useState(true);
   const [quoteDetails, setQuoteDetails] = useState([]);
@@ -209,7 +236,7 @@ const AcceptedQuoteTable = ({ customer, applicationId }) => {
   };
 
   const handleAccept = async () => {
-    if (customerAcceptanceFile === null || rhRecommendationFile === null) {
+    if (!isWaived && (customerAcceptanceFile === null || rhRecommendationFile === null)) {
       SetFileError('Please upload RH Recommendation / Customer Acceptance');
       errorNotification("Please upload RH Recommendation / Customer Acceptance");
       return;
@@ -217,15 +244,18 @@ const AcceptedQuoteTable = ({ customer, applicationId }) => {
 
     if (!accepted) return errorNotification("Please accept before proceeding");
 
-    if (customer?.approvedByROId !== user_Id) return errorNotification("You are not the authorised person to approve this quotation.");
+    if (customer?.approvedByROId && customer?.approvedByROId !== user_Id && !isAdmin) {
+      return errorNotification("You are not the authorised person to approve this quotation.");
+    }
 
     await updateApplicationFlow({
       isQuoteAcceptRO: true,
+      customerAcceptanceRequired: !isWaived,
       reasonOfRejection: "",
       status: 'quoteaccepted',
       approvedByQuoteId: user_Id,
-      customerAcceptanceFile: customerAcceptanceFile,
-      rhRecommendationFile: rhRecommendationFile
+      customerAcceptanceFile: customerAcceptanceFile || null,
+      rhRecommendationFile: rhRecommendationFile || null
     });
     dispatch(closeWorkflowDialog());
   };
@@ -333,23 +363,45 @@ const AcceptedQuoteTable = ({ customer, applicationId }) => {
                 </Typography>
               </Box>
             </Box>
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={<Download />}
-              onClick={handleDownloadPDF}
-              sx={{
-                textTransform: "none",
-                fontWeight: 700,
-                px: 3,
-                py: 1,
-                borderRadius: "8px",
-                boxShadow: "0 4px 12px rgba(25, 118, 210, 0.2)",
-                whiteSpace: "nowrap"
-              }}
-            >
-              Download Quotation
-            </Button>
+            <Box display="flex" gap={1.5} alignItems="center" flexWrap="wrap">
+              <Button
+                variant="outlined"
+                color="primary"
+                startIcon={showQuotation ? <VisibilityOff /> : <Visibility />}
+                onClick={() => setShowQuotation((prev) => !prev)}
+                sx={{
+                  textTransform: "none",
+                  fontWeight: 600,
+                  px: 2.5,
+                  py: 1,
+                  borderRadius: "8px",
+                  borderColor: "#0284c7",
+                  color: "#0284c7",
+                  bgcolor: "#ffffff",
+                  "&:hover": { bgcolor: "#f0f9ff", borderColor: "#0369a1" },
+                  whiteSpace: "nowrap"
+                }}
+              >
+                {showQuotation ? "Hide Quotation Details" : "Show Quotation Details"}
+              </Button>
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<Download />}
+                onClick={handleDownloadPDF}
+                sx={{
+                  textTransform: "none",
+                  fontWeight: 700,
+                  px: 3,
+                  py: 1,
+                  borderRadius: "8px",
+                  boxShadow: "0 4px 12px rgba(25, 118, 210, 0.2)",
+                  whiteSpace: "nowrap"
+                }}
+              >
+                Download Quotation
+              </Button>
+            </Box>
           </Paper>
         </Box>
       )}
@@ -423,31 +475,42 @@ const AcceptedQuoteTable = ({ customer, applicationId }) => {
       {/* Main Visible Screen */}
       <Box p={2} component={Paper} variant="outlined" sx={{ borderRadius: "12px", border: "1px solid #cbd5e1", mb: 3 }}>
 
-        {/* Visible Quotation Details Table */}
-        {/* <Box sx={{ mb: 4 }}>
-          <Typography sx={{ fontWeight: 600, mb: 1.5 }}>
-            Quotation Details:
-          </Typography>
-          <AcceptedQuotationTable quoteDetails={quoteDetails} />
-        </Box> */}
+        {/* Visible Quotation Details Table Toggle */}
+        {showQuotation && (
+          <Box sx={{ mb: 4 }}>
+            <Typography sx={{ fontWeight: 700, fontSize: "15px", color: "primary.main", mb: 1.5 }}>
+              Quotation Details (Commercial Proposals):
+            </Typography>
+            <AcceptedQuotationTable quoteDetails={quoteDetails} />
+          </Box>
+        )}
 
         {customer?.isQuoteAcceptRO ? (
           <Box display="flex" flexDirection="column" alignItems="center" py={4} gap={2}>
-            <Box
-              sx={{
-                bgcolor: "#dcfce7",
-                color: "#166534",
-                fontWeight: 700,
-                fontSize: "24px",
-                px: 4,
-                py: 1.5,
-                borderRadius: "8px",
-                border: "1px solid #bbf7d0",
-                display: "inline-block",
-                mb: 3
-              }}
-            >
-              Accepted
+            <Box display="flex" alignItems="center" gap={2} mb={2}>
+              <Box
+                sx={{
+                  bgcolor: "#dcfce7",
+                  color: "#166534",
+                  fontWeight: 700,
+                  fontSize: "20px",
+                  px: 4,
+                  py: 1.2,
+                  borderRadius: "8px",
+                  border: "1px solid #bbf7d0",
+                  display: "inline-block"
+                }}
+              >
+                Quotation Accepted
+              </Box>
+              {customer?.customerAcceptanceRequired === false && (
+                <Chip
+                  label="Customer Acceptance Waived"
+                  color="warning"
+                  variant="filled"
+                  sx={{ fontWeight: 600, fontSize: "13px", height: "36px" }}
+                />
+              )}
             </Box>
 
             <Grid container spacing={3}>
@@ -456,7 +519,7 @@ const AcceptedQuoteTable = ({ customer, applicationId }) => {
                   appId={customer?.customerAcceptanceFile}
                   canUpload={false}
                   name="customerAcceptanceFile"
-                  label="Customer Acceptance"
+                  label={customer?.customerAcceptanceRequired === false ? "Customer Acceptance (Waived)" : "Customer Acceptance"}
                   value={customerAcceptanceFile || customer?.customerAcceptanceFile}
                   setFieldValue={setCustomerAcceptanceFile}
                   direct
@@ -477,28 +540,59 @@ const AcceptedQuoteTable = ({ customer, applicationId }) => {
           </Box>
         ) : (
           <>
+            <Box sx={{ mb: 2.5, p: 2, bgcolor: "#f8fafc", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+              <Typography variant="subtitle2" fontWeight={700} color="text.primary" gutterBottom>
+                Acceptance Mode:
+              </Typography>
+              <RadioGroup
+                row
+                value={isWaived ? "waived" : "standard"}
+                onChange={(e) => setIsWaived(e.target.value === "waived")}
+              >
+                <FormControlLabel
+                  value="standard"
+                  control={<Radio size="small" />}
+                  label={<Typography variant="body2">Standard Acceptance (Upload Signed Documents)</Typography>}
+                />
+                <FormControlLabel
+                  value="waived"
+                  control={<Radio size="small" />}
+                  label={
+                    <Typography variant="body2" color="primary.main" fontWeight={600}>
+                      Waive Customer Acceptance (Approved at RO Level)
+                    </Typography>
+                  }
+                />
+              </RadioGroup>
+              {isWaived && (
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
+                  ℹ️ Physical customer acceptance document upload is optional when waived. The workflow will advance directly based on Regional Office approval.
+                </Typography>
+              )}
+            </Box>
+
             <Grid container spacing={2} mb={1}>
               <Grid item xs={12} md={6}>
                 <FileUploadOrView
                   appId={customer?.customerAcceptanceFile}
-                  canUpload={isRO}
+                  canUpload={isRO || isAdmin}
                   name="customerAcceptanceFile"
-                  label="Customer Acceptance"
+                  label={isWaived ? "Customer Acceptance (Optional)" : "Customer Acceptance"}
                   value={customerAcceptanceFile || customer?.customerAcceptanceFile}
                   setFieldValue={setCustomerAcceptanceFile}
-                  required
+                  required={!isWaived}
                   direct
                 />
               </Grid>
               <Grid item xs={12} md={6}>
                 <FileUploadOrView
                   appId={customer?.rhRecommendationFile}
-                  canUpload={isRO}
+                  canUpload={isRO || isAdmin}
                   name="rhRecommendationFile"
-                  label="RH Recommendation"
+                  label={isWaived ? "RH Recommendation (Optional)" : "RH Recommendation"}
                   value={rhRecommendationFile || customer?.rhRecommendationFile}
                   setFieldValue={setRhRecommendationFile}
-                  required
+                  required={!isWaived}
                   direct
                 />
               </Grid>
@@ -521,24 +615,33 @@ const AcceptedQuoteTable = ({ customer, applicationId }) => {
               />
             </Box>
 
-            <Box display="flex" gap={2} justifyContent="flex-end">
-              <Button
-                variant="outlined"
-                color="error"
-                onClick={handleReject}
-                sx={{ px: 4, borderRadius: "8px" }}
-              >
-                Reject Quotation
-              </Button>
-              <Button
-                variant="contained"
-                color="success"
-                onClick={handleAccept}
-                sx={{ px: 4, borderRadius: "8px" }}
-              >
-                Accept Quotation
-              </Button>
-            </Box>
+            {isRejected ? (
+              <Box mt={2}>
+                <Typography variant="body2" sx={{ p: 2, bgcolor: "#fef2f2", color: "#991b1b", fontWeight: 700, borderRadius: "8px", border: "1.5px solid #ef4444" }}>
+                  This application is REJECTED. Quotation acceptance, revisions, and approvals are disabled.
+                  {customer?.reasonOfRejection ? ` (Reason: ${customer.reasonOfRejection})` : ""}
+                </Typography>
+              </Box>
+            ) : (
+              <Box display="flex" gap={2} justifyContent="flex-end" flexWrap="wrap">
+                <Button
+                  variant="outlined"
+                  color="error"
+                  onClick={handleReject}
+                  sx={{ px: 4, borderRadius: "8px", textTransform: "none" }}
+                >
+                  Reject Quotation
+                </Button>
+                <Button
+                  variant="contained"
+                  color="success"
+                  onClick={handleAccept}
+                  sx={{ px: 4, borderRadius: "8px", textTransform: "none" }}
+                >
+                  Accept Quotation
+                </Button>
+              </Box>
+            )}
           </>
         )}
       </Box>

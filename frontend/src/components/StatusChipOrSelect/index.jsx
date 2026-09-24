@@ -40,6 +40,8 @@ const CHIP_CONFIG = {
   reviewquote: { label: "Quote Analysis", color: "#FF5722" },
   quoteaccepted: { label: "Customer Accepted", color: "#388E3C" },
   finalapproval: { label: "Final Approval", color: "#30D158" },
+  negotiation_requested: { label: "Negotiation Requested", color: "#F59E0B" },
+  quoterevised: { label: "Quote Revised", color: "#0284C7" },
 
   // Rejections
   rejectedbyro: { label: "Rejected by RO", color: "#FF3B30" },
@@ -78,6 +80,8 @@ const WORKFLOW_OPTIONS = [
   "quotesubmitted",
 
   "reviewquote",
+  "negotiation_requested",
+  "quoterevised",
   "quoteaccepted",
   "finalapproval",
 

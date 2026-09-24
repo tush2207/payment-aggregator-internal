@@ -16,8 +16,10 @@ from app.database.engine import (
     oracle_engine,
     mssql_engine,
 )
-from app.api.routes import auth, users, aggregators, applications, helpdesk, audit
+from app.api.routes import auth, users, aggregators, applications, helpdesk, audit, annexures, notifications, aggregator_portal, crypto_routes
 from app.middleware.audit_middleware import GlobalAuditMiddleware
+from app.middleware.crypto_middleware import EndToEndCryptoMiddleware
+from app.middleware.security_headers_middleware import BankingSecurityHeadersMiddleware
 
 logger = logging.getLogger(__name__)
 
@@ -35,9 +37,8 @@ if not STATIC_DIR.is_dir() and (BACKEND_DIR / "dist").is_dir():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Initialize database in background thread to avoid blocking server boot
-    t = threading.Thread(target=init_db, daemon=True)
-    t.start()
+    # Initialize database tables and migrations on startup
+    init_db()
     yield
 
 
@@ -62,6 +63,8 @@ origins = [
 ]
 
 app.add_middleware(GlobalAuditMiddleware)
+app.add_middleware(EndToEndCryptoMiddleware)
+app.add_middleware(BankingSecurityHeadersMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -133,6 +136,68 @@ async def health_db():
     }
 
 
+@app.get("/api/system/db-status", tags=["Health"])
+async def system_db_status():
+    from sqlalchemy import inspect
+    from app.core import config
+    from app.database.engine import SessionLocal
+    from app.model.models import (
+        ManageAggregatorInDB,
+        ApplicationsInDB,
+        PaymentAggregatorInDB,
+        ProjectionDetailsInDB,
+        AggregatorAuditLogInDB,
+        ApplicationAuditLogInDB,
+        NotificationInDB,
+        User,
+        FileStoreInDB,
+        HelpDesk
+    )
+    
+    oracle_ok = check_oracle_health()
+    tables_status = {}
+    
+    if oracle_engine:
+        try:
+            inspector = inspect(oracle_engine)
+            existing_tables = inspector.get_table_names()
+            db = SessionLocal() if SessionLocal else None
+            
+            models = {
+                'manage_aggregators': ManageAggregatorInDB,
+                'applications': ApplicationsInDB,
+                'payment_aggregators': PaymentAggregatorInDB,
+                'projection_details': ProjectionDetailsInDB,
+                'aggregator_audit_logs': AggregatorAuditLogInDB,
+                'application_audit_logs': ApplicationAuditLogInDB,
+                'app_notifications': NotificationInDB,
+                'users': User,
+                'files': FileStoreInDB,
+                'helpdesk': HelpDesk,
+            }
+            
+            for t_name, m_cls in models.items():
+                if t_name in existing_tables:
+                    cnt = db.query(m_cls).count() if db else 0
+                    tables_status[t_name] = {"status": "active", "rows": cnt}
+                else:
+                    tables_status[t_name] = {"status": "missing", "rows": 0}
+            
+            if db:
+                db.close()
+        except Exception as e:
+            tables_status["error"] = str(e)
+
+    return {
+        "status": "online" if oracle_ok else "degraded",
+        "devMode": config.DEV_MODE,
+        "databaseType": "SQLite" if config.DEV_MODE else "Oracle",
+        "primaryEngineConnected": oracle_ok,
+        "tablesCount": len([t for t in tables_status.values() if isinstance(t, dict) and t.get("status") == "active"]),
+        "tables": tables_status
+    }
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # INCLUDE API ROUTERS
 # ─────────────────────────────────────────────────────────────────────────────
@@ -142,6 +207,10 @@ app.include_router(aggregators.router)
 app.include_router(applications.router)
 app.include_router(helpdesk.router)
 app.include_router(audit.router)
+app.include_router(annexures.router)
+app.include_router(notifications.router)
+app.include_router(aggregator_portal.router)
+app.include_router(crypto_routes.router)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

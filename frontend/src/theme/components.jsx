@@ -51,11 +51,32 @@ export const getComponentsOverride = () => ({
             root: {
                 textTransform: 'none',
                 fontWeight: 600,
-                borderRadius: '10px',
-                fontSize: '0.85rem',
-                padding: '7px 18px',
-                transition: 'all 0.25s ease',
-                letterSpacing: '0.3px',
+                borderRadius: '6px',
+                fontSize: '12px',
+                minHeight: '30px',
+                padding: '4px 14px',
+                lineHeight: 1.4,
+                transition: 'all 0.2s ease',
+                letterSpacing: '0.2px',
+                boxSizing: 'border-box',
+            },
+            sizeSmall: {
+                padding: '3px 10px',
+                fontSize: '11px',
+                minHeight: '26px',
+                borderRadius: '5px',
+            },
+            sizeMedium: {
+                padding: '4px 14px',
+                fontSize: '12px',
+                minHeight: '30px',
+                borderRadius: '6px',
+            },
+            sizeLarge: {
+                padding: '6px 18px',
+                fontSize: '13px',
+                minHeight: '36px',
+                borderRadius: '6px',
             },
 
             /* ── Contained Primary (Official CBI Blue) ── */
@@ -63,11 +84,11 @@ export const getComponentsOverride = () => ({
                 background: `${NAVY.main} !important`,
                 backgroundColor: `${NAVY.main} !important`,
                 color: '#ffffff !important',
-                boxShadow: `0 4px 14px ${alpha(NAVY.main, 0.25)}`,
+                boxShadow: `0 2px 8px ${alpha(NAVY.main, 0.25)}`,
                 '&:hover': {
                     background: `${NAVY.dark} !important`,
                     backgroundColor: `${NAVY.dark} !important`,
-                    boxShadow: `0 6px 18px ${alpha(NAVY.main, 0.35)}`,
+                    boxShadow: `0 4px 12px ${alpha(NAVY.main, 0.35)}`,
                     transform: 'translateY(-1px)',
                 },
                 '&:active': { transform: 'translateY(0)' },
@@ -84,11 +105,11 @@ export const getComponentsOverride = () => ({
                 background: `${RED.main} !important`,
                 backgroundColor: `${RED.main} !important`,
                 color: '#ffffff !important',
-                boxShadow: `0 4px 18px ${alpha(RED.main, 0.25)}`,
+                boxShadow: `0 2px 8px ${alpha(RED.main, 0.25)}`,
                 '&:hover': {
                     background: `${RED.dark} !important`,
                     backgroundColor: `${RED.dark} !important`,
-                    boxShadow: `0 6px 22px ${alpha(RED.main, 0.35)}`,
+                    boxShadow: `0 4px 14px ${alpha(RED.main, 0.35)}`,
                     transform: 'translateY(-1px)',
                 },
                 '&:active': { transform: 'translateY(0)' },
@@ -348,11 +369,12 @@ export const getComponentsOverride = () => ({
     MuiTableContainer: {
         styleOverrides: {
             root: {
-                borderRadius: '10px 10px 0 0',
-                overflow: 'hidden',
+                borderRadius: '8px',
+                overflow: 'auto',
                 border: '1px solid #cbd5e1',
                 boxShadow: 'none',
                 backgroundColor: '#ffffff',
+                position: 'relative',
             },
         },
     },
@@ -364,29 +386,40 @@ export const getComponentsOverride = () => ({
                 background: GRADIENTS.cbiTable,
                 backgroundColor: NAVY.main,
                 borderBottom: '2px solid #062545',
+                position: 'sticky',
+                top: 0,
+                zIndex: 4,
                 '& tr, & .MuiTableRow-root, & .MuiTableRow-head': {
                     boxShadow: 'none',
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 4,
                 },
                 '& th, & .MuiTableCell-root, & .MuiTableCell-head': {
-                    color: '#ffffff',
-                    padding: '10px 14px',
-                    fontSize: '12px',
+                    color: '#ffffff !important',
+                    padding: '8px 12px',
+                    fontSize: '11.5px',
                     fontWeight: 700,
-                    letterSpacing: '0.4px',
+                    letterSpacing: '0.3px',
                     textTransform: 'uppercase',
                     userSelect: 'none',
                     whiteSpace: 'nowrap',
                     border: '1px solid rgba(255, 255, 255, 0.25)',
                     borderBottom: '2px solid #062545',
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 5,
+                    backgroundColor: NAVY.main,
+                    background: GRADIENTS.cbiTable,
                 },
                 '& tr:first-of-type th:first-of-type': {
-                    borderTopLeftRadius: '9px',
+                    borderTopLeftRadius: '6px',
                 },
                 '& tr:first-of-type th:last-of-type': {
-                    borderTopRightRadius: '9px',
+                    borderTopRightRadius: '6px',
                 },
                 '& th *, & .MuiTableCell-root *, & .MuiTableCell-head *': {
-                    color: '#ffffff',
+                    color: '#ffffff !important',
                 },
             },
         },
@@ -413,6 +446,9 @@ export const getComponentsOverride = () => ({
             head: {
                 background: 'transparent !important',
                 backgroundColor: 'transparent !important',
+                position: 'sticky',
+                top: 0,
+                zIndex: 4,
                 '&:hover': {
                     background: 'transparent !important',
                     backgroundColor: 'transparent !important',
@@ -425,19 +461,32 @@ export const getComponentsOverride = () => ({
     MuiTableCell: {
         styleOverrides: {
             root: {
-                padding: '10px 14px',
-                fontSize: '12.5px',
+                padding: '8px 12px',
+                fontSize: '11.5px',
                 border: '1px solid #cbd5e1',
                 color: GREY[800],
             },
             head: {
                 fontWeight: 700,
-                color: '#ffffff',
+                color: '#ffffff !important',
                 border: '1px solid rgba(255, 255, 255, 0.25)',
                 borderBottom: '2px solid #062545',
                 textTransform: 'uppercase',
-                fontSize: '12px',
-                letterSpacing: '0.4px',
+                fontSize: '11.5px',
+                letterSpacing: '0.3px',
+                position: 'sticky',
+                top: 0,
+                zIndex: 5,
+                backgroundColor: `${NAVY.main} !important`,
+                background: `${GRADIENTS.cbiTable} !important`,
+            },
+            stickyHeader: {
+                backgroundColor: `${NAVY.main} !important`,
+                background: `${GRADIENTS.cbiTable} !important`,
+                color: '#ffffff !important',
+                zIndex: 5,
+                top: 0,
+                position: 'sticky',
             },
         },
     },
@@ -674,6 +723,10 @@ export const getComponentsOverride = () => ({
 
     /* ── Tooltip ── */
     MuiTooltip: {
+        defaultProps: {
+            placement: 'top',
+            arrow: true,
+        },
         styleOverrides: {
             tooltip: {
                 background: NAVY.dark,
