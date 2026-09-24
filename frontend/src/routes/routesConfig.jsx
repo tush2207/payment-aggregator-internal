@@ -1,4 +1,4 @@
-import { lazy } from 'react';
+import { lazyWithRetry } from '&src/utils/lazyWithRetry';
 
 //-------------------------------APPLICATION_ROUTES_URLS-------------------------------//
 
@@ -10,6 +10,7 @@ const APPLICATION_ROUTES_URLS = {
   MANAGE_AGGREGRATOR: '/manage-aggregrator',
   HELP_DESK: '/helpdesk',
   ANNEXURES: '/annexures',
+  QA_DASHBOARD: '/qa-dashboard',
   TEST_FLOW: '/test-flow',
   SERVICE_DOWN: '/service-down',
   MAINTENANCE: '/maintenance',
@@ -20,20 +21,21 @@ const APPLICATION_ROUTES_URLS = {
 
 //-------------------------------LAZY IMPORTS-------------------------------//
 
-const Login = lazy(() => import('&src/pages/Login'));
-const Dashboard = lazy(() => import('&src/pages/Dashboard'));
-const Applications = lazy(() => import('&src/pages/Applications'));
-const ManageAggregator = lazy(() => import('&src/pages/ManageAggregator'));
-const AggregratorDashboard = lazy(() => import('&src/pages/AggregratorDashboard'));
-const HelpDesk = lazy(() => import('&src/pages/HelpDesk'));
-const Annexures = lazy(() => import('&src/pages/Annexures'));
-const TestApplicationFlow = lazy(() => import('&src/pages/TestApplicationFlow'));
+const Login = lazyWithRetry(() => import('&src/pages/Login'), 'Login');
+const Dashboard = lazyWithRetry(() => import('&src/pages/Dashboard'), 'Dashboard');
+const Applications = lazyWithRetry(() => import('&src/pages/Applications'), 'Applications');
+const ManageAggregator = lazyWithRetry(() => import('&src/pages/ManageAggregator'), 'ManageAggregator');
+const AggregratorDashboard = lazyWithRetry(() => import('&src/pages/AggregratorDashboard'), 'AggregratorDashboard');
+const HelpDesk = lazyWithRetry(() => import('&src/pages/HelpDesk'), 'HelpDesk');
+const Annexures = lazyWithRetry(() => import('&src/pages/Annexures'), 'Annexures');
+const QADashboard = lazyWithRetry(() => import('&src/pages/QADashboard'), 'QADashboard');
+const TestApplicationFlow = lazyWithRetry(() => import('&src/pages/TestApplicationFlow'), 'TestApplicationFlow');
 
 // Error & Status Pages
-const ServiceDown = lazy(() => import('&src/pages/Errors/ServiceDown'));
-const NotFound = lazy(() => import('&src/pages/Errors/NotFound'));
-const AccessDenied = lazy(() => import('&src/pages/Errors/AccessDenied'));
-const ServerError = lazy(() => import('&src/pages/Errors/ServerError'));
+const ServiceDown = lazyWithRetry(() => import('&src/pages/Errors/ServiceDown'), 'ServiceDown');
+const NotFound = lazyWithRetry(() => import('&src/pages/Errors/NotFound'), 'NotFound');
+const AccessDenied = lazyWithRetry(() => import('&src/pages/Errors/AccessDenied'), 'AccessDenied');
+const ServerError = lazyWithRetry(() => import('&src/pages/Errors/ServerError'), 'ServerError');
 
 //-------------------------------PUBLIC / ERROR ROUTES-------------------------------//
 
@@ -76,6 +78,11 @@ const DEFAULT_ROUTES = [
   ...PUBLIC_ERROR_ROUTES,
 ];
 
+// Check if running in development mode
+const IS_DEV =
+  import.meta.env.VITE_DEV_MODE === 'true' ||
+  (import.meta.env.DEV && import.meta.env.VITE_DEV_MODE !== 'false');
+
 //-------------------------------PROTECTED ROUTES-------------------------------//
 
 const PROTECTED_ROUTES = [
@@ -110,11 +117,21 @@ const PROTECTED_ROUTES = [
     path: APPLICATION_ROUTES_URLS.ANNEXURES,
     element: <Annexures />,
   },
-  {
-    pageTitle: 'Test Application Flow | Payment Aggregator Portal',
-    path: APPLICATION_ROUTES_URLS.TEST_FLOW,
-    element: <TestApplicationFlow />,
-  },
+  // 🔬 Dev-Only QA & TDD Routes (Automatically excluded in production builds)
+  ...(IS_DEV
+    ? [
+        {
+          pageTitle: 'QA & TDD Test Lab | Payment Aggregator Portal',
+          path: APPLICATION_ROUTES_URLS.QA_DASHBOARD,
+          element: <QADashboard />,
+        },
+        {
+          pageTitle: 'Workflow Simulator | Payment Aggregator Portal',
+          path: APPLICATION_ROUTES_URLS.TEST_FLOW,
+          element: <TestApplicationFlow />,
+        },
+      ]
+    : []),
   ...PUBLIC_ERROR_ROUTES,
 ];
 

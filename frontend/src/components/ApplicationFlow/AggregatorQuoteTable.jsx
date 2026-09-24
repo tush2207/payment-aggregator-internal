@@ -39,7 +39,7 @@ import {
   getProjectionsForCustomer,
   getChannelOrder
 } from "&src/utils/calculation";
-import { sortAggregatorsByQuote } from "&src/utils";
+import { sortAggregatorsByQuote, isUserAdmin } from "&src/utils";
 
 import DatePicker from "&src/components/DatePicker";
 import DialogWithHeader from "&src/components/Dialog/DialogWithHeader";
@@ -111,12 +111,20 @@ const AggregatorQuoteTable = ({ customerDetails }) => {
   const [emailManagerPhone, setEmailManagerPhone] = useState("022-49197333");
   const [emailCustomNotes, setEmailCustomNotes] = useState("");
 
+  const userDetails = useMemo(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem("userDetails") || "{}");
+    } catch {
+      return {};
+    }
+  }, []);
+  const isAdmin = isUserAdmin(userDetails);
   const currentUserId =
     sessionStorage.getItem("userId") ||
     sessionStorage.getItem("user_id") ||
-    JSON.parse(sessionStorage.getItem("userDetails") || "{}").employeeId ||
-    JSON.parse(sessionStorage.getItem("userDetails") || "{}").pfNumber;
-  const isReadOnlyUser = String(currentUserId) === "115019";
+    userDetails.employeeId ||
+    userDetails.pfNumber;
+  const isReadOnlyUser = String(currentUserId) === "115019" || !isAdmin;
   const isRejected =
     customerDetails?.status?.toLowerCase()?.includes("reject") ||
     Boolean(customerDetails?.reasonOfRejection) ||
@@ -995,42 +1003,46 @@ const AggregatorQuoteTable = ({ customerDetails }) => {
             mb={2}
           >
             <Typography variant="h6" fontWeight="bold">
-              Add Aggregator for Quote
-              <Button
-                variant="outlined"
-                className="ml-2"
-                startIcon={<Add />}
-                onClick={() => setOpenAddModal(true)}
-                sx={{ ml: 2, textTransform: "none", fontWeight: 700 }}
-              >
-                Add New Aggregator
-              </Button>
+              Payment Aggregators for Quote
+              {!isReadOnlyUser && (
+                <Button
+                  variant="outlined"
+                  className="ml-2"
+                  startIcon={<Add />}
+                  onClick={() => setOpenAddModal(true)}
+                  sx={{ ml: 2, textTransform: "none", fontWeight: 700 }}
+                >
+                  Add New Aggregator
+                </Button>
+              )}
             </Typography>
 
-            <Stack direction="row" spacing={2} alignItems="center">
-              <DatePicker disablePast value={endDate} onChange={setEndDate} />
-              <Tooltip
-                title="Choose the desired end date for quotation submission"
-                arrow
-                placement="top"
-              >
-                <IconButton size="small">
-                  <InfoOutlined color="primary" />
-                </IconButton>
-              </Tooltip>
-              <Button
-                variant="contained"
-                endIcon={<Send />}
-                onClick={handleOpenQuotePreview}
-                sx={{ textTransform: "none", fontWeight: 700 }}
-              >
-                Send for Quote
-              </Button>
-            </Stack>
+            {!isReadOnlyUser && (
+              <Stack direction="row" spacing={2} alignItems="center">
+                <DatePicker disablePast value={endDate} onChange={setEndDate} />
+                <Tooltip
+                  title="Choose the desired end date for quotation submission"
+                  arrow
+                  placement="top"
+                >
+                  <IconButton size="small">
+                    <InfoOutlined color="primary" />
+                  </IconButton>
+                </Tooltip>
+                <Button
+                  variant="contained"
+                  endIcon={<Send />}
+                  onClick={handleOpenQuotePreview}
+                  sx={{ textTransform: "none", fontWeight: 700 }}
+                >
+                  Send for Quote
+                </Button>
+              </Stack>
+            )}
           </Box>
 
           <DataGrid
-            checkboxSelection
+            checkboxSelection={!isReadOnlyUser}
             columns={MANAGE_AGGREGATOR_TABLE_COLUMNS}
             rows={aggregatorDetails || []}
             getRowId={(row) => row.aggregatorId}

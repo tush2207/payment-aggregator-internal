@@ -791,11 +791,6 @@ export default function ApplicationFlowTable({
 
                           {/* Role-based action buttons */}
                           {(() => {
-                            // Non-admin CO users have strict View-Only access
-                            if (userRole === 'CO' && !isAdmin) {
-                              return null;
-                            }
-
                             const isRejected = customer?.status?.toLowerCase()?.includes('reject') || Boolean(customer?.reasonOfRejection);
                             const isCOApproved = Boolean(customer?.isReviewByCO);
                             const roApproved = customer?.isReviewByRO === true;
@@ -841,7 +836,7 @@ export default function ApplicationFlowTable({
                             if (!isCOApproved) {
                               const canROVerify = userRole === 'RO' && !roApproved;
                               const canZOVerify = userRole === 'ZO' && roApproved && !zoApproved;
-                              const canCOVerify = isAdmin && roApproved && zoApproved;
+                              const canCOVerify = (userRole === 'CO' || isAdmin) && roApproved && zoApproved;
 
                               if (canROVerify) {
                                 return (
@@ -878,29 +873,31 @@ export default function ApplicationFlowTable({
                               if (canCOVerify) {
                                 return (
                                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                    <Tooltip title="Verify and review application details as Central Office" arrow placement="top">
+                                    <Tooltip title={isAdmin ? "Verify and review application details as Central Office" : "View Application Details (Inspection Mode)"} arrow placement="top">
                                       <Button
                                         size="small"
                                         sx={{ height: "28px", textTransform: "none", fontSize: "11px", fontWeight: 700, px: 1.4, whiteSpace: "nowrap", borderRadius: "6px" }}
                                         variant="contained"
                                         color="primary"
-                                        onClick={() => onVerify ? onVerify(customer) : (onView && onView(customer))}
+                                        onClick={() => (isAdmin && onVerify) ? onVerify(customer) : (onView ? onView(customer) : dispatch(openWorkflowDialog(customer)))}
                                       >
                                         Verify (CO)
                                       </Button>
                                     </Tooltip>
-                                    <Tooltip title="Reject application" arrow placement="top">
-                                      <Button
-                                        size="small"
-                                        variant="outlined"
-                                        color="error"
-                                        startIcon={<CancelOutlined sx={{ fontSize: 14 }} />}
-                                        sx={{ height: "28px", textTransform: "none", fontSize: "11px", fontWeight: 600, px: 1, whiteSpace: "nowrap", borderRadius: "6px" }}
-                                        onClick={() => handleOpenRejectModal(customer)}
-                                      >
-                                        Reject
-                                      </Button>
-                                    </Tooltip>
+                                    {isAdmin && (
+                                      <Tooltip title="Reject application" arrow placement="top">
+                                        <Button
+                                          size="small"
+                                          variant="outlined"
+                                          color="error"
+                                          startIcon={<CancelOutlined sx={{ fontSize: 14 }} />}
+                                          sx={{ height: "28px", textTransform: "none", fontSize: "11px", fontWeight: 600, px: 1, whiteSpace: "nowrap", borderRadius: "6px" }}
+                                          onClick={() => handleOpenRejectModal(customer)}
+                                        >
+                                          Reject
+                                        </Button>
+                                      </Tooltip>
+                                    )}
                                   </Box>
                                 );
                               }
@@ -926,11 +923,9 @@ export default function ApplicationFlowTable({
                               );
                             }
 
-                            if (isAdmin) {
-                              const showQuoteEvaluationBtn = customer?.isQuoteAddedPA === true && customer?.isMarkUpAddedCO === true && !customer?.isQuoteAcceptRO && !customer?.isFinalApproved;
+                            if (userRole === 'CO' || isAdmin) {
                               const showCostBenefitBtn = customer?.isFinalApproved === true;
-                              const showDownloadPOBtn = customer?.isFinalApproved === true;
-                              const canCOReject = customer?.status !== 'rejected' && !customer?.isFinalApproved;
+                              const canCOReject = isAdmin && customer?.status !== 'rejected' && !customer?.isFinalApproved;
 
                               return (
                                 <>

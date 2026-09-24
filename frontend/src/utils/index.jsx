@@ -216,39 +216,7 @@ export const encodeBase64 = (data) => {
 };
 
 // RBI & Admin Permissions Config
-export const ADMIN_USERS = ['139822', '115019', 'CE25000014', '138922'];
-
-export const isUserAdmin = (userDetails) => {
-  let user = userDetails;
-  if (!user) {
-    try {
-      const stored = sessionStorage.getItem('userDetails');
-      if (stored) user = JSON.parse(stored);
-    } catch {
-      user = null;
-    }
-  }
-  const currentUserId = String(
-    user?.pfId ||
-    user?.EmployeeId ||
-    user?.employeeId ||
-    user?.pfNumber ||
-    sessionStorage.getItem('userId') ||
-    ''
-  ).trim();
-
-  const userRole = String(
-    user?.role ||
-    user?.LocationType ||
-    sessionStorage.getItem('role') ||
-    ''
-  ).toUpperCase().trim();
-
-  if (user?.isAdmin === true) return true;
-  if (ADMIN_USERS.includes(currentUserId)) return true;
-  if (userRole === 'ADMIN') return true;
-  return false;
-};
+export { ADMIN_USERS, isUserAdmin } from './auth';
 
 export { maskPAN, maskBankAccount, maskMobile, maskEmail } from './masking';
 

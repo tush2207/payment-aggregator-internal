@@ -111,10 +111,10 @@ export default function ApplicationFlowDialog() {
   if (!application) return null;
 
   const currentUserId = sessionStorage.getItem('userId') || sessionStorage.getItem('user_id') || (JSON.parse(sessionStorage.getItem('userDetails') || '{}')).employeeId || (JSON.parse(sessionStorage.getItem('userDetails') || '{}')).pfNumber;
-  const isReadOnlyUser = String(currentUserId) === '115019';
+  const isReadOnlyUser = String(currentUserId) === '115019' || !isAdmin;
   const isRejected = application.status?.toLowerCase()?.includes('reject') || Boolean(application.reasonOfRejection) || Boolean(application.rejectedDate);
 
-  const canCOReject = isAdmin && isCO && !isRejected && !application.isFinalApproved && !isReadOnlyUser;
+  const canCOReject = isAdmin && isCO && !isRejected && !application.isFinalApproved;
 
   return (
     <>
@@ -181,7 +181,7 @@ export default function ApplicationFlowDialog() {
 
         {/* Main Content Area - Full Width without bulky bounding box */}
         <Container maxWidth={false} sx={{ mt: 1.5, mb: 10, pb: 4, px: { xs: 1, sm: 2 } }}>
-          {/* View-Only Mode Banner for PF ID 115019 */}
+          {/* View-Only Mode Banner */}
           {isReadOnlyUser && (
             <Paper
               elevation={0}
@@ -197,7 +197,7 @@ export default function ApplicationFlowDialog() {
               }}
             >
               <Typography variant="body2" color="#1d4ed8" fontWeight={700}>
-                ℹ️ Strict View-Only Access Active (PF ID: 115019) &bull; You are in inspection/audit mode. All editing, approvals, rejections, and workflow modifications are disabled. Viewing and document downloads remain active.
+                ℹ️ View-Only Mode Active &bull; You are reviewing this application in read-only inspection mode. All 5 workflow stages, aggregator quotes, CBA comparisons, and document downloads remain active while update/approval controls are restricted to Central Office Admin.
               </Typography>
             </Paper>
           )}

@@ -42,7 +42,6 @@ import {
   MailRounded,
   LockOpenOutlined,
   KeyRounded,
-  HistoryRounded,
   Visibility,
 } from '@mui/icons-material';
 
@@ -55,12 +54,11 @@ import useStatusWiseAlert from '&src/components/ToastNotifications/useStatusWise
 import useAggregatorDetails from '&src/hooks/useAggregatorDetails';
 import useToggle from '&src/hooks/useToggle';
 import ManageAggregatorForm from '&src/modules/ManageAggregrator/ManageAggregatorForm';
-import AggregatorAuditDialog from '&src/modules/ManageAggregrator/AggregatorAuditDialog';
 import manageAggregatorServices from '&src/services/manageAggregator';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import StatusChipOrSelect from '&src/components/StatusChipOrSelect';
-import { isUserAdmin, maskEmail, maskMobile } from '&src/utils';
+import { isUserAdmin } from '&src/utils';
 
 const ManageAggregator = () => {
   const theme = useTheme();
@@ -73,8 +71,6 @@ const ManageAggregator = () => {
   const [aggregatorData, setAggregatorData] = useState(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [selectedKpiFilter, setSelectedKpiFilter] = useState('ALL');
-  const [auditDialogOpen, setAuditDialogOpen] = useState(false);
-  const [selectedAggregatorForAudit, setSelectedAggregatorForAudit] = useState(null);
 
   const { isLoading: showLoader, aggregatorDetails, fetchAllAggregators } = useAggregatorDetails();
 
@@ -476,30 +472,6 @@ const ManageAggregator = () => {
             }}
           />
 
-          <Tooltip title="View complete system-wide Aggregator Audit Trail" arrow>
-            <Button
-              size="small"
-              variant="outlined"
-              color="primary"
-              startIcon={<HistoryRounded />}
-              onClick={() => {
-                setSelectedAggregatorForAudit(null);
-                setAuditDialogOpen(true);
-              }}
-              sx={{
-                textTransform: 'none',
-                fontWeight: 700,
-                fontSize: '0.82rem',
-                borderRadius: '8px',
-                px: 2,
-                borderColor: '#004990',
-                color: '#004990',
-              }}
-            >
-              Audit Trail
-            </Button>
-          </Tooltip>
-
           <Tooltip title="Export all aggregators as Excel spreadsheet" arrow>
             <Button
               size="small"
@@ -580,17 +552,17 @@ const ManageAggregator = () => {
 
                     <TableCell sx={{ fontSize: '12.5px' }}>
                       <Typography variant="body2" sx={{ fontSize: '12.5px', color: 'text.primary', fontWeight: 600 }}>
-                        {isAdmin ? (row.email || 'N/A') : (maskEmail(row.email) || 'N/A')}
+                        {row.email || 'N/A'}
                       </Typography>
                       {row.alternateEmail && row.alternateEmail !== '-' && row.alternateEmail.trim() !== '' && (
                         <Typography variant="caption" sx={{ fontSize: '11px', color: 'text.secondary', display: 'block', mt: 0.2 }}>
-                          Alt: {isAdmin ? row.alternateEmail : maskEmail(row.alternateEmail)}
+                          Alt: {row.alternateEmail}
                         </Typography>
                       )}
                     </TableCell>
 
                     <TableCell sx={{ fontSize: '12.5px', color: 'text.secondary', whiteSpace: 'nowrap' }}>
-                      {isAdmin ? (row.mobileNo || 'N/A') : (maskMobile(row.mobileNo) || 'N/A')}
+                      {row.mobileNo || 'N/A'}
                     </TableCell>
 
                     <TableCell align="center">
@@ -789,13 +761,6 @@ const ManageAggregator = () => {
         onConfirm={handleDelete}
         title="Delete Aggregator"
         message={`Are you sure you want to delete "${aggregatorData?.aggregatorName}"? This action cannot be undone.`}
-      />
-
-      {/* ── Aggregator Audit Trail Dialog ── */}
-      <AggregatorAuditDialog
-        open={auditDialogOpen}
-        onClose={() => setAuditDialogOpen(false)}
-        aggregator={selectedAggregatorForAudit}
       />
     </Box>
   );

@@ -53,6 +53,7 @@ import {
 } from "@mui/icons-material";
 import useStatusWiseAlert from "&src/components/ToastNotifications/useStatusWiseAlert";
 import useApplicationForm from "&src/hooks/useApplicationForm";
+import { isUserAdmin } from "&src/utils";
 
 const PROJECTION_PRESETS = [
   "Corporate Net Banking",
@@ -107,18 +108,38 @@ const ApplicationForm = ({ updateDetails, handleClose, formClosed, fetchAllAppli
     setConsentChecked,
   } = useApplicationForm({ updateDetails, handleClose, formClosed, fetchAllApplications });
 
-  const { values, errors, touched, handleChange, handleBlur, handleSubmit, setFieldValue, resetForm, setFieldTouched } = formik;
-  const currentRole = sessionStorage.getItem('role') || user_role || 'CO';
+  const {
+    values,
+    errors,
+    touched,
+    handleChange,
+    handleBlur,
+    handleSubmit,
+    setFieldValue,
+    resetForm,
+    setFieldTouched,
+  } = formik;
+
+  const userDetails = React.useMemo(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem('userDetails') || '{}');
+    } catch {
+      return {};
+    }
+  }, []);
+  const isAdmin = isUserAdmin(userDetails);
+  const currentRole = (sessionStorage.getItem('role') || userDetails?.role || userDetails?.LocationType || 'CO').toUpperCase();
   const isBO = currentRole === 'BO';
   const isRO = currentRole === 'RO';
   const isZO = currentRole === 'ZO';
   const isCO = currentRole === 'CO' || currentRole === 'ADMIN';
+  const isCOViewOnly = isCO && !isAdmin;
 
   const approvedByCO = Boolean(updateDetails?.isReviewByCO);
   const isExistingApp = Boolean(updateDetails?.applicationId || values?.applicationId);
-  const isAdminViewMode = currentRole === 'ADMIN' || sessionStorage.getItem('adminViewMode') === 'true';
+  const isAdminViewMode = currentRole === 'ADMIN' || sessionStorage.getItem('adminViewMode') === 'true' || isCOViewOnly;
 
-  // Disabled when reviewing an existing application for audit/higher tiers or when already approved by CO
+  // Disabled when reviewing an existing application for audit/higher tiers, view mode, or when already approved by CO
   const disabled = isAdminViewMode || (isExistingApp && isBO && Boolean(updateDetails?.isApplicationSubmittedBR)) || Boolean(approvedByCO);
 
   // ── Dynamic Projections Options State ──
@@ -687,6 +708,16 @@ const ApplicationForm = ({ updateDetails, handleClose, formClosed, fetchAllAppli
                 }
                 // When roApproved is true, CO can directly approve (ZO is optional)!
               }
+            }
+
+            if (isCOViewOnly) {
+              return (
+                <Grid item xs={12}>
+                  <Alert severity="info" sx={{ borderRadius: "8px", bgcolor: "#eff6ff", color: "#1e40af", border: "1px solid #bfdbfe", py: 0.8 }}>
+                    ℹ️ <strong>View-Only Inspection Mode:</strong> You are reviewing this application in read-only mode. Approval, rejection, and submission actions are restricted to Central Office Admin (139822).
+                  </Alert>
+                </Grid>
+              );
             }
 
             // Case 3: Action Buttons (Submit for new application, Approve/Reject for reviewers)

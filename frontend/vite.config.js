@@ -162,11 +162,31 @@ export default defineConfig(({ mode }) => {
         '@mui/system',
         '@mui/material',
         '@mui/icons-material',
+        '@mui/x-data-grid',
+        '@mui/x-date-pickers',
+        '@reduxjs/toolkit',
+        'react',
+        'react-dom',
+        'react-redux',
+        'react-router-dom',
+        'axios',
+        'dayjs',
+        'formik',
+        'yup',
+        'file-saver',
+        'xlsx',
       ],
     },
 
     esbuild: {
       drop: isProd ? ['console', 'debugger'] : [],
+    },
+
+    test: {
+      globals: true,
+      environment: 'jsdom',
+      setupFiles: './src/test/setup.js',
+      include: ['src/**/*.{test,spec}.{js,jsx}'],
     },
 
     define: {

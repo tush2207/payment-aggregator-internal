@@ -4,7 +4,6 @@ import { user_role } from '&src/constants/PaymentAggregratorConstant';
 import ProtectedLayout from '&src/containers/Layout/ProtectedLayout';
 import PageErrorBoundary from '&src/containers/PageErrorBoundary';
 import NetworkStatusBanner from '&src/components/common/NetworkStatusBanner';
-import NotFound from '&src/pages/Errors/NotFound';
 import { getCookie } from '&src/utils/cookies';
 import { Helmet } from 'react-helmet';
 import { Navigate, Route, Routes } from 'react-router-dom';
@@ -76,14 +75,7 @@ const ProtectedRoutes = ({ userRole }) => {
       />
       <Route
         path="*"
-        element={
-          <PageErrorBoundary pageName="404 Not Found">
-            <Helmet>
-              <title>404 - Page Not Found | Payment Aggregator Portal</title>
-            </Helmet>
-            <NotFound />
-          </PageErrorBoundary>
-        }
+        element={<Navigate to={APPLICATION_ROUTES_URLS.NOT_FOUND} replace />}
       />
     </Routes>
   );

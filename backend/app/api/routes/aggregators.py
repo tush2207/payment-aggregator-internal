@@ -115,24 +115,20 @@ def mask_phone_str(phone: Optional[Any]) -> Optional[str]:
 
 
 def serialize_aggregator(agg: ManageAggregatorInDB, is_admin: bool = False) -> dict:
-    """Serializes aggregator model with conditional masking for non-admin callers."""
-    email_val = agg.email if is_admin else mask_email_str(agg.email)
-    alt_email_val = agg.alternateEmail if is_admin else mask_email_str(agg.alternateEmail)
-    mobile_val = agg.mobileNo if is_admin else mask_phone_str(agg.mobileNo)
-    
+    """Serializes aggregator model with plain unmasked contact information."""
     return {
         "aggregatorId": agg.aggregatorId,
         "aggregatorName": agg.aggregatorName,
         "contactPersonName": agg.contactPersonName,
-        "email": email_val,
-        "alternateEmail": alt_email_val,
-        "mobileNo": mobile_val,
+        "email": agg.email,
+        "alternateEmail": agg.alternateEmail,
+        "mobileNo": agg.mobileNo,
         "location": agg.location,
         "services": agg.services,
         "status": getattr(agg, "status", "active") or "active",
         "isDeleted": agg.isDeleted,
         "created_at": agg.created_at.isoformat() if getattr(agg, "created_at", None) else None,
-        "isMasked": not is_admin
+        "isMasked": False
     }
 
 

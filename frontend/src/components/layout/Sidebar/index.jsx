@@ -22,6 +22,7 @@ import {
   StoreRounded,
   HomeWorkRounded,
   AccountBalanceRounded,
+  BugReportRounded,
 } from '@mui/icons-material';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { user_role, ROLE_NAV_ACCESS } from '&src/constants/PaymentAggregratorConstant';
@@ -74,14 +75,33 @@ const Sidebar = ({ open }) => {
       ? `Branch ${userDetails.branchId}`
       : '');
 
+  // Check if running in development mode
+  const IS_DEV =
+    import.meta.env.VITE_DEV_MODE === 'true' ||
+    (import.meta.env.DEV && import.meta.env.VITE_DEV_MODE !== 'false');
+
   // Retrieve navigation items based on current role from constants
-  const visibleItems =
+  const baseItems =
     ROLE_NAV_ACCESS[role] ||
     ROLE_NAV_ACCESS.CO || [
       { label: 'Dashboard', icon: <DashboardRounded />, path: APPLICATION_ROUTES_URLS.DASHBOARD },
       { label: 'Help Desk', icon: <HelpCenterRounded />, path: APPLICATION_ROUTES_URLS.HELP_DESK },
       { label: 'Annexures', icon: <DescriptionRounded />, path: APPLICATION_ROUTES_URLS.ANNEXURES },
     ];
+
+  // Dynamically attach QA Lab in development mode only
+  const visibleItems = [
+    ...baseItems,
+    ...(IS_DEV
+      ? [
+          {
+            label: 'QA & TDD Lab',
+            icon: <BugReportRounded />,
+            path: APPLICATION_ROUTES_URLS.QA_DASHBOARD,
+          },
+        ]
+      : []),
+  ];
 
   return (
     <Drawer

@@ -19,6 +19,7 @@ import {
   selectUserRole,
 } from "&src/store/applicationFlowSlice";
 import applicationServices from "&src/services/applications";
+import { isUserAdmin } from "&src/utils";
 
 // Reusable child components
 import ProjectDetailsTable from "./ProjectDetailsTable";
@@ -120,18 +121,23 @@ export default function WorkflowTabs() {
   };
 
   const stepHeader = getStepHeader();
-  const currentUserId = sessionStorage.getItem('userId') || sessionStorage.getItem('user_id') || (JSON.parse(sessionStorage.getItem('userDetails') || '{}')).employeeId || (JSON.parse(sessionStorage.getItem('userDetails') || '{}')).pfNumber;
-  const isReadOnlyUser = String(currentUserId) === '115019';
+  const userDetails = React.useMemo(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem('userDetails') || '{}');
+    } catch {
+      return {};
+    }
+  }, []);
+  const isAdmin = isUserAdmin(userDetails);
+  const currentUserId = sessionStorage.getItem('userId') || sessionStorage.getItem('user_id') || userDetails.employeeId || userDetails.pfNumber;
+  const isReadOnlyUser = String(currentUserId) === '115019' || !isAdmin;
   const isRejected = selectedApplication?.status?.toLowerCase()?.includes('reject') || Boolean(selectedApplication?.reasonOfRejection) || Boolean(selectedApplication?.rejectedDate);
 
   const canEdit =
     !isRejected &&
     !isReadOnlyUser &&
-    currentStep < 5 &&
-    (userRole === "CO" ||
-      userRole === "ADMIN" ||
-      userRole === stepHeader.role ||
-      (currentStep === 3 && (userRole === "RO" || userRole === "CO" || userRole === "ADMIN")));
+    isAdmin &&
+    currentStep < 5;
 
   return (
     <Box sx={{ width: "100%" }}>
