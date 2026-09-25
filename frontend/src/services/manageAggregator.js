@@ -2,7 +2,7 @@ import ApiUrls from "./apiUrls";
 import { deleteMethod, getMethod, postMethod, putMethod } from "./axiosConfig";
 
 const manageAggregatorServices = {
-  // 🔹 Get all aggregators
+  //  Get all aggregators
   getAllAggregators: async (config) => {
     try {
       return await getMethod(ApiUrls.GET_ALL_AGGREGATORS, config);
@@ -12,7 +12,7 @@ const manageAggregatorServices = {
     }
   },
 
-  // 🔹 Get aggregator by ID
+  //  Get aggregator by ID
   getAggregatorById: async (aggregatorId, config) => {
     try {
       return await getMethod(ApiUrls.GET_AGGREGATOR_BY_ID(aggregatorId), config);
@@ -22,7 +22,7 @@ const manageAggregatorServices = {
     }
   },
 
-  // 🔹 Add aggregator
+  //  Add aggregator
   addAggregator: async (data, config) => {
     try {
       return await postMethod(ApiUrls.ADD_AGGREGATOR, data, config);
@@ -32,7 +32,7 @@ const manageAggregatorServices = {
     }
   },
 
-  // 🔹 Update aggregator
+  //  Update aggregator
   updateAggregator: async (aggregatorId, data, config) => {
     try {
       return await putMethod(ApiUrls.UPDATE_AGGREGATOR(aggregatorId), data, config);
@@ -42,7 +42,7 @@ const manageAggregatorServices = {
     }
   },
 
-  // 🔹 Delete aggregator
+  //  Delete aggregator
   deleteAggregator: async (aggregatorId, config) => {
     try {
       return await deleteMethod(ApiUrls.DELETE_AGGREGATOR(aggregatorId), config);
@@ -52,7 +52,7 @@ const manageAggregatorServices = {
     }
   },
 
-  // 🔹 Reset & Resend Aggregator Login Credentials
+  //  Reset & Resend Aggregator Login Credentials
   resetCredentials: async (aggregatorId, config) => {
     try {
       return await postMethod(ApiUrls.RESET_AGGREGATOR_CREDENTIALS(aggregatorId), {}, config);
@@ -62,7 +62,7 @@ const manageAggregatorServices = {
     }
   },
 
-  // 🔹 Get All Aggregator Audit Logs
+  //  Get All Aggregator Audit Logs
   getAggregatorAuditLogs: async (params, config) => {
     try {
       const queryString = params ? new URLSearchParams(params).toString() : '';
@@ -73,7 +73,7 @@ const manageAggregatorServices = {
     }
   },
 
-  // 🔹 Get Single Aggregator Audit Logs
+  //  Get Single Aggregator Audit Logs
   getSingleAggregatorAuditLogs: async (aggregatorId, config) => {
     try {
       return await getMethod(ApiUrls.GET_SINGLE_AGGREGATOR_AUDIT_LOGS(aggregatorId), config);
@@ -83,7 +83,7 @@ const manageAggregatorServices = {
     }
   },
 
-  // 🔹 Test Email Dispatch
+  //  Test Email Dispatch
   testEmail: async (data, config) => {
     try {
       return await postMethod(ApiUrls.TEST_EMAIL, data, config);

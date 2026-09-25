@@ -2,7 +2,7 @@ import ApiUrls from "./apiUrls";
 import { getMethod, postMethod, putMethod, deleteMethod } from "./axiosConfig";
 
 const HelpdeskServices = {
-  // 🔹 Get all Helpdesks
+  //  Get all Helpdesks
   getAllHelpdesks: async (config) => {
     try {
       return await getMethod(ApiUrls.GET_ALL_HELPDESKS, config);
@@ -12,7 +12,7 @@ const HelpdeskServices = {
     }
   },
 
-  // 🔹 Get Helpdesk by ID
+  //  Get Helpdesk by ID
   getHelpdeskById: async (ticketId, config) => {
     try {
       return await getMethod(ApiUrls.GET_HELPDESK_BY_ID(ticketId), config);
@@ -22,7 +22,7 @@ const HelpdeskServices = {
     }
   },
 
-  // 🔹 Add new Helpdesk
+  //  Add new Helpdesk
   addHelpdesk: async (data, config) => {
     try {
       return await postMethod(ApiUrls.ADD_HELPDESK, data, config);
@@ -32,7 +32,7 @@ const HelpdeskServices = {
     }
   },
 
-  // 🔹 Update Helpdesk
+  //  Update Helpdesk
   updateHelpdesk: async (ticketId, data, config) => {
     try {
       return await putMethod(ApiUrls.UPDATE_HELPDESK(ticketId), data, config);
@@ -42,7 +42,7 @@ const HelpdeskServices = {
     }
   },
 
-  // 🔹 Delete Helpdesk
+  //  Delete Helpdesk
   deleteHelpdesk: async (ticketId, config) => {
     try {
       return await deleteMethod(ApiUrls.DELETE_HELPDESK(ticketId), config);

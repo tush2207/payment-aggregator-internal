@@ -135,6 +135,7 @@ def serialize_aggregator(agg: ManageAggregatorInDB, is_admin: bool = False) -> d
 # --- Manage Aggregator CRUD with Audit Logging ---
 
 @router.post('/api/manage-aggregator', status_code=status.HTTP_201_CREATED)
+@router.post('/manage-aggregator', status_code=status.HTTP_201_CREATED)
 def create_manageAggregator(
     manageAggregator: ManageAggregator,
     background_tasks: BackgroundTasks,
@@ -245,6 +246,7 @@ def reset_aggregator_credentials(
     }
 
 @router.get('/api/single-manage-aggregator/{manageAggregatorId}')
+@router.get('/single-manage-aggregator/{manageAggregatorId}')
 def get_single_manageAggregator(manageAggregatorId: int, db: Session = Depends(get_db), current_user: Any = Depends(get_current_user)):
     manageAggregator = db.query(ManageAggregatorInDB).filter(
         and_(ManageAggregatorInDB.isDeleted == False, ManageAggregatorInDB.aggregatorId == manageAggregatorId)).first()
@@ -255,12 +257,14 @@ def get_single_manageAggregator(manageAggregatorId: int, db: Session = Depends(g
     return serialize_aggregator(manageAggregator, is_admin=is_admin)
 
 @router.get('/api/all-manage-aggregator')
+@router.get('/all-manage-aggregator')
 def get_all_manageAggregator(db: Session = Depends(get_db), current_user: Any = Depends(get_current_user)):
     aggregators = db.query(ManageAggregatorInDB).filter(and_(ManageAggregatorInDB.isDeleted == False)).all()
     is_admin = is_admin_user(current_user)
     return [serialize_aggregator(agg, is_admin=is_admin) for agg in aggregators]
 
 @router.delete('/api/manage-aggregator/{id}')
+@router.delete('/manage-aggregator/{id}')
 def delete_manageAggregator(id: int, db: Session = Depends(get_db), current_user: Any = Depends(verify_admin_permission)):
     existing_manageAggregator = db.query(ManageAggregatorInDB).filter(ManageAggregatorInDB.aggregatorId == id).first()
     if not existing_manageAggregator:
@@ -288,6 +292,7 @@ def delete_manageAggregator(id: int, db: Session = Depends(get_db), current_user
     return JSONResponse(content=response_dict, media_type="application/json")
 
 @router.put('/api/manage-aggregator/{id}')
+@router.put('/manage-aggregator/{id}')
 def update_manageAggregator(id: int, new_manageAggregator: ManageAggregatorUpdate, db: Session = Depends(get_db), current_user: Any = Depends(verify_admin_permission)):
     existing_manageAggregator = db.query(ManageAggregatorInDB).filter(
         and_(ManageAggregatorInDB.aggregatorId == id, ManageAggregatorInDB.isDeleted == False)).first()
@@ -556,6 +561,7 @@ def test_email_endpoint(
     }
 
 @router.get('/api/all-payment-aggregator/{applicationId}')  
+@router.get('/all-payment-aggregator/{applicationId}')  
 def get_all_paymentAggregator(applicationId: int, db: Session = Depends(get_db), current_user: Any = Depends(get_current_user)):
     paymentAggregators = db.query(PaymentAggregatorInDB).filter(
         and_(PaymentAggregatorInDB.isDeleted == False, PaymentAggregatorInDB.applicationId == applicationId)).all()
@@ -762,17 +768,12 @@ def test_email_dispatch(payload: TestEmailRequest, db: Session = Depends(get_db)
         if not app:
             app = db.query(ApplicationsInDB).filter(ApplicationsInDB.isDeleted == False).first()
 
-        # If no application exists in DB, construct a structured fallback object
+        # If no application exists in DB, raise 404
         if not app:
-            class DummyApp:
-                applicationId = 23
-                customerName = "Central Bank Merchant Partner"
-                category = "Education & Training"
-                integrateWith = "Web Payment Gateway & UPI"
-                avgTransactionSize = 2500.0
-                avgTransactionYearly = 25000000.0
-                totalAnnualTransaction = 25000000.0
-            app = DummyApp()
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No active application found in database for email dispatch."
+            )
 
         success = EmailService.send_quote_request_email(
             aggregator_name=payload.aggregatorName or "Test Payment Aggregator",

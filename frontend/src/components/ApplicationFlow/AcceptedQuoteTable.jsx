@@ -176,7 +176,7 @@ const AcceptedQuoteTable = ({ customer, applicationId }) => {
   const { finalizedAggregatorId: aggregatorId } = customer || {};
   const dispatch = useDispatch();
 
-  // ⬇️ Get user details from session storage
+  // ⬇ Get user details from session storage
   const userDetails = useMemo(() => {
     const stored = sessionStorage.getItem('userDetails');
     return stored && JSON.parse(stored);
@@ -224,7 +224,7 @@ const AcceptedQuoteTable = ({ customer, applicationId }) => {
     setLoading(true);
     try {
       await applicationServices.updateApplication(applicationId, payload);
-      successNotification("✅ Application updated successfully");
+      successNotification(" Application updated successfully");
       if (applicationId) {
         dispatch(fetchApplicationDetails(applicationId));
       }
@@ -566,7 +566,7 @@ const AcceptedQuoteTable = ({ customer, applicationId }) => {
               </RadioGroup>
               {isWaived && (
                 <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
-                  ℹ️ Physical customer acceptance document upload is optional when waived. The workflow will advance directly based on Regional Office approval.
+                  ℹ Physical customer acceptance document upload is optional when waived. The workflow will advance directly based on Regional Office approval.
                 </Typography>
               )}
             </Box>

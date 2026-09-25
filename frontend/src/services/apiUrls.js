@@ -1,8 +1,21 @@
 const ApiUrls = {
   // ---------------- Auth ----------------
-  LOGIN: '/token',
-  DEV_LOGIN: '/dev-login',
+  LOGIN: '/auth/login',
+  LEGACY_LOGIN: '/token',
+  DEV_LOGIN: '/api/dev-login',
   GET_USER_DETAILS: (userId) => `/get-user-details/${userId}`,
+
+  // ---------------- Locations ----------------
+  GET_ZONES: '/applications/locations/zones',
+  GET_REGIONS: (zoneId) => (zoneId ? `/applications/locations/regions?zone_id=${encodeURIComponent(zoneId)}` : '/applications/locations/regions'),
+  GET_BRANCHES: (zoneId, regionId) => {
+    const params = new URLSearchParams();
+    if (zoneId) params.append('zone_id', zoneId);
+    if (regionId) params.append('region_id', regionId);
+    const q = params.toString();
+    return q ? `/applications/locations/branches?${q}` : '/applications/locations/branches';
+  },
+  GET_LOCATION_HIERARCHY: '/applications/locations/hierarchy',
 
   // ---------------- Applications ----------------
   GET_ALL_APPLICATIONS: (zoneId, page, search, status, category, createdAt, financialYear, month, startDate, endDate, pageSize, branchId, regionId, exportType, userRole) => {

@@ -61,36 +61,49 @@ function backupOldBuild() {
     : null;
 
   if (!sourceDist) {
-    console.log('ℹ️  No previous backend dist found to backup.');
+    console.log('ℹ  No previous backend dist found to backup.');
     return;
   }
 
   const zipName = getNextVersion();
   const zipPath = path.join(backendAppVersion, zipName);
 
-  console.log(`📦 Creating Backup: ${zipName}`);
+  console.log(` Creating Backup: ${zipName}`);
   try {
-    execSync(`cmd /c tar -a -c -f "${zipPath}" -C "${sourceDist}" .`, {
+    execSync(`tar -a -c -f "${zipPath}" -C "${sourceDist}" .`, {
       stdio: 'inherit',
-      shell: false,
+      shell: true,
+      timeout: 15000,
     });
-    console.log('✅ Backup Created Successfully.');
+    console.log(' Backup Created Successfully.');
   } catch (e) {
-    console.warn('⚠️  Could not create zip backup (tar skipped):', e.message);
+    console.warn('  Could not create zip backup (tar skipped):', e.message);
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Remove Old Build
-// ─────────────────────────────────────────────────────────────────────────────
 function removeOldBuild() {
-  if (fs.existsSync(backendAppDist)) {
-    fs.rmSync(backendAppDist, { recursive: true, force: true });
-    console.log('🧹 Old backend/app/dist Deleted.');
+  try {
+    if (fs.existsSync(backendAppDist)) {
+      const files = fs.readdirSync(backendAppDist);
+      for (const file of files) {
+        fs.rmSync(path.join(backendAppDist, file), { recursive: true, force: true });
+      }
+      console.log(' Old backend/app/dist cleaned.');
+    }
+  } catch (e) {
+    console.warn('  Could not fully remove old backend/app/dist (in use), will overwrite:', e.message);
   }
-  if (fs.existsSync(backendDist)) {
-    fs.rmSync(backendDist, { recursive: true, force: true });
-    console.log('🧹 Old backend/dist Deleted.');
+
+  try {
+    if (fs.existsSync(backendDist)) {
+      const files = fs.readdirSync(backendDist);
+      for (const file of files) {
+        fs.rmSync(path.join(backendDist, file), { recursive: true, force: true });
+      }
+      console.log(' Old backend/dist cleaned.');
+    }
+  } catch (e) {
+    console.warn('  Could not fully remove old backend/dist (in use), will overwrite:', e.message);
   }
 }
 
@@ -98,8 +111,9 @@ function removeOldBuild() {
 // Run Production Vite Build
 // ─────────────────────────────────────────────────────────────────────────────
 function buildFrontend() {
-  console.log('🚀 Running production build (vite build --mode prod)...');
-  execSync('npx vite build --mode prod', {
+  console.log(' Running production build (vite build --mode prod)...');
+  const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+  execSync(`${npmCmd} run build:bundle`, {
     cwd: frontendRoot,
     stdio: 'inherit',
     shell: true,
@@ -119,14 +133,14 @@ function copyBuild() {
     fs.mkdirSync(backendAppDist, { recursive: true });
   }
   fs.cpSync(frontendDist, backendAppDist, { recursive: true });
-  console.log('✨ Build copied to backend/app/dist.');
+  console.log(' Build copied to backend/app/dist.');
 
   // Copy to backend/dist as well for compatibility
   if (!fs.existsSync(backendDist)) {
     fs.mkdirSync(backendDist, { recursive: true });
   }
   fs.cpSync(frontendDist, backendDist, { recursive: true });
-  console.log('✨ Build copied to backend/dist.');
+  console.log(' Build copied to backend/dist.');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -134,7 +148,7 @@ function copyBuild() {
 // ─────────────────────────────────────────────────────────────────────────────
 try {
   console.log('=============================================');
-  console.log('🏗️  Starting Production Build Pipeline (PAPG)');
+  console.log('  Starting Production Build Pipeline (PAPG)');
   console.log('=============================================');
   backupOldBuild();
   removeOldBuild();
@@ -143,9 +157,9 @@ try {
 
   console.log('');
   console.log('=============================================');
-  console.log('🎉 Production Build & Dist Deployment Completed Successfully!');
+  console.log(' Production Build & Dist Deployment Completed Successfully!');
   console.log('=============================================');
 } catch (err) {
-  console.error('❌ Build Pipeline Failed:', err);
+  console.error(' Build Pipeline Failed:', err);
   process.exit(1);
 }

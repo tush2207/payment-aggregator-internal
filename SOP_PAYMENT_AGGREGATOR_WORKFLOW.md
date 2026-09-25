@@ -105,16 +105,16 @@ The portal implements strict role-based access boundaries across the Central Ban
 | Feature / Page | Branch Office (BO) | Regional Office (RO) | Zonal Office (ZO) | Central Office (CO) | Super Admin | Auditor / Read-Only (115019) |
 |---|---|---|---|---|---|---|
 | **Location Scope** | Assigned Branch | Assigned Region | Assigned Zone | All-India Master | All-India Master | All-India Master |
-| **Create Application** | ✅ Full Access | ❌ No | ❌ No | ✅ Full Access | ✅ Full Access | ❌ Read Only |
-| **Review & RH Note** | ❌ No | ✅ Full Access | ❌ No | ✅ Override | ✅ Full Access | ❌ Read Only |
-| **Review & ZH Note** | ❌ No | ❌ No | ✅ Full Access | ✅ Override | ✅ Full Access | ❌ Read Only |
-| **Select PAs & RFP** | ❌ No | ❌ No | ❌ No | ✅ Full Access | ✅ Full Access | ❌ Read Only |
-| **Markup & CBA Table** | ❌ Masked | ❌ Masked | ❌ Masked | ✅ Full Access | ✅ Full Access | ❌ Read Only |
-| **Customer Accept Upload**| ❌ No | ✅ Full Access | ❌ No | ✅ Full Access | ✅ Full Access | ❌ Read Only |
-| **PO & Sanction Letter** | 👁️ View/Download | 👁️ View/Download | 👁️ View/Download | ✅ Generate & Issue | ✅ Full Access | 👁️ View Only |
-| **Manage Aggregators** | ❌ No Access | ❌ No Access | ❌ No Access | ✅ Full Access | ✅ Full Access | ❌ No Access |
-| **Help Desk Tickets** | 📝 Raise & View | 📝 Raise & View | 📝 Raise & View | ⚙️ Admin Resolve | ⚙️ Admin Resolve | 👁️ View Only |
-| **Role Switcher** | ❌ No | ❌ No | ❌ No | ❌ No | ✅ Active | ❌ No |
+| **Create Application** |  Full Access |  No |  No |  Full Access |  Full Access |  Read Only |
+| **Review & RH Note** |  No |  Full Access |  No |  Override |  Full Access |  Read Only |
+| **Review & ZH Note** |  No |  No |  Full Access |  Override |  Full Access |  Read Only |
+| **Select PAs & RFP** |  No |  No |  No |  Full Access |  Full Access |  Read Only |
+| **Markup & CBA Table** |  Masked |  Masked |  Masked |  Full Access |  Full Access |  Read Only |
+| **Customer Accept Upload**|  No |  Full Access |  No |  Full Access |  Full Access |  Read Only |
+| **PO & Sanction Letter** |  View/Download |  View/Download |  View/Download |  Generate & Issue |  Full Access |  View Only |
+| **Manage Aggregators** |  No Access |  No Access |  No Access |  Full Access |  Full Access |  No Access |
+| **Help Desk Tickets** |  Raise & View |  Raise & View |  Raise & View |  Admin Resolve |  Admin Resolve |  View Only |
+| **Role Switcher** |  No |  No |  No |  No |  Active |  No |
 
 ---
 
@@ -145,7 +145,7 @@ The portal implements strict role-based access boundaries across the Central Ban
 │ Region Scope:[ Mumbai Region ▼ ]                                       │
 │ Branch Scope:[ Chembur Branch (1002) ▼ ]                               │
 │                                                                        │
-│ [ Cancel ]                                         [ Apply Scope (✔) ] │
+│ [ Cancel ]                                         [ Apply Scope () ] │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 

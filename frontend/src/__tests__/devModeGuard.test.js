@@ -27,7 +27,6 @@ describe('Environment Mode Gating & Route Protection', () => {
 
     if (isDev) {
       nav.push({ id: 'qa-dashboard', label: 'QA & TDD Test Lab' });
-      nav.push({ id: 'test-flow', label: 'Workflow Simulator' });
     }
 
     return nav;
@@ -50,9 +49,6 @@ describe('Environment Mode Gating & Route Protection', () => {
     const devNav = getVisibleNavItems(true, 'CO');
 
     expect(prodNav.some((item) => item.id === 'qa-dashboard')).toBe(false);
-    expect(prodNav.some((item) => item.id === 'test-flow')).toBe(false);
-
     expect(devNav.some((item) => item.id === 'qa-dashboard')).toBe(true);
-    expect(devNav.some((item) => item.id === 'test-flow')).toBe(true);
   });
 });

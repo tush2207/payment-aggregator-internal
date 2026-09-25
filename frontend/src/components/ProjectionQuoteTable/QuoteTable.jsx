@@ -105,9 +105,9 @@ const QuoteTable = ({ applicationDetails, aggregatorId, aggregatorName, isRateAd
   const updateApplicationFlow = async (statusFlags) => {
     try {
       await applicationServices.updateApplication(applicationId, statusFlags);
-      successNotification("✅ Application updated successfully");
+      successNotification(" Application updated successfully");
     } catch (err) {
-      console.error("❌ Error updating application:", err);
+      console.error(" Error updating application:", err);
       errorNotification("Failed to update application");
     }
   };
@@ -116,13 +116,13 @@ const QuoteTable = ({ applicationDetails, aggregatorId, aggregatorName, isRateAd
     setLoading(true);
     try {
 
-      // ✅ Ensure all items have unique IDs (fallback if missing)
+      //  Ensure all items have unique IDs (fallback if missing)
       const dataWithIds = quoteDetails?.map((item, index) => ({
         ...item,
         id: item.id ?? index + 1,
       }));
 
-      // ✅ Helper to safely check numeric fields
+      //  Helper to safely check numeric fields
       const isInvalidNumber = (value) =>
         value === null ||
         value === undefined ||
@@ -130,20 +130,20 @@ const QuoteTable = ({ applicationDetails, aggregatorId, aggregatorName, isRateAd
         isNaN(Number(value)) ||
         Number(value) <= 0;
 
-      // ✅ Find invalid rows
+      //  Find invalid rows
       const invalidRows = dataWithIds.filter(
         (row) =>
           row.allow && isInvalidNumber(row.chargesProposed)
       );
 
-      // ✅ Handle invalid rows
+      //  Handle invalid rows
       if (invalidRows.length > 0) {
         const invalidIds = invalidRows.map((r) => r.id);
         setErrorRowIds(invalidIds);
 
         const transactionTypeList = invalidRows.map((r) => r.transactionType);
         errorNotification(
-          `⚠️ Missing or invalid charge details in: ${transactionTypeList.join(", ")}`
+          ` Missing or invalid charge details in: ${transactionTypeList.join(", ")}`
         );
 
         console.warn("Invalid Rows Detected:", invalidRows);
@@ -151,10 +151,10 @@ const QuoteTable = ({ applicationDetails, aggregatorId, aggregatorName, isRateAd
         return; // Stop execution if validation fails
       }
 
-      // ✅ Clear previous errors if validation passed
+      //  Clear previous errors if validation passed
       setErrorRowIds([]);
       setLoading(false);
-      // ✅ Prepare API payloads
+      //  Prepare API payloads
       const [res, resAgg, resApp] = await Promise.all([
         aggregatorProjections.updateProjection(applicationId, aggregatorId, dataWithIds),
         aggregatorByApplication.updateAggregatorByApplication(applicationId, aggregatorId, totals),
@@ -168,16 +168,16 @@ const QuoteTable = ({ applicationDetails, aggregatorId, aggregatorName, isRateAd
         }),
       ]);
 
-      // ✅ Validate all responses
+      //  Validate all responses
       const allSuccess = [res, resAgg, resApp].every(
         (r) => r?.status === 200 || r?.status === 201
       );
 
       if (!allSuccess) {
-        throw new Error("❌ One or more API calls failed.");
+        throw new Error(" One or more API calls failed.");
       }
 
-      successNotification("✅ Application approved and projections added successfully.");
+      successNotification(" Application approved and projections added successfully.");
       window.location.reload();
       setLoading(false);
 
@@ -187,7 +187,7 @@ const QuoteTable = ({ applicationDetails, aggregatorId, aggregatorName, isRateAd
       errorNotification(
         err?.response?.data?.message ||
         err?.message ||
-        "⚠️ Something went wrong. Please try again."
+        " Something went wrong. Please try again."
       );
     }
   };
@@ -299,7 +299,7 @@ const QuoteTable = ({ applicationDetails, aggregatorId, aggregatorName, isRateAd
                       size="small"
                       type="text"
                       value={localCharges}
-                      error={errorRowIds?.includes(row.id)} // 🔴 highlights red if row.id is invalid
+                      error={errorRowIds?.includes(row.id)} //  highlights red if row.id is invalid
                       helperText={errorRowIds?.includes(row.id) ? "Required" : ""} // optional message
                       onChange={(e) => {
                         const val = e.target.value;

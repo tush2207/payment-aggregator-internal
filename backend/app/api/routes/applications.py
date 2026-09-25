@@ -25,6 +25,7 @@ router = APIRouter()
 
 
 @router.post('/api/applications', status_code=status.HTTP_201_CREATED)
+@router.post('/applications', status_code=status.HTTP_201_CREATED)
 def create_application(application: Applications, db: Session = Depends(get_db), current_user: User = Depends(verify_write_permission)):
     try:
         app_data = application.dict()
@@ -109,6 +110,7 @@ def serialize_application(app):
     return data
 
 @router.get('/api/get-single-applications/{applicationId}')
+@router.get('/get-single-applications/{applicationId}')
 def get_single_application(applicationId: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     application = db.query(ApplicationsInDB).filter( 
         and_(or_(ApplicationsInDB.isDeleted == False, ApplicationsInDB.isDeleted.is_(None)), ApplicationsInDB.applicationId == applicationId)).first()
@@ -117,6 +119,7 @@ def get_single_application(applicationId: int, db: Session = Depends(get_db), cu
     return serialize_application(application)
 
 @router.get('/api/get-all-applications/{zoneId}')
+@router.get('/get-all-applications/{zoneId}')
 def get_all_application(
     zoneId: str = None, 
     status: Optional[str] = None, 
@@ -379,6 +382,7 @@ def check_application_not_rejected(application_id: int, db: Session):
         raise HTTPException(status_code=400, detail=f"Application #{application_id} is REJECTED. Actions on rejected applications are disabled.")
 
 @router.delete('/api/applications/{id}')
+@router.delete('/applications/{id}')
 def delete_applications(id: int, db: Session = Depends(get_db), current_user: User = Depends(verify_write_permission)):
     check_application_not_rejected(id, db)
     existing_Applications = db.query(ApplicationsInDB).filter(ApplicationsInDB.applicationId == id).first()
@@ -796,6 +800,7 @@ def dispatch_po_email_to_vendor(application_id: int, db: Session) -> bool:
 
 
 @router.put('/api/applications/{id}')
+@router.put('/applications/{id}')
 def update_applications(id: int, new_application: ApplicationsUpdate, db: Session = Depends(get_db), current_user: User = Depends(verify_write_permission)):
     existing_Applications = db.query(ApplicationsInDB).filter(
         and_(ApplicationsInDB.applicationId == id, or_(ApplicationsInDB.isDeleted == False, ApplicationsInDB.isDeleted.is_(None)))).first()
@@ -2096,6 +2101,7 @@ def generate_sanction_letter_document(
 # --- Workflow Stage Metrics & Status Counts Endpoint ---
 
 @router.get('/api/applications/stage-metrics')
+@router.get('/applications/stage-metrics')
 def get_stage_metrics(
     zoneId: Optional[str] = None,
     branchId: Optional[str] = None,

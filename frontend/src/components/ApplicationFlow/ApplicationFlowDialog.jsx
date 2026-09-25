@@ -197,7 +197,7 @@ export default function ApplicationFlowDialog() {
               }}
             >
               <Typography variant="body2" color="#1d4ed8" fontWeight={700}>
-                ℹ️ View-Only Mode Active &bull; You are reviewing this application in read-only inspection mode. All 5 workflow stages, aggregator quotes, CBA comparisons, and document downloads remain active while update/approval controls are restricted to Central Office Admin.
+                ℹ View-Only Mode Active &bull; You are reviewing this application in read-only inspection mode. All 5 workflow stages, aggregator quotes, CBA comparisons, and document downloads remain active while update/approval controls are restricted to Central Office Admin.
               </Typography>
             </Paper>
           )}
@@ -327,7 +327,7 @@ export default function ApplicationFlowDialog() {
         </Backdrop>
       </Dialog>
 
-      {/* 🔹 CO REJECTION MODAL */}
+      {/*  CO REJECTION MODAL */}
       <Dialog open={rejectModalOpen} onClose={() => setRejectModalOpen(false)} maxWidth="xs" fullWidth>
         <DialogTitle sx={{ fontWeight: 700, color: 'error.main', display: 'flex', alignItems: 'center', gap: 1 }}>
           <CancelOutlinedIcon color="error" /> Reject Application (CO)

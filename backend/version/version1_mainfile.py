@@ -1,12 +1,3 @@
-None selected
-
-Skip to content
-Using Gmail with screen readers
-Conversations
-0% of 5,120 GB used
-Terms · Privacy · Programme Policies
-Last account activity: 16 minutes ago
-Details
 from fastapi import FastAPI, Depends,status,File,UploadFile,Form
 from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse,FileResponse, Response, StreamingResponse
@@ -1819,5 +1810,3 @@ def delete_ticket(ticket_id: int, db: Session = Depends(get_db),current_user: Us
 @app.get("/{full_path:path}")
 async def serve_react_spa(full_path: str):
     return FileResponse("dist/index.html")
-OLD-BE-PAWS.txt
-Displaying OLD-BE-PAWS.txt.

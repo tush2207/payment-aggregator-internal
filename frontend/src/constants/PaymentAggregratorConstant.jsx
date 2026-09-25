@@ -154,18 +154,18 @@ export const WORK_FLOW_STATUS = [
 
 export const WORK_FLOW_OPTIONS = {
   SUBMIT_APPLICATION: 'applicationSubmitted',
-  REVIEW_BY_RO: 'approvedbyro',   // ⚠️ used as "review by RO" also
-  REVIEW_BY_ZO: 'approvedbyzo',   // ⚠️ used as "review by ZO" also
+  REVIEW_BY_RO: 'approvedbyro',   //  used as "review by RO" also
+  REVIEW_BY_ZO: 'approvedbyzo',   //  used as "review by ZO" also
   QUOTE_SUBMISSION: 'quotesubmission',
   REVIEW_QUOTE: 'reviewquote',
   FINAL_APPROVAL: 'finalapproval',
 
-  // ✅ Approvals
+  //  Approvals
   APPROVED_BY_RO: 'approvedbyro',
   APPROVED_BY_ZO: 'approvedbyzo',
   APPROVED_BY_CO: 'approvedbyco',
 
-  // ❌ Rejections
+  //  Rejections
   REJECTED_BY_RO: 'rejectedbyro',
   REJECTED_BY_ZO: 'rejectedbyzo',
   REJECTED_BY_CO: 'rejectedbyco',

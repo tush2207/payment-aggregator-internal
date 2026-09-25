@@ -85,7 +85,7 @@ const FileUploadOrView = ({
     }
   };
 
-  // 🔹 Upload Staged File
+  //  Upload Staged File
   const handleUpload = async () => {
     if (!selectedFile)
       return errorNotification(`Please select a file to upload for ${label}`);
@@ -116,7 +116,7 @@ const FileUploadOrView = ({
     }
   };
 
-  // 🔹 Delete / Remove File with Backend API Call (Creation / Draft Mode Only)
+  //  Delete / Remove File with Backend API Call (Creation / Draft Mode Only)
   const handleDelete = async () => {
     const fileIdToDelete = uploadedFileId || (alreadyUploadedFile && !isNaN(Number(alreadyUploadedFile)) ? Number(alreadyUploadedFile) : null);
 
@@ -137,7 +137,7 @@ const FileUploadOrView = ({
     handleLocalReset();
   };
 
-  // 🔹 Download File
+  //  Download File
   const handleDownload = async (fileId) => {
     const targetId = fileId || uploadedFileId || alreadyUploadedFile;
     if (!targetId) return errorNotification("File not available for download");

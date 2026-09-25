@@ -340,7 +340,7 @@ export default function WorkflowTabs() {
               )
             ) : (
               <Typography color="text.secondary" align="center" py={4}>
-                ℹ️ PO details generation is completed.
+                ℹ PO details generation is completed.
               </Typography>
             )}
           </Box>

@@ -52,9 +52,14 @@ MSSQL_CONNECTION_STRING: str = os.getenv("MSSQL_CONNECTION_STRING", "")
 # ─────────────────────────────────────────────────────────────────────────────
 # 3. BANK ACTIVE DIRECTORY & LDAP AUTHENTICATION
 # ─────────────────────────────────────────────────────────────────────────────
-LDAP_SERVER: str = os.getenv("LDAP_SERVER", "ldaps://DRCSVR1.CBI.CO.IN")
+LDAP_SERVER: str = os.getenv("LDAP_SERVER", "DRCSVR1.CBI.CO.IN")
+LDAP_PORT: int = int(os.getenv("LDAP_PORT", "636"))
 LDAP_BASE_DN: str = os.getenv("LDAP_BASE_DN", "DC=CBI,DC=CO,DC=IN")
 LDAP_USER_DN: str = f"CN=Users,{LDAP_BASE_DN}" if LDAP_BASE_DN else ""
+DOMAIN: str = os.getenv("DOMAIN", "CBI")
+MODE: str = os.getenv("MODE", "DEV" if DEV_MODE else "PROD")
+LDAP_ENABLED: bool = os.getenv("LDAP_ENABLED", "True" if not DEV_MODE else "False").lower() in ("true", "1", "t", "yes", "y")
+ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "480"))
 
 # Department code representing Central Office (CO) administrators
 CENTRAL_OFFICE_DEPARTMENT_CODE: str = os.getenv("CENTRAL_OFFICE_DEPARTMENT_CODE", "CO08646")

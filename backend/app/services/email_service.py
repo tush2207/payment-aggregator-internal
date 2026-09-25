@@ -88,13 +88,13 @@ class EmailService:
                 with open(preview_file, "w", encoding="utf-8") as f:
                     f.write(f"<!-- TO: {', '.join(recipients)} | SUBJECT: {subject} -->\n")
                     f.write(html_content or f"<pre>{text_content}</pre>")
-                logger.info(f"💾 [LOCAL PREVIEW] Single preview saved to: {preview_file}")
+                logger.info(f"[LOCAL PREVIEW] Single preview saved to: {preview_file}")
             except Exception as save_err:
                 logger.debug(f"Could not save debug preview: {save_err}")
 
         # If SMTP credentials are not configured, treat as local dev mode and succeed gracefully
         if not smtp_user or not smtp_password:
-            logger.info(f"📧 [DEV MOCK MODE] No SMTP credentials in .env. Email simulated successfully to {recipients} with subject: '{subject}' (Attached: {len(attachments or [])} files)")
+            logger.info(f"[DEV MOCK MODE] No SMTP credentials in .env. Email simulated successfully to {recipients} with subject: '{subject}' (Attached: {len(attachments or [])} files)")
             return True
 
         try:
@@ -149,7 +149,7 @@ class EmailService:
                     server.login(smtp_user, smtp_password)
                     server.sendmail(from_email, all_recipients, msg.as_string())
 
-            logger.info(f"✅ Email successfully dispatched via SMTP to {recipients} with subject: '{subject}'")
+            logger.info(f"[SUCCESS] Email successfully dispatched via SMTP to {recipients} with subject: '{subject}'")
             return True
 
         except smtplib.SMTPAuthenticationError as auth_err:

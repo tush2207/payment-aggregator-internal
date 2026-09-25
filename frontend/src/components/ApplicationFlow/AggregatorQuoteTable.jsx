@@ -682,11 +682,11 @@ const AggregatorQuoteTable = ({ customerDetails }) => {
 
       if (isWaived) {
         successNotification(
-          `✅ Quotation for ${agg.aggregatorName} approved! Customer acceptance waived — jumped straight to PO stage.`
+          ` Quotation for ${agg.aggregatorName} approved! Customer acceptance waived — jumped straight to PO stage.`
         );
       } else {
         successNotification(
-          `✅ Quotation for ${agg.aggregatorName} forwarded to RO for customer acceptance.`
+          ` Quotation for ${agg.aggregatorName} forwarded to RO for customer acceptance.`
         );
       }
 
@@ -993,7 +993,7 @@ const AggregatorQuoteTable = ({ customerDetails }) => {
         </Alert>
       )}
 
-      {/* ➤ Add Aggregator Section */}
+      {/*  Add Aggregator Section */}
       {showAddAggregatorSection && !isRejected && (
         <Box sx={{ p: 2 }}>
           <Box
@@ -1124,7 +1124,7 @@ const AggregatorQuoteTable = ({ customerDetails }) => {
         setQuoteConsent={setQuoteConsent}
       />
 
-      {/* ➤ Added Aggregators Section */}
+      {/*  Added Aggregators Section */}
       {!showAddAggregatorSection && (
         <>
           {/* Rate Negotiation Banner for CO */}
@@ -1442,7 +1442,7 @@ const AggregatorQuoteTable = ({ customerDetails }) => {
         </>
       )}
 
-      {/* 🔹 Customer Acceptance Waiver Modal */}
+      {/*  Customer Acceptance Waiver Modal */}
       <WaiverForwardDialog
         open={acceptanceModalOpen}
         onClose={() => !waiverSubmitting && setAcceptanceModalOpen(false)}

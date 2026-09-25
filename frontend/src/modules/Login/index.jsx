@@ -7,7 +7,6 @@ import {
   Typography,
   Chip,
   Paper,
-  Tooltip,
 } from '@mui/material';
 import {
   Visibility,
@@ -22,7 +21,7 @@ import FullScreenLoader from '&src/components/Loaders/FullScreenLoader';
 import { DEV_ROLES, IS_DEV, useLogin } from './useLogin';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ROLE CONFIG & STYLING TOKENS
+// ROLE CONFIG & STYLING TOKENS (Matches Bank Unified Portal Standard)
 // ─────────────────────────────────────────────────────────────────────────────
 
 const ROLE_META = {
@@ -35,7 +34,7 @@ const ROLE_META = {
 const FIELD_SX = {
   '& .MuiOutlinedInput-root': {
     borderRadius: '10px',
-    fontSize: '0.88rem',
+    fontSize: '0.86rem',
     background: '#f4f7fb',
     transition: 'all 0.2s ease',
     '& fieldset': {
@@ -58,24 +57,24 @@ const FIELD_SX = {
 const LABEL_SX = {
   color: '#475569',
   fontWeight: 700,
-  mb: 0.5,
+  mb: 0.4,
   display: 'block',
-  fontSize: '0.70rem',
-  letterSpacing: '0.6px',
+  fontSize: '0.68rem',
+  letterSpacing: '0.5px',
   textTransform: 'uppercase',
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DEV ROLE SELECTOR (Digital Ambassador Style)
+// DEV ROLE SELECTOR
 // ─────────────────────────────────────────────────────────────────────────────
 
 const DevRoleSelector = ({ devRole, setDevRole }) => (
   <Box
     sx={{
       width: '100%',
-      mb: 1.5,
-      p: 1,
-      borderRadius: '10px',
+      mb: 1.2,
+      p: 0.8,
+      borderRadius: '8px',
       background: 'rgba(0, 73, 144, 0.04)',
       border: '1px dashed rgba(0, 73, 144, 0.25)',
     }}
@@ -86,19 +85,19 @@ const DevRoleSelector = ({ devRole, setDevRole }) => (
         fontWeight: 700,
         color: '#004990',
         display: 'block',
-        mb: 0.6,
+        mb: 0.5,
         textAlign: 'center',
         letterSpacing: '0.4px',
-        fontSize: '0.68rem',
+        fontSize: '0.65rem',
       }}
     >
-      🛠️ DEV MODE — SELECT TARGET ROLE
+       DEV MODE — SELECT ROLE
     </Typography>
 
-    <Box sx={{ display: 'flex', gap: 0.6, justifyContent: 'center', flexWrap: 'wrap' }}>
-      {DEV_ROLES.map(({ value }) => {
+    <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center', flexWrap: 'wrap' }}>
+      {DEV_ROLES.map(({ value, label }) => {
         const isSel = devRole === value;
-        const meta = ROLE_META[value] || { accent: '#004990', label: value };
+        const meta = ROLE_META[value] || { accent: '#1565c0', label };
         return (
           <Chip
             key={value}
@@ -107,8 +106,8 @@ const DevRoleSelector = ({ devRole, setDevRole }) => (
             onClick={() => setDevRole(value)}
             sx={{
               fontWeight: 700,
-              fontSize: '0.68rem',
-              height: 24,
+              fontSize: '0.65rem',
+              height: 22,
               cursor: 'pointer',
               bgcolor: isSel ? meta.accent : 'transparent',
               color: isSel ? '#ffffff' : '#475569',
@@ -126,14 +125,14 @@ const DevRoleSelector = ({ devRole, setDevRole }) => (
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MAIN LOGIN MODULE — Centered Card Layout, Balanced 65:35 Ratio & Full Image
+// MAIN LOGIN MODULE — Compact, Proportioned & Responsive (0 Scrollbars)
 // ─────────────────────────────────────────────────────────────────────────────
 
 const LoginModule = () => {
-  const { isLoading, formik, devRole, setDevRole } = useLogin();
+  const { login, isLoading, formik, devRole, setDevRole } = useLogin();
   const [showPassword, setShowPassword] = useState(false);
 
-  const { values, errors, touched, handleChange, handleBlur, handleSubmit } = formik || {};
+  const { values, errors, touched, handleChange, handleBlur, handleSubmit } = formik;
 
   return (
     <>
@@ -151,31 +150,32 @@ const LoginModule = () => {
           alignItems: 'center',
           justifyContent: 'center',
           background: 'linear-gradient(135deg, #07192d 0%, #0d2847 50%, #153b66 100%)',
-          p: { xs: 1.5, sm: 2.5, md: 3 },
+          p: { xs: 1.5, sm: 2 },
           boxSizing: 'border-box',
         }}
       >
-        {/* Centered Floating Card Container with Balanced Proportions */}
+        {/* Seamless Compact Card Container */}
         <Paper
           elevation={16}
           sx={{
             width: '100%',
-            maxWidth: 1160,
-            height: { xs: '100%', md: '580px' },
-            maxHeight: '90vh',
-            borderRadius: '24px',
+            maxWidth: 1020,
+            height: { xs: '100%', md: '540px' },
+            maxHeight: '92vh',
+            borderRadius: '20px',
             overflow: 'hidden',
             display: 'flex',
-            boxShadow: '0 24px 60px rgba(0, 0, 0, 0.45)',
+            boxShadow: '0 20px 50px rgba(0, 0, 0, 0.45)',
             background: '#ffffff',
           }}
         >
           {/* ════════════════════════════════════════════════════════════
-              LEFT PANEL — Wide Frame for loginLeftside.png (64% Width)
+              LEFT PANEL — Fitted 1:1 Aspect Frame with Zero Gap
           ════════════════════════════════════════════════════════════ */}
           <Box
             sx={{
-              flex: { md: 1.7, lg: 1.8 },
+              flex: { md: '0 0 540px' },
+              width: { md: '540px' },
               display: { xs: 'none', md: 'block' },
               position: 'relative',
               height: '100%',
@@ -191,14 +191,14 @@ const LoginModule = () => {
                 width: '100%',
                 height: '100%',
                 objectFit: 'cover',
-                objectPosition: 'left center',
+                objectPosition: 'center center',
                 display: 'block',
               }}
             />
           </Box>
 
           {/* ════════════════════════════════════════════════════════════
-              RIGHT PANEL — Login Form with papgLogo (36% Width)
+              RIGHT PANEL — Login Form Connected Directly to Image
           ════════════════════════════════════════════════════════════ */}
           <Box
             sx={{
@@ -207,75 +207,67 @@ const LoginModule = () => {
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              p: { xs: 2.5, sm: 3.5, md: 4.5 },
+              p: { xs: 2.5, sm: 3, md: 3.5 },
               height: '100%',
               boxSizing: 'border-box',
               overflowY: 'auto',
               background: '#ffffff',
             }}
           >
-            <Box sx={{ width: '100%', maxWidth: 350, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              {/* Top Official Portal Logo */}
-              <Box sx={{ mb: 1.5, textAlign: 'center', width: '100%', display: 'flex', justifyContent: 'center' }}>
+            <Box sx={{ width: '100%', maxWidth: 330, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              {/* Top Official Logo */}
+              <Box sx={{ mb: 1, textAlign: 'center', width: '100%', display: 'flex', justifyContent: 'center' }}>
                 <Box
                   component="img"
                   src={papgLogo}
                   alt="Central Bank of India - Payment Aggregator Portal"
                   sx={{
-                    height: { xs: 75, sm: 110, md: 120 },
-                    maxHeight: 130,
+                    height: { xs: 65, sm: 80, md: 85 },
+                    maxHeight: 95,
                     width: 'auto',
                     objectFit: 'contain',
-                    filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.06))',
                   }}
                 />
               </Box>
 
               {/* Title + Accent Stripe */}
-              <Box sx={{ textAlign: 'center', mb: 2 }}>
-                <Typography
-                  variant="h6"
-                  sx={{
-                    fontWeight: 800,
-                    color: '#003875',
-                    fontSize: '1.18rem',
-                    letterSpacing: '-0.2px',
-                  }}
-                >
-                  Payment Aggregator Portal
-                </Typography>
+              <Box sx={{ textAlign: 'center', mb: 1.5, width: '100%' }}>
                 <Box
                   sx={{
                     height: 3,
-                    width: 44,
+                    width: 36,
                     mx: 'auto',
-                    mt: 0.6,
+                    mt: 0.2,
                     borderRadius: 2,
                     background: 'linear-gradient(90deg, #c0392b, #e74c3c)',
                   }}
                 />
-                <Typography variant="body2" sx={{ color: '#64748b', fontSize: '0.78rem', mt: 0.8 }}>
-                  Sign in to your account to continue
+                <Typography variant="body2" sx={{ color: '#64748b', fontSize: '0.75rem', mt: 0.6 }}>
+                  {IS_DEV
+                    ? 'Sign in to development environment'
+                    : 'Sign in to access your PAPG operations console'}
                 </Typography>
               </Box>
 
-              {/* DEV Role Selector (Active only in DEV mode) */}
-              {IS_DEV && <DevRoleSelector devRole={devRole} setDevRole={setDevRole} />}
+              {/* Dynamic Mode-Based Component: DEV Selector */}
+              {IS_DEV && (
+                <DevRoleSelector devRole={devRole} setDevRole={setDevRole} />
+              )}
 
               {/* Form Inputs */}
               <Box
                 component="form"
                 onSubmit={handleSubmit}
-                sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 1.8 }}
+                sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 1.4 }}
               >
                 {/* Username Input */}
                 <Box>
                   <Typography variant="caption" sx={LABEL_SX}>
-                    USERNAME
+                    {IS_DEV ? 'USERNAME / PF ID' : 'PF ID / USERNAME'}
                   </Typography>
                   <FormField
                     name="username"
-                    placeholder="Enter your username"
+                    placeholder={IS_DEV ? 'Enter username or PF ID' : 'Enter your bank PF ID'}
                     fullWidth
                     autoComplete="username"
                     value={values?.username ?? ''}
@@ -296,7 +288,7 @@ const LoginModule = () => {
                 {/* Password Input */}
                 <Box>
                   <Typography variant="caption" sx={LABEL_SX}>
-                    PASSWORD
+                    {IS_DEV ? 'PASSWORD' : 'DOMAIN / PORTAL PASSWORD'}
                   </Typography>
                   <FormField
                     name="password"
@@ -334,32 +326,25 @@ const LoginModule = () => {
                 {/* Coral-Red / Brand LOGIN Button */}
                 <Button
                   type="submit"
+                  variant="contained"
                   disabled={isLoading}
                   sx={{
-                    mt: 0.6,
-                    height: 44,
+                    mt: 0.4,
+                    height: 42,
                     borderRadius: '10px',
                     fontWeight: 800,
-                    fontSize: '0.90rem',
+                    fontSize: '0.88rem',
                     letterSpacing: '0.8px',
-                    color: '#ffffff',
                     background: 'linear-gradient(90deg, #ff5733 0%, #e74c3c 100%)',
                     boxShadow: '0 6px 18px rgba(231, 76, 60, 0.35)',
                     textTransform: 'uppercase',
-                    transition: 'all 0.25s ease',
                     '&:hover': {
                       background: 'linear-gradient(90deg, #e04826 0%, #c0392b 100%)',
                       boxShadow: '0 8px 22px rgba(231, 76, 60, 0.45)',
-                      transform: 'translateY(-1px)',
-                    },
-                    '&.Mui-disabled': {
-                      background: 'rgba(0, 0, 0, 0.12)',
-                      color: 'rgba(0, 0, 0, 0.26)',
-                      boxShadow: 'none',
                     },
                   }}
                 >
-                  {isLoading ? 'AUTHENTICATING...' : 'LOGIN'}
+                  {IS_DEV ? 'DEV SIGN IN' : 'SIGN IN'}
                 </Button>
               </Box>
 
@@ -369,17 +354,19 @@ const LoginModule = () => {
                 sx={{
                   color: '#94a3b8',
                   textAlign: 'center',
-                  fontSize: '0.66rem',
-                  lineHeight: 1.5,
-                  mt: 2.5,
-                  pt: 1.5,
+                  fontSize: '0.64rem',
+                  lineHeight: 1.4,
+                  mt: 1.8,
+                  pt: 1.2,
                   borderTop: '1px solid #f1f5f9',
                   width: '100%',
                 }}
               >
                 © {new Date().getFullYear()} Central Bank of India.
                 <br />
-                All rights reserved. Authorised personnel only.
+                {IS_DEV
+                  ? 'Development Simulation Mode'
+                  : 'All rights reserved. Authorised banking personnel only.'}
               </Typography>
             </Box>
           </Box>

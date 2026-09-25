@@ -60,7 +60,7 @@ export default function Dashboard() {
   const dispatch = useDispatch();
   const [searchParams, setSearchParams] = useSearchParams();
   const openAppId = searchParams.get('openAppId');
-  const [mockApp, setMockApp] = useState([]);
+  const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [isReview, setIsReview] = useState(false);
@@ -130,15 +130,15 @@ export default function Dashboard() {
 
       if (response && response.data) {
         const appList = response.data.data || response.data || [];
-        setMockApp(Array.isArray(appList) ? appList : []);
+        setApplications(Array.isArray(appList) ? appList : []);
         setTotalRecords(response.data.totalRecords || (Array.isArray(appList) ? appList.length : 0));
       } else {
-        setMockApp([]);
+        setApplications([]);
         setTotalRecords(0);
       }
     } catch (err) {
       console.error('Failed to fetch applications:', err);
-      setMockApp([]);
+      setApplications([]);
       setTotalRecords(0);
     } finally {
       setLoading(false);
@@ -193,14 +193,14 @@ const getApplicationActiveStage = (app) => {
   // Compute live stage counts for the 7 steps in the workflow based on active stage
   const stageCounts = useMemo(() => {
     const counts = [0, 0, 0, 0, 0, 0, 0];
-    mockApp.forEach((app) => {
+    applications.forEach((app) => {
       const stageIdx = getApplicationActiveStage(app);
       if (stageIdx >= 0 && stageIdx < 7) {
         counts[stageIdx]++;
       }
     });
     return counts;
-  }, [mockApp]);
+  }, [applications]);
 
   const currentUserId = sessionStorage.getItem('userId') || sessionStorage.getItem('user_id') || userDetails.employeeId || userDetails.pfNumber;
   const isReadOnlyUser = String(currentUserId) === '115019';
@@ -213,7 +213,7 @@ const getApplicationActiveStage = (app) => {
     let rejected = 0;
     let query = 0;
 
-    mockApp.forEach((app) => {
+    applications.forEach((app) => {
       const statusStr = String(app.status || '').toLowerCase();
       const isRej = statusStr.includes('reject') || Boolean(app.reasonOfRejection) || Boolean(app.rejectedDate);
       const isAppr = !isRej && (Boolean(app.isFinalApproved) || ['finalapproved', 'approved', 'completed'].includes(statusStr));
@@ -234,18 +234,18 @@ const getApplicationActiveStage = (app) => {
     });
 
     return {
-      total: totalRecords || mockApp.length,
+      total: totalRecords || applications.length,
       pending,
       inProgress,
       approved,
       rejected,
       query,
     };
-  }, [mockApp, totalRecords]);
+  }, [applications, totalRecords]);
 
   // Filter applications if a KPI card or Stage Stepper is selected
   const displayedApplications = useMemo(() => {
-    let list = mockApp;
+    let list = applications;
 
     // 1. Stage Stepper Filter (if user clicked a step in the pipeline)
     if (selectedStageIndex !== null) {
@@ -286,7 +286,7 @@ const getApplicationActiveStage = (app) => {
       if (dateB !== dateA) return dateB - dateA;
       return (Number(b.applicationId) || 0) - (Number(a.applicationId) || 0);
     });
-  }, [mockApp, selectedStageIndex, selectedKpiFilter]);
+  }, [applications, selectedStageIndex, selectedKpiFilter]);
 
   const recentThreeApplications = useMemo(() => {
     return displayedApplications.slice(0, 3);

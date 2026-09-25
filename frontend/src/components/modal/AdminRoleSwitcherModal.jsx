@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -15,6 +15,7 @@ import {
   CardActionArea,
   Chip,
   Alert,
+  CircularProgress,
 } from '@mui/material';
 import {
   Close,
@@ -33,6 +34,7 @@ import {
   CBI_REGIONS,
   CBI_DEFAULT_LOCATIONS,
 } from '&src/constants/PaymentAggregratorConstant';
+import locationServices from '&src/services/locationServices';
 
 const ROLE_OPTIONS = [
   {
@@ -73,29 +75,112 @@ export const AdminRoleSwitcherModal = ({ open, onClose, currentUser }) => {
   const [role, setRole] = useState(currentUser?.role || 'CO');
   const [validationError, setValidationError] = useState('');
 
-  // Selected values
-  const [selectedZone, setSelectedZone] = useState('');
-  const [selectedRegion, setSelectedRegion] = useState('');
-  const [selectedBranch, setSelectedBranch] = useState('');
+  // Location data states from API
+  const [zonesList, setZonesList] = useState([]);
+  const [regionsList, setRegionsList] = useState([]);
+  const [branchesList, setBranchesList] = useState([]);
+  const [loadingLocations, setLoadingLocations] = useState(false);
 
+  // Selected values (can be object { zoneId, zoneName } or string)
+  const [selectedZone, setSelectedZone] = useState(null);
+  const [selectedRegion, setSelectedRegion] = useState(null);
+  const [selectedBranch, setSelectedBranch] = useState(null);
+
+  // Fetch Zones from Location API
+  const loadZones = useCallback(async () => {
+    try {
+      setLoadingLocations(true);
+      const res = await locationServices.getZones();
+      const data = res?.data?.data || res?.data || [];
+      if (Array.isArray(data)) {
+        setZonesList(data);
+      } else {
+        setZonesList([]);
+      }
+    } catch (e) {
+      console.debug('Failed to fetch zones:', e);
+      setZonesList([]);
+    } finally {
+      setLoadingLocations(false);
+    }
+  }, []);
+
+  // Fetch Regions for a Zone
+  const loadRegions = useCallback(async (zoneId) => {
+    try {
+      const res = await locationServices.getRegions(zoneId || null);
+      const data = res?.data?.data || res?.data || [];
+      if (Array.isArray(data)) {
+        setRegionsList(data);
+      } else {
+        setRegionsList([]);
+      }
+    } catch (e) {
+      console.debug('Failed to fetch regions:', e);
+      setRegionsList([]);
+    }
+  }, []);
+
+  // Fetch Branches for Zone + Region
+  const loadBranches = useCallback(async (zoneId, regionId) => {
+    try {
+      const res = await locationServices.getBranches(zoneId || null, regionId || null);
+      const data = res?.data?.data || res?.data || [];
+      if (Array.isArray(data) && data.length > 0) {
+        setBranchesList(data);
+      } else {
+        setBranchesList([]);
+      }
+    } catch (e) {
+      console.debug('Failed to fetch branches:', e);
+      setBranchesList([]);
+    }
+  }, []);
+
+  // Initial load when modal opens
   useEffect(() => {
     if (open) {
       const curRole = currentUser?.role || sessionStorage.getItem('role') || 'CO';
       setRole(curRole);
       setValidationError('');
 
-      const zName = currentUser?.zoneName || currentUser?.Zone_Name || (CBI_DEFAULT_LOCATIONS[curRole]?.zoneName) || 'West Zone';
-      const rName = currentUser?.regionName || currentUser?.Region_Name || (CBI_DEFAULT_LOCATIONS[curRole]?.regionName) || 'Mumbai Region';
-      const bName = currentUser?.branchName || currentUser?.Branch_Name || (CBI_DEFAULT_LOCATIONS[curRole]?.branchName) || '';
+      const zName = currentUser?.zoneName || currentUser?.Zone_Name || (CBI_DEFAULT_LOCATIONS[curRole]?.zoneName) || 'MUMBAI ZONE';
+      const zId = currentUser?.zoneId || currentUser?.ZoneId || '1109';
+      const rName = currentUser?.regionName || currentUser?.Region_Name || (CBI_DEFAULT_LOCATIONS[curRole]?.regionName) || 'MUMBAI REGION';
+      const rId = currentUser?.regionId || currentUser?.RegionId || '1169';
+      const bName = currentUser?.branchName || currentUser?.Branch_Name || (CBI_DEFAULT_LOCATIONS[curRole]?.branchName) || 'CHEMBUR';
+      const bId = currentUser?.branchId || currentUser?.BranchId || '2394';
 
-      setSelectedZone(zName);
-      setSelectedRegion(rName);
-      setSelectedBranch(bName);
+      setSelectedZone({ zoneId: String(zId), zoneName: zName });
+      setSelectedRegion({ regionId: String(rId), regionName: rName, zoneId: String(zId) });
+      setSelectedBranch({ branchId: String(bId), branchName: bName, regionId: String(rId) });
+
+      loadZones();
+      loadRegions(zId);
+      loadBranches(zId, rId);
     }
-  }, [open, currentUser]);
+  }, [open, currentUser, loadZones, loadRegions, loadBranches]);
 
-  const zoneOptions = useMemo(() => CBI_ZONES, []);
-  const regionOptions = useMemo(() => CBI_REGIONS, []);
+  // Handle Zone selection change
+  const handleZoneChange = (newZone) => {
+    setSelectedZone(newZone);
+    setSelectedRegion(null);
+    setSelectedBranch(null);
+    setValidationError('');
+    const zId = newZone?.zoneId || (typeof newZone === 'string' ? newZone : null);
+    loadRegions(zId);
+    loadBranches(zId, null);
+  };
+
+  // Handle Region selection change
+  const handleRegionChange = (newRegion) => {
+    setSelectedRegion(newRegion);
+    setSelectedBranch(null);
+    setValidationError('');
+    const zId = selectedZone?.zoneId || null;
+    const rId = newRegion?.regionId || (typeof newRegion === 'string' ? newRegion : null);
+    loadBranches(zId, rId);
+  };
 
   const handleApply = () => {
     if (role === 'ZO' && !selectedZone) {
@@ -111,24 +196,33 @@ export const AdminRoleSwitcherModal = ({ open, onClose, currentUser }) => {
       return;
     }
 
+    const zId = role === 'CO' ? '1109' : (selectedZone?.zoneId || '1109');
+    const zName = role === 'CO' ? 'Central Office' : (selectedZone?.zoneName || (typeof selectedZone === 'string' ? selectedZone : 'Central Office'));
+
+    const rId = role === 'CO' || role === 'ZO' ? (role === 'CO' ? '1169' : '') : (selectedRegion?.regionId || '1169');
+    const rName = role === 'CO' || role === 'ZO' ? (role === 'CO' ? 'Central Office' : '') : (selectedRegion?.regionName || (typeof selectedRegion === 'string' ? selectedRegion : ''));
+
+    const bId = role === 'BO' ? (selectedBranch?.branchId || '2394') : (role === 'CO' ? '2394' : '');
+    const bName = role === 'BO' ? (selectedBranch?.branchName || (typeof selectedBranch === 'string' ? selectedBranch : 'CHEMBUR')) : (role === 'CO' ? 'CENTRAL OFFICE' : '');
+
     const updated = {
       ...currentUser,
       role,
       locationType: role,
-      zoneId: role === 'CO' ? '1109' : (selectedZone ? '1109' : ''),
-      zoneName: role === 'CO' ? 'Central Office' : (selectedZone || 'Central Office'),
-      Zone_Name: role === 'CO' ? 'Central Office' : (selectedZone || 'Central Office'),
-      regionId: role === 'CO' || role === 'ZO' ? (role === 'CO' ? '1169' : '') : (selectedRegion ? '1169' : ''),
-      regionName: role === 'CO' || role === 'ZO' ? (role === 'CO' ? 'Central Office' : '') : (selectedRegion || ''),
-      Region_Name: role === 'CO' || role === 'ZO' ? (role === 'CO' ? 'Central Office' : '') : (selectedRegion || ''),
-      branchId: role === 'BO' ? (selectedBranch ? '2394' : '') : (role === 'CO' ? '2394' : ''),
-      branchName: role === 'BO' ? (selectedBranch || '') : (role === 'CO' ? 'CENTRAL OFFICE' : ''),
-      Branch_Name: role === 'BO' ? (selectedBranch || '') : (role === 'CO' ? 'CENTRAL OFFICE' : ''),
+      zoneId: zId,
+      zoneName: zName,
+      Zone_Name: zName,
+      regionId: rId,
+      regionName: rName,
+      Region_Name: rName,
+      branchId: bId,
+      branchName: bName,
+      Branch_Name: bName,
     };
 
     sessionStorage.setItem('role', role);
     if (role === 'RO' || role === 'ZO' || role === 'BO') {
-      sessionStorage.setItem('simulatedRegion', selectedRegion || selectedZone);
+      sessionStorage.setItem('simulatedRegion', rName || zName);
       sessionStorage.setItem('adminViewMode', 'true');
     } else {
       sessionStorage.removeItem('simulatedRegion');
@@ -136,6 +230,7 @@ export const AdminRoleSwitcherModal = ({ open, onClose, currentUser }) => {
     }
 
     sessionStorage.setItem('userDetails', JSON.stringify(updated));
+    localStorage.setItem('userDetails', JSON.stringify(updated));
     window.dispatchEvent(new Event('user-session-changed'));
     window.dispatchEvent(new Event('storage'));
     if (onClose) onClose();
@@ -161,11 +256,16 @@ export const AdminRoleSwitcherModal = ({ open, onClose, currentUser }) => {
     sessionStorage.removeItem('simulatedRegion');
     sessionStorage.removeItem('adminViewMode');
     sessionStorage.setItem('userDetails', JSON.stringify(defaultProfile));
+    localStorage.setItem('userDetails', JSON.stringify(defaultProfile));
     window.dispatchEvent(new Event('user-session-changed'));
     window.dispatchEvent(new Event('storage'));
     if (onClose) onClose();
     window.location.reload();
   };
+
+  const selectedZoneLabel = selectedZone?.zoneName || (typeof selectedZone === 'string' ? selectedZone : '');
+  const selectedRegionLabel = selectedRegion?.regionName || (typeof selectedRegion === 'string' ? selectedRegion : '');
+  const selectedBranchLabel = selectedBranch?.branchName || (typeof selectedBranch === 'string' ? selectedBranch : '');
 
   return (
     <Dialog
@@ -212,7 +312,7 @@ export const AdminRoleSwitcherModal = ({ open, onClose, currentUser }) => {
               Switch Role & Scope View
             </Typography>
             <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.74rem' }}>
-              Digital Ambassador Portal Role Simulator
+              Digital Ambassador Portal Role & Location Simulator
             </Typography>
           </Box>
         </Box>
@@ -253,9 +353,14 @@ export const AdminRoleSwitcherModal = ({ open, onClose, currentUser }) => {
                     setRole(opt.value);
                     setValidationError('');
                     const defaults = CBI_DEFAULT_LOCATIONS[opt.value] || CBI_DEFAULT_LOCATIONS.CO;
-                    setSelectedZone(defaults.zoneName || 'West Zone');
-                    setSelectedRegion(defaults.regionName || 'Mumbai Region');
-                    setSelectedBranch(defaults.branchName || (opt.value === 'BO' ? 'Chembur Branch' : ''));
+                    const zObj = { zoneId: String(defaults.zoneId || 1109), zoneName: defaults.zoneName || 'MUMBAI ZONE' };
+                    const rObj = { regionId: String(defaults.regionId || 1169), regionName: defaults.regionName || 'MUMBAI REGION', zoneId: zObj.zoneId };
+                    const bObj = { branchId: String(defaults.branchId || 2394), branchName: defaults.branchName || 'CHEMBUR', regionId: rObj.regionId };
+                    setSelectedZone(zObj);
+                    setSelectedRegion(rObj);
+                    setSelectedBranch(bObj);
+                    loadRegions(zObj.zoneId);
+                    loadBranches(zObj.zoneId, rObj.regionId);
                   }}
                   sx={{ p: 1.4 }}
                 >
@@ -277,9 +382,12 @@ export const AdminRoleSwitcherModal = ({ open, onClose, currentUser }) => {
         </Box>
 
         {/* Location Selection Section */}
-        <Typography variant="caption" sx={{ fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', mb: 1.2, display: 'block' }}>
-          2. Select Location Hierarchy
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.2 }}>
+          <Typography variant="caption" sx={{ fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            2. Select Location Hierarchy
+          </Typography>
+          {loadingLocations && <CircularProgress size={16} sx={{ color: '#176FC1' }} />}
+        </Box>
 
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {/* Zone Autocomplete */}
@@ -289,17 +397,23 @@ export const AdminRoleSwitcherModal = ({ open, onClose, currentUser }) => {
                 ZONE {role === 'ZO' && '(Required)'}
               </Typography>
               <Autocomplete
-                options={zoneOptions}
-                value={selectedZone}
-                onChange={(e, val) => {
-                  setSelectedZone(val || '');
-                  setValidationError('');
+                options={zonesList}
+                getOptionLabel={(option) => {
+                  if (typeof option === 'string') return option;
+                  return option.zoneName ? `${option.zoneName}${option.zoneId ? ` (${option.zoneId})` : ''}` : '';
                 }}
+                isOptionEqualToValue={(option, val) => {
+                  if (!val) return false;
+                  if (typeof val === 'string') return option.zoneName === val || option.zoneId === val;
+                  return option.zoneId === val.zoneId || option.zoneName === val.zoneName;
+                }}
+                value={selectedZone}
+                onChange={(e, val) => handleZoneChange(val)}
                 renderInput={(params) => (
                   <TextField
                     {...params}
                     size="small"
-                    placeholder="Select or Search Zone (e.g., West Zone, Mumbai Zone)..."
+                    placeholder="Select or Search Zone (e.g., MUMBAI ZONE, WEST ZONE)..."
                     InputProps={{
                       ...params.InputProps,
                       startAdornment: (
@@ -325,17 +439,23 @@ export const AdminRoleSwitcherModal = ({ open, onClose, currentUser }) => {
                 REGION {role === 'RO' && '(Required)'}
               </Typography>
               <Autocomplete
-                options={regionOptions}
-                value={selectedRegion}
-                onChange={(e, val) => {
-                  setSelectedRegion(val || '');
-                  setValidationError('');
+                options={regionsList}
+                getOptionLabel={(option) => {
+                  if (typeof option === 'string') return option;
+                  return option.regionName ? `${option.regionName}${option.regionId ? ` (${option.regionId})` : ''}` : '';
                 }}
+                isOptionEqualToValue={(option, val) => {
+                  if (!val) return false;
+                  if (typeof val === 'string') return option.regionName === val || option.regionId === val;
+                  return option.regionId === val.regionId || option.regionName === val.regionName;
+                }}
+                value={selectedRegion}
+                onChange={(e, val) => handleRegionChange(val)}
                 renderInput={(params) => (
                   <TextField
                     {...params}
                     size="small"
-                    placeholder="Select or Search Region (e.g., Mumbai Region, Pune Region)..."
+                    placeholder="Select or Search Region (e.g., MUMBAI REGION, THANE REGION)..."
                     InputProps={{
                       ...params.InputProps,
                       startAdornment: (
@@ -354,27 +474,52 @@ export const AdminRoleSwitcherModal = ({ open, onClose, currentUser }) => {
             </Box>
           )}
 
-          {/* Branch Autocomplete / Input */}
+          {/* Branch Autocomplete */}
           {role === 'BO' && (
             <Box>
               <Typography variant="caption" sx={{ fontWeight: 700, color: '#475569', mb: 0.6, display: 'block' }}>
                 BRANCH (Required)
               </Typography>
-              <TextField
-                fullWidth
-                size="small"
+              <Autocomplete
+                freeSolo
+                options={branchesList}
+                getOptionLabel={(option) => {
+                  if (typeof option === 'string') return option;
+                  return option.branchName ? `${option.branchName}${option.branchId ? ` (${option.branchId})` : ''}` : '';
+                }}
+                isOptionEqualToValue={(option, val) => {
+                  if (!val) return false;
+                  if (typeof val === 'string') return option.branchName === val || option.branchId === val;
+                  return option.branchId === val.branchId || option.branchName === val.branchName;
+                }}
                 value={selectedBranch}
-                onChange={(e) => {
-                  setSelectedBranch(e.target.value);
+                onChange={(e, val) => {
+                  if (typeof val === 'string') {
+                    setSelectedBranch({ branchId: '2394', branchName: val });
+                  } else {
+                    setSelectedBranch(val);
+                  }
                   setValidationError('');
                 }}
-                placeholder="Enter Branch Name (e.g. Chembur Branch, Nariman Point Branch)"
-                InputProps={{
-                  startAdornment: <PlaceRounded sx={{ color: '#94a3b8', fontSize: 18, mr: 0.5 }} />,
-                }}
-                sx={{
-                  '& .MuiOutlinedInput-root': { borderRadius: '10px' },
-                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    size="small"
+                    placeholder="Select or Enter Branch Name (e.g. CHEMBUR, NARIMAN POINT)..."
+                    InputProps={{
+                      ...params.InputProps,
+                      startAdornment: (
+                        <>
+                          <PlaceRounded sx={{ color: '#94a3b8', fontSize: 18, mr: 0.5 }} />
+                          {params.InputProps.startAdornment}
+                        </>
+                      ),
+                    }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': { borderRadius: '10px' },
+                    }}
+                  />
+                )}
               />
             </Box>
           )}
@@ -383,7 +528,7 @@ export const AdminRoleSwitcherModal = ({ open, onClose, currentUser }) => {
           {role === 'CO' && (
             <Box sx={{ p: 2, background: 'rgba(23, 111, 193, 0.05)', borderRadius: '12px', border: '1px dashed rgba(23, 111, 193, 0.3)' }}>
               <Typography variant="body2" sx={{ color: '#176FC1', fontSize: '0.85rem', fontWeight: 600 }}>
-                🏢 Central Office Scope Active:
+                 Central Office Scope Active:
               </Typography>
               <Typography variant="caption" sx={{ color: '#475569', fontSize: '0.78rem', display: 'block', mt: 0.4 }}>
                 Full organization-wide administrative view across all 15+ zones, 80+ regions, and 4500+ branches.
@@ -394,14 +539,14 @@ export const AdminRoleSwitcherModal = ({ open, onClose, currentUser }) => {
           {/* Scope summary pill */}
           {role !== 'CO' && (
             <Box sx={{ display: 'flex', gap: 0.8, flexWrap: 'wrap', mt: 0.5 }}>
-              {selectedZone && (
-                <Chip label={`Zone: ${selectedZone}`} size="small" sx={{ bgcolor: '#e3f2fd', color: '#1565c0', fontWeight: 600, fontSize: '0.72rem' }} />
+              {selectedZoneLabel && (
+                <Chip label={`Zone: ${selectedZoneLabel}`} size="small" sx={{ bgcolor: '#e3f2fd', color: '#1565c0', fontWeight: 600, fontSize: '0.72rem' }} />
               )}
-              {selectedRegion && (
-                <Chip label={`Region: ${selectedRegion}`} size="small" sx={{ bgcolor: '#e8f5e9', color: '#2e7d32', fontWeight: 600, fontSize: '0.72rem' }} />
+              {selectedRegionLabel && (
+                <Chip label={`Region: ${selectedRegionLabel}`} size="small" sx={{ bgcolor: '#e8f5e9', color: '#2e7d32', fontWeight: 600, fontSize: '0.72rem' }} />
               )}
-              {selectedBranch && (
-                <Chip label={`Branch: ${selectedBranch}`} size="small" sx={{ bgcolor: '#fff8e1', color: '#b45309', fontWeight: 600, fontSize: '0.72rem' }} />
+              {selectedBranchLabel && (
+                <Chip label={`Branch: ${selectedBranchLabel}`} size="small" sx={{ bgcolor: '#fff8e1', color: '#b45309', fontWeight: 600, fontSize: '0.72rem' }} />
               )}
             </Box>
           )}
@@ -450,3 +595,4 @@ export const AdminRoleSwitcherModal = ({ open, onClose, currentUser }) => {
 };
 
 export default AdminRoleSwitcherModal;
+

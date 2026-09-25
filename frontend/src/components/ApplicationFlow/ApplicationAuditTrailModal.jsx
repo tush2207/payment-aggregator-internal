@@ -33,15 +33,14 @@ export default function ApplicationAuditTrailModal({ open, onClose, application 
     try {
       const response = await auditLogsService.getAuditTrailByApplication(application.applicationId);
       const fetchedData = response?.data || response;
-      if (Array.isArray(fetchedData) && fetchedData.length > 0) {
+      if (Array.isArray(fetchedData)) {
         setLogs(fetchedData);
       } else {
-        // Fallback audit trail generated from application metadata for demonstration
-        setLogs(generateMockAuditTrail(application));
+        setLogs([]);
       }
     } catch (err) {
-      console.warn("Using fallback audit log entries:", err);
-      setLogs(generateMockAuditTrail(application));
+      console.warn("Failed to fetch application audit trail:", err);
+      setLogs([]);
     } finally {
       setLoading(false);
     }
@@ -52,128 +51,6 @@ export default function ApplicationAuditTrailModal({ open, onClose, application 
       fetchLogs();
     }
   }, [open, application]);
-
-  const generateMockAuditTrail = (app) => {
-    if (!app) return [];
-    const trail = [
-      {
-        id: 1,
-        action: "CREATE_APPLICATION",
-        stage: "Application Submission",
-        performedBy: app.createdByBRId || "54829",
-        userRole: "BR",
-        details: `Application submitted for customer ${app.customerName || 'N/A'} (Category: ${app.category || 'N/A'})`,
-        ipAddress: "192.168.1.45",
-        createdAt: app.createdAt || new Date().toISOString()
-      }
-    ];
-
-    if (app.approvedByRODate || app.isReviewByRO) {
-      trail.unshift({
-        id: 2,
-        action: "REVIEW_RO",
-        stage: "RO / ZO Review",
-        performedBy: app.approvedByROId || "54868",
-        userRole: "RO",
-        details: "RO recommendation uploaded and approved",
-        ipAddress: "192.168.1.88",
-        createdAt: app.approvedByRODate || app.createdAt
-      });
-    }
-
-    if (app.approvedByCODate || app.isReviewByCO) {
-      trail.unshift({
-        id: 3,
-        action: "REVIEW_CO",
-        stage: "CO Review",
-        performedBy: app.approvedByCOId || "115019",
-        userRole: "CO",
-        details: "CO verified and forwarded to workflow stage",
-        ipAddress: "10.0.4.12",
-        createdAt: app.approvedByCODate || app.createdAt
-      });
-    }
-
-    if (app.isProjectionAdded) {
-      trail.unshift({
-        id: 4,
-        action: "UPDATE_PROJECTION",
-        stage: "Update Projection",
-        performedBy: app.approvedByCOId || "115019",
-        userRole: "CO",
-        details: "Projections and transaction shares updated/skipped successfully",
-        ipAddress: "10.0.4.12",
-        createdAt: app.updatedAt || app.createdAt
-      });
-    }
-
-    if (app.isAggregatorAdded) {
-      trail.unshift({
-        id: 5,
-        action: "ADD_AGGREGATOR",
-        stage: "Add Aggregator",
-        performedBy: app.approvedByCOId || "115019",
-        userRole: "CO",
-        details: "Payment aggregators selected and quote requested",
-        ipAddress: "10.0.4.12",
-        createdAt: app.updatedAt || app.createdAt
-      });
-    }
-
-    if (app.isMarkUpAddedCO || app.isQuoteReviewCO) {
-      trail.unshift({
-        id: 6,
-        action: "ADD_MARKUP",
-        stage: "Add Markup",
-        performedBy: app.approvedByQuoteId || app.approvedByCOId || "115019",
-        userRole: "CO",
-        details: "Calculated aggregator quotes & applied bank markup",
-        ipAddress: "10.0.4.12",
-        createdAt: app.quoteReviewCODate || app.createdAt
-      });
-    }
-
-    if (app.isQuoteAcceptRO) {
-      trail.unshift({
-        id: 7,
-        action: "ACCEPT_QUOTE",
-        stage: "Customer Acceptance",
-        performedBy: app.approvedByROId || "Customer",
-        userRole: "RO / Customer",
-        details: "Customer acceptance uploaded and confirmed",
-        ipAddress: "192.168.1.88",
-        createdAt: app.quoteAcceptRODate || app.createdAt
-      });
-    }
-
-    if (app.isFinalApproved) {
-      trail.unshift({
-        id: 8,
-        action: "FINALIZE_PO",
-        stage: "PO Details",
-        performedBy: app.approvedByCOId || "115019",
-        userRole: "CO",
-        details: `Purchase Order finalized (PO ID: ${app.purchaseOrderId || 'PO-2026-88'})`,
-        ipAddress: "10.0.4.12",
-        createdAt: app.finalApprovedDate || app.createdAt
-      });
-    }
-
-    if (app.status === "rejected") {
-      trail.unshift({
-        id: 9,
-        action: "REJECT_APPLICATION",
-        stage: "CO Rejection",
-        performedBy: app.approvedByCOId || "CO User",
-        userRole: "CO",
-        details: `Application rejected. Reason: ${app.reasonOfRejection || 'N/A'}`,
-        ipAddress: "10.0.4.12",
-        createdAt: app.updatedAt || app.createdAt
-      });
-    }
-
-    return trail;
-  };
 
   const getActionColor = (action) => {
     if (action.includes("REJECT")) return "error";

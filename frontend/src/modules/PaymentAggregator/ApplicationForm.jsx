@@ -193,7 +193,7 @@ const ApplicationForm = ({ updateDetails, handleClose, formClosed, fetchAllAppli
           {isAdminViewMode && (
             <Grid item xs={12}>
               <Alert severity="info" sx={{ borderRadius: "8px", bgcolor: "#eff6ff", color: "#1e40af", border: "1px solid #bfdbfe", py: 0.8 }}>
-                🔒 <strong>Admin View Mode (Read-Only Audit):</strong> You are reviewing this application in central admin view. All applications across branches are visible. Operational actions (Submit / Approve / Reject) are restricted to designated office roles.
+                 <strong>Admin View Mode (Read-Only Audit):</strong> You are reviewing this application in central admin view. All applications across branches are visible. Operational actions (Submit / Approve / Reject) are restricted to designated office roles.
               </Alert>
             </Grid>
           )}
@@ -714,7 +714,7 @@ const ApplicationForm = ({ updateDetails, handleClose, formClosed, fetchAllAppli
               return (
                 <Grid item xs={12}>
                   <Alert severity="info" sx={{ borderRadius: "8px", bgcolor: "#eff6ff", color: "#1e40af", border: "1px solid #bfdbfe", py: 0.8 }}>
-                    ℹ️ <strong>View-Only Inspection Mode:</strong> You are reviewing this application in read-only mode. Approval, rejection, and submission actions are restricted to Central Office Admin (139822).
+                    ℹ <strong>View-Only Inspection Mode:</strong> You are reviewing this application in read-only mode. Approval, rejection, and submission actions are restricted to Central Office Admin (139822).
                   </Alert>
                 </Grid>
               );

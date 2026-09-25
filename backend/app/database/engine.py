@@ -1,6 +1,14 @@
 import os
 import sys
 import logging
+
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 from sqlalchemy import create_engine, Sequence, text, inspect
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
@@ -75,7 +83,7 @@ try:
 
     SessionLocal = sessionmaker(bind=oracle_engine, autocommit=False, autoflush=False)
 except Exception as e:
-    print(f"\n[DATABASE] ❌ Fatal Error initializing DB engine: {e}")
+    print(f"\n[DATABASE] [ERROR] Fatal Error initializing DB engine: {e}")
     print("  [TROUBLESHOOTING] If running locally without Oracle, set DEV_MODE=\"True\" in backend/.env to use SQLite.")
     logger.error(f"Error initializing DB engine: {e}")
     oracle_engine = None
@@ -141,16 +149,16 @@ def init_db():
         pass
 
     if oracle_engine is None:
-        print("[DATABASE] ❌ Cannot initialize tables: oracle_engine is None.")
+        print("[DATABASE] [ERROR] Cannot initialize tables: oracle_engine is None.")
         return
 
     # Test live connectivity
     is_healthy = check_oracle_health()
     db_label = "SQLite (paws.db)" if is_sqlite else "Oracle Database"
     if is_healthy:
-        print(f"[DATABASE] ✅ Connection test passed for {db_label}.")
+        print(f"[DATABASE] [OK] Connection test passed for {db_label}.")
     else:
-        print(f"[DATABASE] ⚠️ Connection test warning for {db_label}. Attempting initialization...")
+        print(f"[DATABASE] [WARN] Connection test warning for {db_label}. Attempting initialization...")
 
     # 1. Initialize Oracle Sequences (Oracle only, safe on SQLite)
     sequences = [
@@ -193,16 +201,16 @@ def init_db():
             'users'
         ]
 
-        print("[DATABASE] ─────────────────────────────────────────────────────────────")
+        print("[DATABASE] -------------------------------------------------------------")
         print("[DATABASE] Verifying & Initializing Database Tables:")
         for idx, table_name in enumerate(target_tables, 1):
             if table_name in created_tables:
-                print(f"[DATABASE]   ✓ [{idx:02d}/10] Table Active: {table_name}")
+                print(f"[DATABASE]   [OK] [{idx:02d}/10] Table Active: {table_name}")
             else:
-                print(f"[DATABASE]   ⏳ [{idx:02d}/10] Table Pending: {table_name}")
-        print("[DATABASE] ─────────────────────────────────────────────────────────────")
+                print(f"[DATABASE]   [PENDING] [{idx:02d}/10] Table Pending: {table_name}")
+        print("[DATABASE] -------------------------------------------------------------")
     except Exception as e:
-        print(f"[DATABASE] ❌ Error creating tables on {db_label}: {e}")
+        print(f"[DATABASE] [ERROR] Error creating tables on {db_label}: {e}")
         logger.error(f"Database create_all error: {e}")
 
     # 3. Ensure Extended Columns Exist (Safe on Oracle / SQLite / PostgreSQL)
@@ -284,10 +292,10 @@ def init_db():
 
     # 4. MSSQL Engine (Production view) - Read-only view, no table creation needed
     if mssql_engine is not None and check_mssql_health():
-        print("[DATABASE] ✓ Secondary MSSQL Employee view connected.")
+        print("[DATABASE] [OK] Secondary MSSQL Employee view connected.")
 
     # 5. Initialization complete
-    print(f"[DATABASE] ✅ Database initialization complete. All tables ready.\n")
+    print(f"[DATABASE] [OK] Database initialization complete. All tables ready.\n")
 
 
 

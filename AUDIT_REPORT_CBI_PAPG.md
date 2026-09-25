@@ -4,7 +4,7 @@
 **Standard Benchmarks:** RBI Master Direction on Cyber Security & IT Governance | NPCI PA/PG Compliance Guidelines | CERT-In Security Benchmarks  
 **Classification:** STRICTLY CONFIDENTIAL / AUDIT READY  
 **Audit Completed Date:** 18-Sep-2026  
-**Final Audit Verdict:** 🟢 **100% COMPLIANT & CERTIFIED (AUDIT READY)**
+**Final Audit Verdict:**  **100% COMPLIANT & CERTIFIED (AUDIT READY)**
 
 ---
 
@@ -14,15 +14,15 @@ The Central Bank of India Payment Aggregator & RFQ Portal (PAPG) has undergone a
 
 | Evaluation Area | Checkpoints | Passed | Failed | Status |
 | :--- | :---: | :---: | :---: | :---: |
-| **System Health & Oracle DB Infrastructure** | 2 | 2 | 0 | 🟢 100% PASS |
-| **AES-256-GCM Cryptographic Suite** | 5 | 5 | 0 | 🟢 100% PASS |
-| **Authentication & Role-Based Access Control** | 3 | 3 | 0 | 🟢 100% PASS |
-| **Business Flow & RFQ Lifecycle** | 2 | 2 | 0 | 🟢 100% PASS |
-| **Vendor Aggregator Portal Security** | 2 | 2 | 0 | 🟢 100% PASS |
-| **RBI & NPCI PII Data Masking Controls** | 4 | 4 | 0 | 🟢 100% PASS |
-| **Audit Trail & Zero-Leakage Credential Redaction** | 1 | 1 | 0 | 🟢 100% PASS |
-| **CERT-In / RBI Banking HTTP Security Headers** | 6 | 6 | 0 | 🟢 100% PASS |
-| **TOTAL STATUTORY AUDIT SCORE** | **25** | **25** | **0** | 🟢 **100.0%** |
+| **System Health & Oracle DB Infrastructure** | 2 | 2 | 0 |  100% PASS |
+| **AES-256-GCM Cryptographic Suite** | 5 | 5 | 0 |  100% PASS |
+| **Authentication & Role-Based Access Control** | 3 | 3 | 0 |  100% PASS |
+| **Business Flow & RFQ Lifecycle** | 2 | 2 | 0 |  100% PASS |
+| **Vendor Aggregator Portal Security** | 2 | 2 | 0 |  100% PASS |
+| **RBI & NPCI PII Data Masking Controls** | 4 | 4 | 0 |  100% PASS |
+| **Audit Trail & Zero-Leakage Credential Redaction** | 1 | 1 | 0 |  100% PASS |
+| **CERT-In / RBI Banking HTTP Security Headers** | 6 | 6 | 0 |  100% PASS |
+| **TOTAL STATUTORY AUDIT SCORE** | **25** | **25** | **0** |  **100.0%** |
 
 ---
 
@@ -161,4 +161,4 @@ The Central Bank of India Payment Aggregator & RFQ Portal (PAPG) has undergone a
 I hereby certify that the **Central Bank of India — Payment Aggregator & RFQ Portal (PAPG)** meets all statutory requirements stipulated by the Reserve Bank of India (RBI) Cyber Security Master Directions, NPCI Payment Aggregator Guidelines, and CERT-In security controls. The application is officially **AUDIT-READY** with zero compliance defects.
 
 **Audited By:** Central Bank of India — Information Security & Statutory Audit Committee  
-**Audit Status:** 🟢 **CERTIFIED (100% PASS)**
+**Audit Status:**  **CERTIFIED (100% PASS)**

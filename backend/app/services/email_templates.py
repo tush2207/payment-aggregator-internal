@@ -493,7 +493,7 @@ def render_quote_request_email(
 
       <!-- Instructions for Submission -->
       <div class="instructions-card">
-        <div class="instructions-title">📌 Instructions for Submission:</div>
+        <div class="instructions-title"> Instructions for Submission:</div>
         <ul class="instructions-list">
           <li><strong>System Integration Fee &amp; AMC Charges</strong> must be <strong>NIL</strong>. Kindly confirm the same in your quotation.</li>
           {custom_notes_html}
@@ -637,7 +637,7 @@ def render_po_issuance_email(
 
       <div class="attachment-box">
         <div>
-          <strong style="color: #065f46; font-size: 13px;">📎 Attached Document:</strong><br/>
+          <strong style="color: #065f46; font-size: 13px;"> Attached Document:</strong><br/>
           <span style="font-size: 12px; color: #047857;">{f"CP_Certificate_{cust_name}_{po_number}.docx"} &bull; Formal Purchase Order Document</span>
         </div>
       </div>
@@ -936,7 +936,7 @@ def render_aggregator_onboarding_email(
 
       <div class="cred-box">
         <div style="font-weight: 800; color: #004990; font-size: 14px; margin-bottom: 12px; text-transform: uppercase;">
-          🔒 Your Portal Login Credentials
+           Your Portal Login Credentials
         </div>
         <div class="cred-row">
           <span class="cred-label">Login User ID:</span>
@@ -953,7 +953,7 @@ def render_aggregator_onboarding_email(
       </div>
 
       <div class="warning-box">
-        <strong>⚠️ Mandatory Security Action Required:</strong><br>
+        <strong> Mandatory Security Action Required:</strong><br>
         This temporary password is provided for first-time account initialization. Upon your initial login, the system will prompt you to set your own private, permanent password. You will not be able to access the dashboard until this step is completed.
       </div>
 
@@ -1032,7 +1032,7 @@ def render_password_reset_confirmation_email(
     <div class="top-accent-bar"></div>
     <div class="content-section">
       <div style="font-size: 16px; font-weight: 800; color: #16a34a; margin-bottom: 12px;">
-        ✓ Password Changed Successfully
+         Password Changed Successfully
       </div>
       <p style="font-size: 14px;">Dear <strong style="color: #004990;">{recipient_name}</strong>,</p>
       <p style="font-size: 13.5px; color: #334155; line-height: 1.6;">
@@ -1102,7 +1102,7 @@ def render_quote_submitted_confirmation_email(
     <div class="top-accent-bar"></div>
     <div class="content-section">
       <div style="font-size: 16px; font-weight: 800; color: #004990; margin-bottom: 12px;">
-        ✓ Quotation Submission Received
+         Quotation Submission Received
       </div>
       <p style="font-size: 14px;">Dear <strong style="color: #004990;">{recipient_name}</strong>,</p>
       <p style="font-size: 13.5px; color: #334155; line-height: 1.6;">

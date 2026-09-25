@@ -3,7 +3,7 @@ import { Chip, MenuItem, Select, Box } from "@mui/material";
 import TextFieldLabel from "../Label";
 
 // -------------------------------------------------------------
-// 🌈 1. CONFIG – COLORS + LABELS (NO ICONS, MINIMAL PREMIUM)
+//  1. CONFIG – COLORS + LABELS (NO ICONS, MINIMAL PREMIUM)
 // -------------------------------------------------------------
 const CHIP_CONFIG = {
   // Status
@@ -52,7 +52,7 @@ const CHIP_CONFIG = {
 };
 
 // -------------------------------------------------------------
-// 🟣 2. OPTIONS LISTS
+//  2. OPTIONS LISTS
 // -------------------------------------------------------------
 const STATUS_OPTIONS = [
   "to do",
@@ -94,7 +94,7 @@ const WORKFLOW_OPTIONS = [
 ];
 
 // -------------------------------------------------------------
-// 🔥 3. PREMIUM MINIMAL CHIP (NO ICONS • ULTRA CLEAN)
+//  3. PREMIUM MINIMAL CHIP (NO ICONS • ULTRA CLEAN)
 // -------------------------------------------------------------
 const premiumChipStyle = (color) => ({
   borderColor: `${color}AA`,
@@ -117,7 +117,7 @@ const premiumChipStyle = (color) => ({
 });
 
 // -------------------------------------------------------------
-// 🌟 4. MAIN COMPONENT
+//  4. MAIN COMPONENT
 // -------------------------------------------------------------
 const StatusChipOrSelect = ({
   placeholder,
@@ -145,7 +145,7 @@ const StatusChipOrSelect = ({
   const color = selected?.color || "#ccc";
 
   // -------------------------------------------------------------
-  // 🔹 VIEW MODE → CLEAN MINIMAL PREMIUM CHIP
+  //  VIEW MODE → CLEAN MINIMAL PREMIUM CHIP
   // -------------------------------------------------------------
   if (!editable) {
     return (
@@ -164,7 +164,7 @@ const StatusChipOrSelect = ({
   }
 
   // -------------------------------------------------------------
-  // 🔹 EDIT MODE → PREMIUM SELECT (NO ICONS)
+  //  EDIT MODE → PREMIUM SELECT (NO ICONS)
   // -------------------------------------------------------------
   return (
     <Box>
@@ -232,7 +232,7 @@ export default StatusChipOrSelect;
 // import { all } from "axios";
 
 // // -------------------------------------------------------------
-// // 🔥 1. CENTRALIZED CONFIG – COLORS + ICONS + LABELS
+// //  1. CENTRALIZED CONFIG – COLORS + ICONS + LABELS
 // // -------------------------------------------------------------
 // const CHIP_CONFIG = {
 //   // Status
@@ -371,7 +371,7 @@ export default StatusChipOrSelect;
 // };
 
 // // -------------------------------------------------------------
-// // 🔥 2. OPTIONS LISTS
+// //  2. OPTIONS LISTS
 // // -------------------------------------------------------------
 // const STATUS_OPTIONS = Object.keys(CHIP_CONFIG).filter(
 //   (key) =>
@@ -399,7 +399,7 @@ export default StatusChipOrSelect;
 // );
 
 // // -------------------------------------------------------------
-// // 🔥 3. ULTRA-PREMIUM CHIP STYLE (GLASS + GLOW)
+// //  3. ULTRA-PREMIUM CHIP STYLE (GLASS + GLOW)
 // // -------------------------------------------------------------
 // const premiumChipStyle = (color) => ({
 //   borderColor: color,
@@ -418,7 +418,7 @@ export default StatusChipOrSelect;
 // });
 
 // // -------------------------------------------------------------
-// // 🔥 4. MAIN COMPONENT
+// //  4. MAIN COMPONENT
 // // -------------------------------------------------------------
 // const StatusChipOrSelect = ({
 //   placeholder,
@@ -446,7 +446,7 @@ export default StatusChipOrSelect;
 //   const color = selected?.color || "#ccc";
 
 //   // -------------------------------------------------------------
-//   // 🔹 VIEW MODE → PREMIUM CHIP
+//   //  VIEW MODE → PREMIUM CHIP
 //   // -------------------------------------------------------------
 //   if (!editable) {
 //     return (
@@ -465,7 +465,7 @@ export default StatusChipOrSelect;
 //   }
 
 //   // -------------------------------------------------------------
-//   // 🔹 EDIT MODE → PREMIUM SELECT
+//   //  EDIT MODE → PREMIUM SELECT
 //   // -------------------------------------------------------------
 //   return (
 //     <Box>

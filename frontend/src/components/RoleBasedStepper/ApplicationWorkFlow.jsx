@@ -13,7 +13,7 @@ import {
 import { styled } from '@mui/material/styles';
 import StatusChipOrSelect from '../StatusChipOrSelect';
 
-// ✅ Custom connector (line centered with image)
+//  Custom connector (line centered with image)
 const CenteredConnector = styled(StepConnector)(({ theme }) => ({
   [`&.${stepConnectorClasses.alternativeLabel}`]: {
     top: '50%',
@@ -37,7 +37,7 @@ export default function ApplicationWorkFlow({
 }) {
   const [activeStep, setActiveStep] = useState(0);
 
-  // ✅ Handle active step calculation
+  //  Handle active step calculation
   useEffect(() => {
     if (!allActive && steps?.length > 0) {
       const currentIndex = steps.findIndex((step) => !step.status);
@@ -47,7 +47,7 @@ export default function ApplicationWorkFlow({
     }
   }, [steps, allActive]);
 
-  // ✅ Step label renderer
+  //  Step label renderer
   const renderStepLabel = (step, index, isPlaceholder = false) => {
     const labelProps = {};
 
@@ -129,7 +129,7 @@ export default function ApplicationWorkFlow({
     return stepLabel;
   };
 
-  // ✅ If steps are empty → show default placeholders (all active)
+  //  If steps are empty → show default placeholders (all active)
   const displaySteps =
     steps && steps.length > 0
       ? steps

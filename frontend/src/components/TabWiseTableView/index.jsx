@@ -10,7 +10,7 @@ const TabWiseTableView = ({ rows, columns }) => {
     setActiveTab(newValue);
   };
 
-  // 🧠 Deduplicate based on `merchantAccountNo`
+  //  Deduplicate based on `merchantAccountNo`
   const getDuplicates = (data) => {
     const seen = new Set();
     const duplicates = [];
@@ -26,7 +26,7 @@ const TabWiseTableView = ({ rows, columns }) => {
     return duplicates;
   };
 
-  // 🗂️ Filter rows based on selected tab
+  //  Filter rows based on selected tab
   const filteredRows = useMemo(() => {
     switch (activeTab) {
       case 0: return rows; // All

@@ -462,23 +462,23 @@ const Navbar = ({ onDrawerToggle }) => {
           <Box sx={{ mt: 1.2, pt: 1, borderTop: '1px solid rgba(255,255,255,0.18)', display: 'flex', flexDirection: 'column', gap: 0.5 }}>
             {role === 'CO' || role === 'ADMIN' ? (
               <Typography sx={{ color: GOLD, fontSize: '0.74rem', fontWeight: 600 }}>
-                🏛️ Central Office (All India Scope)
+                 Central Office (All India Scope)
               </Typography>
             ) : (
               <>
                 {zoneName && (
                   <Typography sx={{ color: 'rgba(255,255,255,0.92)', fontSize: '0.72rem' }}>
-                    🏢 <strong>Zone:</strong> {zoneName} {zoneId ? `(${zoneId})` : ''}
+                     <strong>Zone:</strong> {zoneName} {zoneId ? `(${zoneId})` : ''}
                   </Typography>
                 )}
                 {regionName && (
                   <Typography sx={{ color: 'rgba(255,255,255,0.92)', fontSize: '0.72rem' }}>
-                    📍 <strong>Region:</strong> {regionName} {regionId ? `(${regionId})` : ''}
+                     <strong>Region:</strong> {regionName} {regionId ? `(${regionId})` : ''}
                   </Typography>
                 )}
                 {branchName && (
                   <Typography sx={{ color: GOLD, fontSize: '0.74rem', fontWeight: 600 }}>
-                    🏦 <strong>Branch:</strong> {branchName} {branchId ? `(${branchId})` : ''}
+                     <strong>Branch:</strong> {branchName} {branchId ? `(${branchId})` : ''}
                   </Typography>
                 )}
               </>

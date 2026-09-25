@@ -4,7 +4,7 @@ This folder contains automated packaging and deployment utilities for the **Paym
 
 ---
 
-## 📁 File Overview
+##  File Overview
 
 | Script | Description |
 |---|---|
@@ -14,7 +14,7 @@ This folder contains automated packaging and deployment utilities for the **Paym
 
 ---
 
-## 🚀 How to Use
+##  How to Use
 
 ### 1. Packaging Changes (Source Machine)
 Run:
@@ -34,7 +34,7 @@ scripts\deploy\Apply-Changes.bat
 
 ---
 
-## 🏗️ Production Frontend Build & Dist Sync
+##  Production Frontend Build & Dist Sync
 To build the optimized frontend and deploy directly to `backend/app/dist`:
 ```bash
 cd frontend

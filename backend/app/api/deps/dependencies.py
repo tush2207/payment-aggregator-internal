@@ -44,11 +44,14 @@ def get_mssql_db():
     db = None
     try:
         db = MSSQLSessionLocal()
-        yield db
     except Exception as e:
-        print(f"Warning: MSSQL connection failed (circuit breaker tripped): {e}")
+        print(f"Warning: MSSQL session initialization failed: {e}")
         _record_mssql_failure()
         yield None
+        return
+
+    try:
+        yield db
     finally:
         if db is not None:
             try:

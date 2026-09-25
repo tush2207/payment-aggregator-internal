@@ -596,7 +596,7 @@ const ManageAggregator = () => {
 
                     <TableCell align="center">
                       <Stack direction="row" spacing={0.8} justifyContent="center">
-                        {/* 👁️ View Aggregator Details (Available to All) */}
+                        {/*  View Aggregator Details (Available to All) */}
                         <Tooltip title="View Aggregator Details" arrow>
                           <IconButton
                             size="small"

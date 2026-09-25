@@ -11,7 +11,6 @@ const APPLICATION_ROUTES_URLS = {
   HELP_DESK: '/helpdesk',
   ANNEXURES: '/annexures',
   QA_DASHBOARD: '/qa-dashboard',
-  TEST_FLOW: '/test-flow',
   SERVICE_DOWN: '/service-down',
   MAINTENANCE: '/maintenance',
   NOT_FOUND: '/404',
@@ -29,7 +28,6 @@ const AggregratorDashboard = lazyWithRetry(() => import('&src/pages/AggregratorD
 const HelpDesk = lazyWithRetry(() => import('&src/pages/HelpDesk'), 'HelpDesk');
 const Annexures = lazyWithRetry(() => import('&src/pages/Annexures'), 'Annexures');
 const QADashboard = lazyWithRetry(() => import('&src/pages/QADashboard'), 'QADashboard');
-const TestApplicationFlow = lazyWithRetry(() => import('&src/pages/TestApplicationFlow'), 'TestApplicationFlow');
 
 // Error & Status Pages
 const ServiceDown = lazyWithRetry(() => import('&src/pages/Errors/ServiceDown'), 'ServiceDown');
@@ -100,7 +98,7 @@ const PROTECTED_ROUTES = [
     pageTitle: 'Manage Aggregator | Payment Aggregator Portal',
     path: APPLICATION_ROUTES_URLS.MANAGE_AGGREGRATOR,
     element: <ManageAggregator />,
-    allowedRoles: ['CO'], // 🔑 only CO can access
+    allowedRoles: ['CO'], //  only CO can access
   },
   {
     pageTitle: 'Payment Aggregators | Payment Aggregator Portal',
@@ -117,18 +115,13 @@ const PROTECTED_ROUTES = [
     path: APPLICATION_ROUTES_URLS.ANNEXURES,
     element: <Annexures />,
   },
-  // 🔬 Dev-Only QA & TDD Routes (Automatically excluded in production builds)
+  //  Dev-Only QA & TDD Routes (Automatically excluded in production builds)
   ...(IS_DEV
     ? [
         {
           pageTitle: 'QA & TDD Test Lab | Payment Aggregator Portal',
           path: APPLICATION_ROUTES_URLS.QA_DASHBOARD,
           element: <QADashboard />,
-        },
-        {
-          pageTitle: 'Workflow Simulator | Payment Aggregator Portal',
-          path: APPLICATION_ROUTES_URLS.TEST_FLOW,
-          element: <TestApplicationFlow />,
         },
       ]
     : []),

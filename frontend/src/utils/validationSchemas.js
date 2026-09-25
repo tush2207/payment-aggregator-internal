@@ -92,7 +92,7 @@ export const applicationFormSchema = (user_role) => {
           .test("min-today-balance", "Account Balance must be at least ₹1000", (val) => !val || Number(val) >= 1000),
     }),
 
-    // 🔹 Conditionally add file validations based on dynamic role
+    //  Conditionally add file validations based on dynamic role
     ...(user_role === "BO" || sessionStorage.getItem('role') === "BO"
       ? {
         kycFile: Yup.mixed().required("KYC File is required"),

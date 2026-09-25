@@ -108,8 +108,8 @@ const GetRates = ({
             const rVal = hasExplicitRate ? q.rate : "";
             const cVal =
               q.chargesProposed !== undefined &&
-              q.chargesProposed !== null &&
-              q.chargesProposed !== ""
+                q.chargesProposed !== null &&
+                q.chargesProposed !== ""
                 ? q.chargesProposed
                 : "";
             return {
@@ -136,8 +136,8 @@ const GetRates = ({
             const rVal = hasExplicitRate ? q.rate : "";
             const cVal =
               q.chargesProposed !== undefined &&
-              q.chargesProposed !== null &&
-              q.chargesProposed !== ""
+                q.chargesProposed !== null &&
+                q.chargesProposed !== ""
                 ? q.chargesProposed
                 : "";
             return {
@@ -289,7 +289,7 @@ const GetRates = ({
 
         const transactionTypeList = invalidRows.map((r) => r.transactionType);
         errorNotification(
-          `⚠️ Missing or invalid rate in: ${transactionTypeList.join(", ")}`
+          ` Missing or invalid rate in: ${transactionTypeList.join(", ")}`
         );
         setLoading(false);
         return;
@@ -301,9 +301,9 @@ const GetRates = ({
       const calculatedRows = rateDetails.map((item) => {
         const charges =
           item.chargesProposed !== undefined &&
-          item.chargesProposed !== null &&
-          item.chargesProposed !== "" &&
-          Number(item.chargesProposed) >= 0
+            item.chargesProposed !== null &&
+            item.chargesProposed !== "" &&
+            Number(item.chargesProposed) >= 0
             ? item.chargesProposed
             : item.rate;
         return calculateQuoteRow(item, charges, item.unit, item.rate);
@@ -314,15 +314,15 @@ const GetRates = ({
 
       const isRevision = Boolean(
         applicationDetails?.isNegotiationRequested ||
-          applicationDetails?.status === "negotiation_requested"
+        applicationDetails?.status === "negotiation_requested"
       );
       const config = isRevision
         ? {
-            params: {
-              isRevision: true,
-              revisionRemarks: applicationDetails?.negotiationRemarks || undefined,
-            },
-          }
+          params: {
+            isRevision: true,
+            revisionRemarks: applicationDetails?.negotiationRemarks || undefined,
+          },
+        }
         : undefined;
 
       // 1. First, save the projections
@@ -351,7 +351,7 @@ const GetRates = ({
         isNegotiationRequested: false,
       });
 
-      successNotification("✅ Rates and projections saved successfully.");
+      successNotification(" Rates and projections saved successfully.");
       setOpenModal(false);
       if (onSaveSuccess) {
         await onSaveSuccess(calculatedRows);
@@ -359,7 +359,7 @@ const GetRates = ({
     } catch (err) {
       console.error("Error in saveAllRates:", err);
       errorNotification(
-        err?.response?.data?.message || err?.message || "⚠️ Something went wrong. Please try again."
+        err?.response?.data?.message || err?.message || " Something went wrong. Please try again."
       );
     } finally {
       setLoading(false);

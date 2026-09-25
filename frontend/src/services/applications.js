@@ -2,7 +2,7 @@ import ApiUrls from "./apiUrls";
 import { getMethod, postMethod, putMethod, deleteMethod } from "./axiosConfig";
 
 const applicationServices = {
-  // 🔹 Get all applications
+  //  Get all applications
   getAllApplications: async ({ zoneId, page, search, status, category, createdAt, financialYear, month, startDate, endDate, pageSize, branchId, regionId, exportType, userRole, config } = {}) => {
     console.log('getAllApplicationsprops', zoneId, page, search, status, category, createdAt, financialYear, month, startDate, endDate, pageSize, branchId, regionId, exportType, userRole)
 
@@ -35,7 +35,7 @@ const applicationServices = {
     }
   },
 
-  // 🔹 Get application by ID
+  //  Get application by ID
   getApplicationById: async (applicationId, config) => {
     try {
       const response = await getMethod(ApiUrls.GET_APPLICATION_BY_ID(applicationId), config);
@@ -65,7 +65,7 @@ const applicationServices = {
     }
   },
 
-  // 🔹 Add new application
+  //  Add new application
   addApplication: async (data, config) => {
     try {
       return await postMethod(ApiUrls.ADD_APPLICATION, data, config);
@@ -75,7 +75,7 @@ const applicationServices = {
     }
   },
 
-  // 🔹 Update application
+  //  Update application
   updateApplication: async (applicationId, data, config) => {
     try {
       return await putMethod(ApiUrls.UPDATE_APPLICATION(applicationId), data, config);
@@ -85,7 +85,7 @@ const applicationServices = {
     }
   },
 
-  // 🔹 Delete application
+  //  Delete application
   deleteApplication: async (applicationId, config) => {
     try {
       return await deleteMethod(ApiUrls.DELETE_APPLICATION(applicationId), config);
@@ -95,13 +95,12 @@ const applicationServices = {
     }
   },
 
-  // 🔹 Upload file
+  //  Upload file
   uploadFile: async (file, config) => {
     try {
       const formData = file;
       return await postMethod(ApiUrls.UPLOAD_FILE, formData, {
         ...config,
-        baseType: 'loginMockApi',
         headers: { "Content-Type": "multipart/form-data" },
       });
     } catch (error) {
@@ -110,7 +109,7 @@ const applicationServices = {
     }
   },
 
-  // 🔹 Download file
+  //  Download file
   downloadFile: async (filename, config) => {
     try {
       const response = await getMethod(ApiUrls.DOWNLOAD_FILE(filename), {
@@ -124,13 +123,10 @@ const applicationServices = {
     }
   },
 
-  // 🔹 Delete file
+  //  Delete file
   deleteFile: async (fileId, config) => {
     try {
-      return await deleteMethod(ApiUrls.DELETE_FILE(fileId), {
-        ...config,
-        baseType: 'loginMockApi',
-      });
+      return await deleteMethod(ApiUrls.DELETE_FILE(fileId), config);
     } catch (error) {
       console.error(`Error in ${ApiUrls.DELETE_FILE(fileId)}:`, error);
       throw error;
@@ -152,7 +148,7 @@ const applicationServices = {
     }
   },
 
-  // 🔹 Get stage counts and KPI metrics
+  //  Get stage counts and KPI metrics
   getStageMetrics: async (params = {}, config) => {
     try {
       const queryParams = new URLSearchParams();
@@ -173,7 +169,7 @@ const applicationServices = {
     }
   },
 
-  // 🔹 Download Editable Sanction Letter (.docx)
+  //  Download Editable Sanction Letter (.docx)
   generateSanctionLetter: async (applicationId, config) => {
     try {
       const response = await getMethod(ApiUrls.GENERATE_SANCTION_LETTER(applicationId), {
@@ -187,7 +183,7 @@ const applicationServices = {
     }
   },
 
-  // 🔹 Resend PO Email to Finalized Aggregator
+  //  Resend PO Email to Finalized Aggregator
   resendPOEmail: async (applicationId, config) => {
     try {
       return await postMethod(ApiUrls.RESEND_PO_EMAIL(applicationId), {}, config);
@@ -197,7 +193,7 @@ const applicationServices = {
     }
   },
 
-  // 🔹 Mark single notification as read
+  //  Mark single notification as read
   markNotificationRead: async (notifId, config) => {
     try {
       return await putMethod(ApiUrls.MARK_NOTIFICATION_READ(notifId), {}, config);
@@ -206,7 +202,7 @@ const applicationServices = {
     }
   },
 
-  // 🔹 Mark all notifications as read
+  //  Mark all notifications as read
   markAllNotificationsRead: async (params, config) => {
     try {
       return await postMethod(ApiUrls.MARK_ALL_NOTIFICATIONS_READ, {}, { params, ...config });
@@ -215,7 +211,7 @@ const applicationServices = {
     }
   },
 
-  // 🔹 Request quote negotiation
+  //  Request quote negotiation
   requestNegotiation: async (applicationId, data, config) => {
     try {
       return await postMethod(ApiUrls.REQUEST_QUOTE_NEGOTIATION(applicationId), data, config);

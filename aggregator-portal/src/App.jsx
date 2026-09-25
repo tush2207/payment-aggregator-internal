@@ -32,7 +32,7 @@ function ProtectedLayout({ profile, onOpenPasswordReset, children }) {
         </p>
         <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-semibold mb-2">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span>🔒 RBI Cyber Security Master Directions & NPCI Compliant • AES-256-GCM Secured</span>
+          <span> RBI Cyber Security Master Directions & NPCI Compliant • AES-256-GCM Secured</span>
         </div>
         <p className="text-[11px] text-slate-400 max-w-xl mx-auto">
           Official Payment Aggregator RFQ & Commercial Bidding Portal. Confidentiality notice applies. Chandramukhi, Nariman Point, Mumbai - 400 021.

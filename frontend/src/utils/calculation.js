@@ -259,12 +259,12 @@ export function calculateProjectionDetails({
 
   console.log(projections, "projections (all from projectionDetails + alwaysInclude)");
 
-  // ✅ Helper function to consistently format to 3 decimals
+  //  Helper function to consistently format to 3 decimals
   const formatTo3Decimals = (value) => Number(parseFloat(value || 0).toFixed(3));
 
   // Step 1: Pre-calculate all items
   const firstPass = projectionDetails?.map((item) => {
-    console.log("➡️ Processing Item:", item, "calculateProjectionDetails 2");
+    console.log(" Processing Item:", item, "calculateProjectionDetails 2");
 
     const countPercent = parseFloat(item.transactionCount) / 100 || 0;
     const valuePercent = parseFloat(item.transactionValue) / 100 || 0;
@@ -272,7 +272,7 @@ export function calculateProjectionDetails({
     const estimatedTransactions = formatTo3Decimals(countPercent * parseFloat(avgTransactionYearly));
     const aggregateAmount = formatTo3Decimals(valuePercent * parseFloat(aggregateDepositAmt));
 
-    console.log("✅ Calculated Projection: calculateProjectionDetails 3", {
+    console.log(" Calculated Projection: calculateProjectionDetails 3", {
       transactionType: item.transactionType,
       countPercent,
       valuePercent,
@@ -298,7 +298,7 @@ export function calculateProjectionDetails({
   // Step 2: Find Internet Banking parent
   const ibParent = firstPass?.find((d) => d.transactionType === "Internet banking");
 
-  console.log("🔍 Internet Banking Parent: calculateProjectionDetails 4", ibParent);
+  console.log(" Internet Banking Parent: calculateProjectionDetails 4", ibParent);
 
   // Step 3: Calculate children + allow logic
   const secondPass = firstPass?.map((item) => {
@@ -313,7 +313,7 @@ export function calculateProjectionDetails({
         aggregateAmount: formatTo3Decimals(percent * ibParent.aggregateAmount),
       };
 
-      console.log("📊 IB Child Calculation: calculateProjectionDetails 5", {
+      console.log(" IB Child Calculation: calculateProjectionDetails 5", {
         transactionType: item.transactionType,
         percent,
         estimatedTransactions: updatedItem.estimatedTransactions,
@@ -328,12 +328,12 @@ export function calculateProjectionDetails({
         ? false
         : true;
 
-    // 🚫 Override for UPI and Rupay
+    //  Override for UPI and Rupay
     if (["UPI", "Debit card - Rupay"].includes(item.transactionType)) {
       updatedItem.allow = false;
     }
 
-    // ✅ Ensure numeric values remain formatted to 3 decimals
+    //  Ensure numeric values remain formatted to 3 decimals
     updatedItem = {
       ...updatedItem,
       estimatedTransactions: formatTo3Decimals(updatedItem.estimatedTransactions),
@@ -345,7 +345,7 @@ export function calculateProjectionDetails({
     };
 
     console.log(
-      "⚙️ Final Item After Allow Logic: calculateProjectionDetails 6",
+      " Final Item After Allow Logic: calculateProjectionDetails 6",
       updatedItem
     );
 
@@ -353,7 +353,7 @@ export function calculateProjectionDetails({
   });
 
   // Step 4: Return everything without filtering
-  console.log("✅ Final Result: calculateProjectionDetails 8", secondPass);
+  console.log(" Final Result: calculateProjectionDetails 8", secondPass);
 
   return secondPass;
 }
@@ -500,9 +500,9 @@ export function calculateProjectionDetails_working({
       let estimatedTransactions = 0;
       let aggregateAmount = 0;
 
-      console.log("➡️ Processing Item:", item, "calculateProjectionDetails 2");
+      console.log(" Processing Item:", item, "calculateProjectionDetails 2");
 
-      // ✅ calculate if it's in selectedProjections OR alwaysInclude
+      //  calculate if it's in selectedProjections OR alwaysInclude
       if (projections.includes(item.transactionType)) {
         const countPercent = parseFloat(item.transactionCount) / 100 || 0;
         const valuePercent = parseFloat(item.transactionValue) / 100 || 0;
@@ -510,7 +510,7 @@ export function calculateProjectionDetails_working({
         estimatedTransactions = countPercent * avgTransactionYearly;
         aggregateAmount = valuePercent * aggregateDepositAmt;
 
-        console.log("✅ Calculated Projection: calculateProjectionDetails 3", {
+        console.log(" Calculated Projection: calculateProjectionDetails 3", {
           transactionType: item.transactionType,
           countPercent,
           valuePercent,
@@ -532,7 +532,7 @@ export function calculateProjectionDetails_working({
     firstPass?.length > 0 &&
     firstPass.find((d) => d.transactionType === "Internet banking");
 
-  console.log("🔍 Internet Banking Parent: calculateProjectionDetails 4", ibParent);
+  console.log(" Internet Banking Parent: calculateProjectionDetails 4", ibParent);
 
   // Step 3: Calculate children + add allow logic
   const secondPass =
@@ -548,7 +548,7 @@ export function calculateProjectionDetails_working({
           aggregateAmount: Number((percent * ibParent.aggregateAmount).toFixed(2)),
         };
 
-        console.log("📊 IB Child Calculation: calculateProjectionDetails 5", {
+        console.log(" IB Child Calculation: calculateProjectionDetails 5", {
           transactionType: item.transactionType,
           percent,
           estimatedTransactions: updatedItem.estimatedTransactions,
@@ -557,7 +557,7 @@ export function calculateProjectionDetails_working({
       }
       // Add allow field (merged getProjectionWithAllow logic)
       if (item.transactionType === "Internet banking" && !item.isIB) {
-        // 🚫 Always false for Internet banking parent
+        //  Always false for Internet banking parent
         updatedItem.allow = false;
       } else {
         updatedItem.allow = !item.isIB
@@ -566,7 +566,7 @@ export function calculateProjectionDetails_working({
       }
 
       console.log(
-        "⚙️ Final Item After Allow Logic: calculateProjectionDetails 6",
+        " Final Item After Allow Logic: calculateProjectionDetails 6",
         updatedItem
       );
 
@@ -582,7 +582,7 @@ export function calculateProjectionDetails_working({
         : projections.includes(item.transactionType)
     );
 
-  console.log("✅ Final Result: calculateProjectionDetails 8", finalResult);
+  console.log(" Final Result: calculateProjectionDetails 8", finalResult);
 
   return finalResult;
 }
@@ -606,7 +606,7 @@ export function markAllowedIBTransactions(data, projectionList = []) {
   });
 }
 
-// 🔹 Pure utility function for calculations
+//  Pure utility function for calculations
 // export const calculateQuoteRow = (row, newCharges, newUnit, newRate) => {
 //   const charges = newCharges !== undefined ? parseFloat(newCharges) || 0 : row.chargesProposed || 0;
 //   const unit = newUnit || row.unit;
@@ -655,12 +655,12 @@ export function markAllowedIBTransactions(data, projectionList = []) {
 //   let expectedRevenue = 0;
 
 //   if (unit === PERCENTAGE) {
-//     // ✅ charges means "percentage value"
+//     //  charges means "percentage value"
 //     grossAmount = (row.aggregateAmount * charges) / 100;
 //     vendorShare = (row.aggregateAmount * rate) / 100;
 //     expectedRevenue = grossAmount - vendorShare;
 //   } else {
-//     // ✅ charges means "flat value"
+//     //  charges means "flat value"
 //     grossAmount = row.isIB ? row.estimatedTransactions * charges : row.aggregateAmount * charges;
 //     vendorShare = row.estimatedTransactions * rate;
 //     expectedRevenue = grossAmount - vendorShare;
@@ -800,7 +800,7 @@ export const calculateQuoteRow = (row, newCharges, newUnit, newRate) => {
 //   };
 // };
 
-// 🔹 Pure utility function for totals
+//  Pure utility function for totals
 export const calculateTotals = (rows, precision = 3) => {
   const totals = {
     totalEstimatedTransactions: 0,
@@ -824,7 +824,7 @@ export const calculateTotals = (rows, precision = 3) => {
     totals.totalExpectedRevenue += Number(row.expectedRevenue) || 0;
   }
 
-  // ✅ Round dynamically based on precision (default = 3)
+  //  Round dynamically based on precision (default = 3)
   Object.keys(totals).forEach(
     (key) => (totals[key] = Number(totals[key].toFixed(precision)))
   );

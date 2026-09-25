@@ -135,10 +135,10 @@ def run_db_diagnostic():
     print("\n4. DIAGNOSTIC SCORECARD:")
     print("────────────────────────────────────────────────────────────────────────")
     if oracle_ok and all_ok:
-        print(" 🎉 ALL 10 DATABASE TABLES ARE PROPERLY CREATED, INDEXED, AND ACTIVE! 🎉")
+        print("  ALL 10 DATABASE TABLES ARE PROPERLY CREATED, INDEXED, AND ACTIVE! ")
         print(" The backend is 100% ready to handle API requests, RFQ quotes, and audit logs.\n")
     else:
-        print(" ⚠️ One or more issues were detected. Check the error log details above.\n")
+        print("  One or more issues were detected. Check the error log details above.\n")
 
 if __name__ == "__main__":
     run_db_diagnostic()

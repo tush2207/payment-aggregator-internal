@@ -470,9 +470,9 @@ const CostBenefitAnalysisView = ({
           : "agg-ranking-header";
 
         const statusText = isFinal
-          ? "✓ Selected (Finalized)"
+          ? " Selected (Finalized)"
           : isAccepted
-          ? "✗ Rejected"
+          ? " Rejected"
           : `(${rankLabel})`;
 
         tableHtml += `
@@ -652,7 +652,7 @@ const CostBenefitAnalysisView = ({
         customerDetails?.applicationId || ""
       }.xls`
     );
-    successNotification("✅ Premium styled Excel report exported successfully!");
+    successNotification(" Premium styled Excel report exported successfully!");
   };
 
   const handleExportPDF = async () => {
@@ -706,7 +706,7 @@ const CostBenefitAnalysisView = ({
           customerDetails?.applicationId || ""
         }.pdf`
       );
-      successNotification("✅ High-resolution PDF exported successfully!");
+      successNotification(" High-resolution PDF exported successfully!");
     } catch (err) {
       console.error("PDF generation error: ", err);
       errorNotification("Failed to generate PDF");
@@ -1060,9 +1060,9 @@ const CostBenefitAnalysisView = ({
                           }}
                         >
                           {isFinal
-                            ? "✓ Selected (Finalized)"
+                            ? " Selected (Finalized)"
                             : (hasAnyFinalized || isAccepted)
-                            ? "✗ Rejected"
+                            ? " Rejected"
                             : `(${rankLabel})`}
                         </Typography>
                       </Box>
@@ -1704,9 +1704,9 @@ const CostBenefitAnalysisView = ({
                                 }}
                               >
                                 {isFinal
-                                  ? "✓ Selected (Finalized)"
+                                  ? " Selected (Finalized)"
                                   : (hasAnyFinalized || isAccepted)
-                                  ? "✗ Rejected"
+                                  ? " Rejected"
                                   : `(${rankLabel})`}
                               </Typography>
                             </Box>

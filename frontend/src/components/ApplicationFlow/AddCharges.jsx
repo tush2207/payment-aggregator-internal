@@ -60,8 +60,8 @@ const AddCharges = ({
         const rawData = Array.isArray(res?.data)
           ? res.data
           : Array.isArray(res)
-          ? res
-          : [];
+            ? res
+            : [];
         if (rawData.length > 0) {
           const mapped = rawData.map((row, i) => ({
             id: row.id ?? i + 1,
@@ -132,7 +132,7 @@ const AddCharges = ({
         allCharges
       );
       successNotification(
-        "✅ Bank charges updated and projections recalculated successfully."
+        " Bank charges updated and projections recalculated successfully."
       );
       setOpenModal(false);
       if (onSaveSuccess) {
@@ -144,8 +144,8 @@ const AddCharges = ({
       console.error("Error in saveAllChareges:", err);
       errorNotification(
         err?.response?.data?.message ||
-          err?.message ||
-          "⚠️ Something went wrong. Please try again."
+        err?.message ||
+        " Something went wrong. Please try again."
       );
     }
   };

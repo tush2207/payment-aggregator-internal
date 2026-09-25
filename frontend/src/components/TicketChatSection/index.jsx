@@ -49,7 +49,7 @@ const renderMessageContent = (text, isCurrentUser) => {
                     },
                 }}
             >
-                📎 {fileName}
+                 {fileName}
             </Box>
         </Box>
     );

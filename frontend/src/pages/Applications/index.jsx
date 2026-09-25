@@ -47,7 +47,7 @@ export default function Applications() {
   const [searchParams, setSearchParams] = useSearchParams();
   const openAppId = searchParams.get('openAppId');
   const [currentTab, setCurrentTab] = useState(0);
-  const [mockApp, setMockApp] = useState([]);
+  const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [isReview, setIsReview] = useState(false);
@@ -117,15 +117,15 @@ export default function Applications() {
 
       if (response && response.data) {
         const appList = response.data.data || response.data || [];
-        setMockApp(Array.isArray(appList) ? appList : []);
+        setApplications(Array.isArray(appList) ? appList : []);
         setTotalRecords(response.data.totalRecords || (Array.isArray(appList) ? appList.length : 0));
       } else {
-        setMockApp([]);
+        setApplications([]);
         setTotalRecords(0);
       }
     } catch (err) {
       console.error('Failed to fetch applications:', err);
-      setMockApp([]);
+      setApplications([]);
       setTotalRecords(0);
     } finally {
       setLoading(false);
@@ -319,7 +319,7 @@ export default function Applications() {
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <span>Customer-Based Applications</span>
                 <Chip
-                  label={totalRecords || mockApp.length}
+                  label={totalRecords || applications.length}
                   size="small"
                   sx={{
                     bgcolor: currentTab === 0 ? 'rgba(206,15,62,0.12)' : 'grey.100',
@@ -358,7 +358,7 @@ export default function Applications() {
       {/* ── Tab 1: Customer-Based Applications Table ── */}
       {currentTab === 0 && (
         <ApplicationFlowTable
-          applicationDetails={mockApp}
+          applicationDetails={applications}
           totalRecords={totalRecords}
           onRefresh={fetchApplicationsData}
           onView={handleView}
@@ -373,7 +373,7 @@ export default function Applications() {
       {currentTab === 1 && (
         <AggregatorApplicationsTable
           aggregators={aggregatorDetails || []}
-          applications={mockApp || []}
+          applications={applications || []}
           onView={handleView}
           onVerify={handleVerify}
         />

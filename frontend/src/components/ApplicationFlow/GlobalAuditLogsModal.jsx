@@ -48,14 +48,14 @@ export default function GlobalAuditLogsModal({ open, onClose }) {
     try {
       const response = await auditLogsService.getAuditTrailByApplication("all");
       const fetchedData = response?.data || response;
-      if (Array.isArray(fetchedData) && fetchedData.length > 0) {
+      if (Array.isArray(fetchedData)) {
         setLogs(fetchedData);
       } else {
-        setLogs(generateGlobalMockAuditLogs());
+        setLogs([]);
       }
     } catch (err) {
-      console.warn("Using project-wide audit log mock fallback:", err);
-      setLogs(generateGlobalMockAuditLogs());
+      console.warn("Error fetching global audit logs:", err);
+      setLogs([]);
     } finally {
       setLoading(false);
     }
@@ -66,81 +66,6 @@ export default function GlobalAuditLogsModal({ open, onClose }) {
       fetchGlobalLogs();
     }
   }, [open]);
-
-  const generateGlobalMockAuditLogs = () => {
-    return [
-      {
-        id: 101,
-        action: "POST /api/applications",
-        stage: "Application Submission",
-        performedBy: "54829",
-        userRole: "BR",
-        details: "Status Code: 201 | Execution Time: 142ms",
-        ipAddress: "192.168.1.45",
-        createdAt: new Date(Date.now() - 3600000 * 2).toISOString()
-      },
-      {
-        id: 102,
-        action: "PUT /api/applications/22",
-        stage: "Update Projection",
-        performedBy: "115019",
-        userRole: "CO",
-        details: "Status Code: 200 | Execution Time: 88ms",
-        ipAddress: "10.0.4.12",
-        createdAt: new Date(Date.now() - 3600000 * 1.5).toISOString()
-      },
-      {
-        id: 103,
-        action: "POST /api/applications/bulk-update-charges/22",
-        stage: "API_CALL",
-        performedBy: "115019",
-        userRole: "CO",
-        details: "Status Code: 200 | Execution Time: 112ms",
-        ipAddress: "10.0.4.12",
-        createdAt: new Date(Date.now() - 3600000 * 1.2).toISOString()
-      },
-      {
-        id: 104,
-        action: "GET /api/aggregators",
-        stage: "API_CALL",
-        performedBy: "115019",
-        userRole: "CO",
-        details: "Status Code: 200 | Execution Time: 34ms",
-        ipAddress: "10.0.4.12",
-        createdAt: new Date(Date.now() - 3600000 * 1.1).toISOString()
-      },
-      {
-        id: 105,
-        action: "POST /api/applications/aggregators/complex-projections",
-        stage: "Add Aggregator",
-        performedBy: "115019",
-        userRole: "CO",
-        details: "Status Code: 201 | Execution Time: 210ms",
-        ipAddress: "10.0.4.12",
-        createdAt: new Date(Date.now() - 3600000 * 0.8).toISOString()
-      },
-      {
-        id: 106,
-        action: "GET /api/helpdesk/tickets",
-        stage: "API_CALL",
-        performedBy: "54868",
-        userRole: "RO",
-        details: "Status Code: 200 | Execution Time: 45ms",
-        ipAddress: "192.168.1.88",
-        createdAt: new Date(Date.now() - 3600000 * 0.5).toISOString()
-      },
-      {
-        id: 107,
-        action: "PUT /api/applications/22",
-        stage: "CO Rejection",
-        performedBy: "115019",
-        userRole: "CO",
-        details: "Status Code: 200 | Execution Time: 95ms",
-        ipAddress: "10.0.4.12",
-        createdAt: new Date(Date.now() - 3600000 * 0.1).toISOString()
-      }
-    ];
-  };
 
   const filteredLogs = useMemo(() => {
     return logs.filter((log) => {

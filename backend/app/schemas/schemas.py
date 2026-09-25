@@ -1,6 +1,13 @@
 from pydantic import BaseModel
 from typing import Optional, Any
 
+class Base64Request(BaseModel):
+    data: str
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
 class UserCreate(BaseModel):
     username: str
     password: str
@@ -13,9 +20,10 @@ class TokenData(BaseModel):
     username: Optional[str] = None
 
 class DevLoginRequest(BaseModel):
-    username: str
+    username: Optional[str] = "145538"
     password: Optional[str] = None
-    role: Optional[str] = None
+    role: Optional[str] = "CO"
+    pfId: Optional[str] = None
 
 class PaymentAggregator(BaseModel):
     aggregatorId : int

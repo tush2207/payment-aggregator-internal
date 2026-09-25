@@ -35,7 +35,6 @@ import {
   PROJECTION_CAL_DETAILS
 } from "&src/constants/PaymentAggregratorConstant";
 
-import { AGGREGRATOR_BY_APPLICATION_RESPONSE } from "&src/data/data";
 import useAggregatorDetails from "&src/hooks/useAggregatorDetails";
 import aggregatorByApplication from "&src/services/aggregatorByApplication";
 import aggregatorProjections from "&src/services/aggregatorProjections";
@@ -52,7 +51,7 @@ import useStatusWiseAlert from "../ToastNotifications/useStatusWiseAlert";
 import AddCharges from "./AddCharges";
 import QuoteTable from "./QuoteTable";
 
-// ✅ Conditional hook wrapper
+//  Conditional hook wrapper
 function useConditionalAggregatorDetails(condition) {
   return condition ? useAggregatorDetails() : { aggregatorDetails: [] };
 }
@@ -72,7 +71,7 @@ const AggregatorDetails = ({ customerDetails }) => {
   const condition = isAggregatorAdded === null && isCO;
   const { aggregatorDetails } = useConditionalAggregatorDetails(condition);
 
-  // 🔹 Manage Tabs
+  //  Manage Tabs
   const [tabValue, setTabValue] = useState("all");
 
   useEffect(() => {
@@ -88,7 +87,7 @@ const AggregatorDetails = ({ customerDetails }) => {
     setOpenRow(null)
   };
 
-  /** 🔹 Fetch Aggregator Details */
+  /**  Fetch Aggregator Details */
   const fetchSelectedAggregatorDetails = useCallback(async () => {
     if (!applicationId) return;
     setLoading(true);
@@ -96,14 +95,12 @@ const AggregatorDetails = ({ customerDetails }) => {
     try {
       const response = await aggregatorByApplication.getAllAggregatorsByApplication(applicationId);
       setSelectedAggregatorsDetails(Array.isArray(response?.data)
-
         ? sortAggregatorsByQuote(response?.data)
         : []);
     } catch (error) {
       console.error("[ERROR] Failed to fetch aggregators:", error);
       errorNotification(error?.response?.data?.message || "Failed to fetch aggregators");
-      // fallback mock sorted data
-      setSelectedAggregatorsDetails(sortAggregatorsByQuote(AGGREGRATOR_BY_APPLICATION_RESPONSE));
+      setSelectedAggregatorsDetails([]);
     } finally {
       setLoading(false);
     }
@@ -115,7 +112,7 @@ const AggregatorDetails = ({ customerDetails }) => {
     }
   }, [applicationId, customerDetails?.isAggregatorAdded]);
 
-  /** 🔹 Send for Quote */
+  /**  Send for Quote */
   const handleSendForQuote = async () => {
     if (!selectedAggregators?.length) {
       return errorNotification("Please select at least one aggregator");
@@ -124,7 +121,7 @@ const AggregatorDetails = ({ customerDetails }) => {
     try {
       setLoading(true);
 
-      // 1️⃣ Aggregator Payload
+      // 1⃣ Aggregator Payload
       const aggregatorPayload = selectedAggregators.map((agg) => ({
         aggregatorId: agg.aggregatorId,
         aggregatorName: agg.aggregatorName,
@@ -145,7 +142,7 @@ const AggregatorDetails = ({ customerDetails }) => {
       }));
 
       const projectionList = generateProjectionArray(PROJECTION_CAL_DETAILS, avgTransactionSize)
-      // 2️⃣ Projection Payload
+      // 2⃣ Projection Payload
       const projectionsPayload = calculateProjectionDetails({
         projectionDetails: projectionList,
         avgTransactionYearly,
@@ -153,7 +150,7 @@ const AggregatorDetails = ({ customerDetails }) => {
         applicationId,
       });
 
-      // 🔹 Sequential API Calls
+      //  Sequential API Calls
       const aggResponse = await aggregatorByApplication.createAggregatorByApplication(applicationId, aggregatorPayload);
       if (!(aggResponse?.status === 200 || aggResponse?.status === 201)) {
         throw new Error("Failed to add aggregator");
@@ -195,7 +192,7 @@ const AggregatorDetails = ({ customerDetails }) => {
     })
   }
 
-  /** 🔹 Filter finalized aggregator if exists */
+  /**  Filter finalized aggregator if exists */
   const filteredAggregators =
     tabValue === "finalizedAggregator" && finalizedAggregatorId
 
@@ -207,7 +204,7 @@ const AggregatorDetails = ({ customerDetails }) => {
     <Box>
       {loading && <FullScreenLoader />}
 
-      {/* ➤ Add Aggregator Section */}
+      {/*  Add Aggregator Section */}
       {condition && (
         <Box>
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
@@ -249,7 +246,7 @@ const AggregatorDetails = ({ customerDetails }) => {
         </Box>
       )}
 
-      {/* ➤ Added Aggregators Section */}
+      {/*  Added Aggregators Section */}
       {customerDetails?.isAggregatorAdded && isCO && (
         <Box sx={{ mt: 2 }}>
           <Box display='flex' justifyContent='space-between' m={2}>

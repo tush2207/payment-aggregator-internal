@@ -1,31 +1,45 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Button, Typography, Box, Checkbox, TextField,
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper 
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, CircularProgress 
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import GroupsIcon from '@mui/icons-material/Groups';
 import DialogWithHeader from '&src/components/Dialog/DialogWithHeader';
-
-// Mock aggregators for UI demonstration
-const INITIAL_MOCK_AGGREGATORS = [
-  { id: '1', name: 'BillDesk', services: 'Internet banking, UPI' },
-  { id: '2', name: 'Razorpay', services: 'UPI, Credit card, Debit card' },
-  { id: '3', name: 'PayU', services: 'Internet banking, Credit card' },
-  { id: '4', name: 'CCAvenue', services: 'All' },
-];
+import manageAggregatorServices from '&src/services/manageAggregator';
 
 export default function AggregatorSelectionModal({ open, onClose, applicationData, onSendForQuote }) {
-  const [aggregators, setAggregators] = useState([...INITIAL_MOCK_AGGREGATORS]);
+  const [aggregators, setAggregators] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAddNew, setShowAddNew] = useState(false);
   const [newAggName, setNewAggName] = useState('');
   const [newAggServices, setNewAggServices] = useState('');
 
+  const fetchAggregators = async () => {
+    setLoading(true);
+    try {
+      const res = await manageAggregatorServices.getAllAggregators();
+      const list = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+      const mapped = list.map((a) => ({
+        id: String(a.aggregatorId || a.id),
+        name: a.aggregatorName || a.name || 'Payment Aggregator',
+        services: a.services || 'UPI, Net Banking, Cards',
+      }));
+      setAggregators(mapped);
+    } catch (err) {
+      console.error('Failed to load aggregators:', err);
+      setAggregators([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (open) {
       setSelectedIds([]);
+      fetchAggregators();
     }
   }, [open]);
 

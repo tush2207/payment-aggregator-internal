@@ -16,7 +16,7 @@ const useApplicationForm = ({
   fetchAllApplications,
   formClosed,
 }) => {
-  // ⬇️ Get user details from session storage
+  // ⬇ Get user details from session storage
   const userDetails = useMemo(() => {
     try {
       const stored = sessionStorage.getItem('userDetails');
@@ -68,7 +68,7 @@ const useApplicationForm = ({
     validateOnBlur: true,
     validateOnChange: true,
     onSubmit: async (values) => {
-      // ✅ Validate before calling API
+      //  Validate before calling API
       await formik.validateForm(values);
       if (Object.keys(formik.errors).length > 0) {
         errorNotification("Please fix the errors before submitting.");

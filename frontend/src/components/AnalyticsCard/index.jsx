@@ -1,7 +1,7 @@
 import { Card, CardContent, Typography, Box } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
-// 🎛 Neumorphism Main Card
+//  Neumorphism Main Card
 const NeoCard = styled(Card)(({ theme }) => ({
     borderRadius: "20px",
     padding: "22px",
@@ -22,7 +22,7 @@ const NeoCard = styled(Card)(({ theme }) => ({
     },
 }));
 
-// 🌀 Icon container with pressed effect
+//  Icon container with pressed effect
 const SoftIcon = styled(Box)(({ color }) => ({
     width: 70,
     height: 70,

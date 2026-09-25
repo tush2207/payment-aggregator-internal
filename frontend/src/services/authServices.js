@@ -2,28 +2,38 @@ import ApiUrls from "./apiUrls";
 import { getMethod, postMethod } from "./axiosConfig";
 
 const AuthServices = {
+  // ── Single DEV Login API (Matches bank-unified-portal /auth/dev-token) ──────
+  devLogin: async (data = {}, config) => {
+    try {
+      const pfId = data.pfId || data.username || "145538";
+      const role = data.role || "CO";
+      return await getMethod(`/auth/dev-token?pfId=${encodeURIComponent(pfId)}&role=${encodeURIComponent(role)}`, config);
+    } catch (error) {
+      console.error(`Error in /auth/dev-token:`, error);
+      throw error;
+    }
+  },
+
+  // ── Standard LDAP / PROD Login API ──────────────────────────────────────────
   login: async (data, config) => {
     try {
-      const formData  = new URLSearchParams();
-      Object.keys(data).forEach(key => formData.append(key, data[key]));
-      const headers ={
-        'Content-Type': 'application/x-www-form-urlencoded',
+      if (data && typeof data === 'object' && ('data' in data || 'username' in data)) {
+        return await postMethod(ApiUrls.LOGIN, data, config);
       }
-      return await postMethod(ApiUrls.LOGIN, formData, {...config, headers});
+      const formData = new URLSearchParams();
+      Object.keys(data).forEach(key => formData.append(key, data[key]));
+      const headers = {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      };
+      return await postMethod(ApiUrls.LOGIN, formData, { ...config, headers });
     } catch (error) {
       console.error(`Error in ${ApiUrls.LOGIN}:`, error);
       throw error;
     }
   },
-  devLogin: async (data, config) => {
-    try {
-      return await postMethod(ApiUrls.DEV_LOGIN, data, config);
-    } catch (error) {
-      console.error(`Error in ${ApiUrls.DEV_LOGIN}:`, error);
-      throw error;
-    }
-  },
-   userDetails: async (userId, config) => {
+
+  // ── Get User Details ────────────────────────────────────────────────────────
+  userDetails: async (userId, config) => {
     try {
       return await getMethod(ApiUrls.GET_USER_DETAILS(userId), config);
     } catch (error) {

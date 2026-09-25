@@ -25,7 +25,6 @@ import NoData from "../NoData";
 import useStatusWiseAlert from "../ToastNotifications/useStatusWiseAlert";
 import aggregatorProjections from "&src/services/aggregatorProjections";
 import applicationServices from "&src/services/applications";
-import { PROJECTION_LIST_BASED_ON_AGG } from "&src/data/data";
 import { calculateTotals } from "&src/utils/calculation";
 
 import jsPDF from "jspdf";
@@ -36,9 +35,9 @@ const AcceptedQuoteTable = ({ customer, applicationId, aggregatorId, application
   const [quoteDetails, setQuoteDetails] = useState([]);
   const [loading, setLoading] = useState(false);
   const [accepted, setAccepted] = useState(false);
-  const pdfRef = useRef(); // 🔹 Ref for capturing PDF
+  const pdfRef = useRef(); //  Ref for capturing PDF
 
-  // 🔹 Fetch Projection Details
+  //  Fetch Projection Details
   const fetchSelectedAggregatorDetails = async () => {
     setLoading(true);
     try {
@@ -81,10 +80,10 @@ const AcceptedQuoteTable = ({ customer, applicationId, aggregatorId, application
         payload
       );
 
-      successNotification("✅ Application updated successfully");
-      console.log("✅ Updated application:", response);
+      successNotification(" Application updated successfully");
+      console.log(" Updated application:", response);
     } catch (err) {
-      console.error("❌ Error updating application:", err);
+      console.error(" Error updating application:", err);
       errorNotification("Failed to update application");
     }
   };
@@ -130,7 +129,7 @@ const AcceptedQuoteTable = ({ customer, applicationId, aggregatorId, application
           borderRadius: 3,
           background: "#fafafa",
         }}
-        ref={pdfRef} // 🔹 This section will be converted into PDF
+        ref={pdfRef} //  This section will be converted into PDF
       >
         {/* Letter Header */}
         <Typography variant="h5" fontWeight={700} textAlign="center" gutterBottom>

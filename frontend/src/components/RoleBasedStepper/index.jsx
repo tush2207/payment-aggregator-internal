@@ -20,7 +20,7 @@ import { selectUserRole } from '&src/store/applicationFlowSlice';
 import StatusChipOrSelect from '../StatusChipOrSelect';
 
 // ------------------------------------------------------
-// 🌀 CBI Premium Keyframe Animations
+//  CBI Premium Keyframe Animations
 // ------------------------------------------------------
 const pulseGlow = keyframes`
   0% {
@@ -62,7 +62,7 @@ const flowingLine = keyframes`
 `;
 
 // ------------------------------------------------------
-// 🌈 CBI Premium Gradient Connector (OUTSIDE BOX)
+//  CBI Premium Gradient Connector (OUTSIDE BOX)
 // ------------------------------------------------------
 const CBIConnector = styled(StepConnector)(({ theme }) => ({
   [`&.${stepConnectorClasses.alternativeLabel}`]: {
@@ -99,7 +99,7 @@ const CBIConnector = styled(StepConnector)(({ theme }) => ({
 }));
 
 // ------------------------------------------------------
-// ⭐ MAIN COMPONENT
+//  MAIN COMPONENT
 // ------------------------------------------------------
 export default function RoleBasedStepper({
   steps = [],
@@ -150,7 +150,7 @@ export default function RoleBasedStepper({
     });
   }, [steps, userRole]);
 
-  // ✔ Auto-detect active step
+  //  Auto-detect active step
   useEffect(() => {
     if (!allActive && filteredSteps?.length > 0) {
       const currentIndex = filteredSteps.findIndex((step) => !step.status);
@@ -161,7 +161,7 @@ export default function RoleBasedStepper({
   }, [filteredSteps, allActive]);
 
   // ------------------------------------------------------
-  // 🎨 Premium Step Label Renderer
+  //  Premium Step Label Renderer
   // ------------------------------------------------------
   const renderStepLabel = (step, index) => {
     const isCompleted = allActive || step.status;

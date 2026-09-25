@@ -3,6 +3,7 @@ import { APPLICATION_ROUTES_URLS } from "&src/routes/routesConfig";
 import { CBI_DEFAULT_LOCATIONS } from "&src/constants/PaymentAggregratorConstant";
 import AuthServices from "&src/services/authServices";
 import { encodeBase64 } from "&src/utils";
+import { setStoredItem } from "&src/utils/storage";
 import { loginSchema } from "&src/utils/validationSchemas";
 import { useFormik } from "formik";
 import { useState } from "react";
@@ -42,113 +43,120 @@ export const DEV_ROLES = [
 export const useLogin = () => {
   const navigate = useNavigate();
   const { errorNotification, successNotification } = useStatusWiseAlert();
+
   const [isLoading, setLoading] = useState(false);
-  const [devRole, setDevRole] = useState("CO"); // only used in DEV
+  const [devRole, setDevRole] = useState('CO'); // only used in DEV
 
   const formik = useFormik({
-    initialValues: {
-      username: "",
-      password: "",
-    },
-    validationSchema: loginSchema,
-    onSubmit: (values) => {
-      login(values);
-    },
+    initialValues: { username: '', password: '' },
+    // Only enforce strict validation in PROD mode so DEV bypass can log in instantly
+    validationSchema: IS_DEV ? undefined : loginSchema,
+    onSubmit: (values) => login(values),
   });
 
-  const login = async (values) => {
+  const login = async (values = {}) => {
     setLoading(true);
     try {
-      let username = (values?.username || "").trim();
-      let password = values?.password || "";
+      let res;
+      const cleanUsername = String(values?.username || '').trim();
+      const cleanPassword = String(values?.password || '');
 
-      let response;
       if (IS_DEV) {
-        // In DEV mode, provide sensible defaults if empty
-        if (!username) {
-          username = devRole === "CO" ? "139822" : `${devRole}1001`;
+        /* DEV bypass — single /auth/dev-token endpoint with selected role and optional custom pfId */
+        const pfId = cleanUsername || (devRole === 'CO' ? '139822' : `${devRole}1001`);
+        res = await AuthServices.devLogin({
+          pfId,
+          role: devRole,
+        });
+
+        const resData = res?.data?.data || res?.data || {};
+        const token = resData?.access_token || resData?.token || 'mock-dev-token';
+        const userDetails = resData?.employeeDetails || resData?.user || {
+          employeeName: `Administrator (${pfId})`,
+          pfId: pfId,
+          employeeId: pfId,
+          role: devRole,
+          ...(CBI_DEFAULT_LOCATIONS[devRole] || CBI_DEFAULT_LOCATIONS.CO),
+        };
+
+        // Ensure location details are populated
+        if (!userDetails.branchName && !userDetails.branchId) {
+          const locDefaults = CBI_DEFAULT_LOCATIONS[devRole] || CBI_DEFAULT_LOCATIONS.CO;
+          Object.assign(userDetails, locDefaults);
         }
-        if (!password) {
-          password = "Admin@12345";
-        }
-        // Dev login: backend expects { username, password, role }
-        response = await AuthServices.devLogin({ username, password, role: devRole });
-      } else {
-        // Production login: backend expects Base64 encoded username/password in form URL encoded format
-        const encUsername = encodeBase64(username);
-        const encPassword = encodeBase64(password);
-        response = await AuthServices.login({ username: encUsername, password: encPassword });
+
+        setStoredItem('accessToken', token);
+        setStoredItem('userDetails', userDetails);
+        setStoredItem('role', devRole);
+        setStoredItem('userId', pfId);
+        sessionStorage.setItem('accessToken', token);
+        sessionStorage.setItem('userDetails', JSON.stringify(userDetails));
+        sessionStorage.setItem('role', devRole);
+        sessionStorage.setItem('userId', pfId);
+
+        window.dispatchEvent(new Event('user-session-changed'));
+
+        successNotification(`Dev Login Successful — Role: ${devRole} `);
+        window.location.href = APPLICATION_ROUTES_URLS.DASHBOARD;
+        return;
       }
 
-      if (response?.status === 200 || response?.status === 201) {
-        const accessToken = response?.data?.access_token;
-        if (accessToken) {
-          sessionStorage.setItem("accessToken", accessToken);
-        }
-
-        try {
-          let userObj;
-          if (IS_DEV) {
-            userObj = response?.data?.user || {};
-            if (!userObj.branchName && !userObj.branchId) {
-              const locDefaults = CBI_DEFAULT_LOCATIONS[devRole] || CBI_DEFAULT_LOCATIONS.CO;
-              userObj.zoneName = userObj.zoneName || locDefaults.zoneName;
-              userObj.zoneId = userObj.zoneId ?? locDefaults.zoneId;
-              userObj.regionName = userObj.regionName || locDefaults.regionName;
-              userObj.regionId = userObj.regionId ?? locDefaults.regionId;
-              userObj.branchName = userObj.branchName || locDefaults.branchName;
-              userObj.branchId = userObj.branchId ?? locDefaults.branchId;
-            }
-          } else {
-            // In Production mode: Fetch user profile details from backend
-            try {
-              const userDetailsResponse = await AuthServices.userDetails(username);
-              if (userDetailsResponse && (userDetailsResponse.status === 200 || userDetailsResponse.status === 201)) {
-                userObj = userDetailsResponse.data;
-              }
-            } catch (fetchErr) {
-              console.warn("Could not retrieve full user profile from backend, using fallback session details:", fetchErr);
-            }
-
-            // If userObj not fully provided, populate standard secure defaults based on username
-            if (!userObj || !userObj.role) {
-              const isAdminId = ["139822", "115019", "CE25000014", "138922"].includes(username);
-              const inferredRole = isAdminId ? "CO" : (username.toUpperCase().startsWith("RO") ? "RO" : (username.toUpperCase().startsWith("ZO") ? "ZO" : "BO"));
-              const locDefaults = CBI_DEFAULT_LOCATIONS[inferredRole] || CBI_DEFAULT_LOCATIONS.CO;
-
-              userObj = {
-                employeeId: username,
-                pfId: username,
-                employeeName: isAdminId ? "Central Office Administrator" : `Bank Officer (${username})`,
-                email: `${username.toLowerCase()}@cbi.co.in`,
-                role: inferredRole,
-                isAdmin: isAdminId,
-                ...locDefaults,
-              };
-            }
-          }
-
-          // Persist user session
-          sessionStorage.setItem("userDetails", JSON.stringify(userObj));
-          sessionStorage.setItem("role", userObj.role || "CO");
-          sessionStorage.setItem("userId", userObj.pfId || userObj.employeeId || username);
-
-          // Dispatch session update event for appbar / layout listeners
-          window.dispatchEvent(new Event("user-session-changed"));
-
-          successNotification("Authentication successful. Welcome to PAPG Portal!");
-          window.location.href = APPLICATION_ROUTES_URLS.DASHBOARD;
-        } catch (err) {
-          console.error("Error setting up user session:", err);
-          errorNotification(err?.response?.data?.detail || err?.message || "Failed to initialize session. Please try again.");
-          sessionStorage.clear();
-        }
-      } else {
-        errorNotification(response?.data?.message || "Invalid credentials. Please verify your Employee ID and password.");
+      /* UAT / PROD normal API login — Base64 payload encoded */
+      if (!cleanUsername || !cleanPassword) {
+        throw new Error('Please enter your username and password.');
       }
+
+      const payload = {
+        username: cleanUsername,
+        password: cleanPassword,
+      };
+      const encData = encodeBase64(JSON.stringify(payload));
+      res = await AuthServices.login({ data: encData });
+
+      const resBody = res?.data || {};
+      if (resBody?.status === 'error' || resBody?.statusCode >= 400) {
+        throw new Error(resBody?.message || 'Invalid credentials.');
+      }
+
+      const resData = resBody?.data || resBody;
+      const token = resData?.access_token || resData?.token || resBody?.access_token;
+      const employeeDetails = resData?.employeeDetails || resData?.user || resBody?.employeeDetails || resBody?.user;
+
+      if (!token) {
+        throw new Error(resBody?.message || 'Authentication succeeded but no access token received.');
+      }
+
+      const role =
+        employeeDetails?.role ||
+        (employeeDetails?.locationType === 'DO' ? 'CO' : employeeDetails?.locationType) ||
+        'CO';
+
+      const userDetails = {
+        ...employeeDetails,
+        role,
+      };
+
+      setStoredItem('accessToken', token);
+      setStoredItem('userDetails', userDetails);
+      setStoredItem('role', role);
+      setStoredItem('userId', userDetails?.pfId || userDetails?.employeeId || cleanUsername);
+      sessionStorage.setItem('accessToken', token);
+      sessionStorage.setItem('userDetails', JSON.stringify(userDetails));
+      sessionStorage.setItem('role', role);
+      sessionStorage.setItem('userId', userDetails?.pfId || userDetails?.employeeId || cleanUsername);
+
+      window.dispatchEvent(new Event('user-session-changed'));
+
+      successNotification('Login successful ');
+      window.location.href = APPLICATION_ROUTES_URLS.DASHBOARD;
     } catch (err) {
-      console.error("Login exception:", err);
-      const msg = err?.response?.data?.detail || err?.response?.data?.message || "Invalid Employee ID or password. Please verify and try again.";
+      console.error('Login error:', err);
+      const msg =
+        err?.response?.data?.detail?.message ||
+        err?.response?.data?.detail ||
+        err?.response?.data?.message ||
+        err?.message ||
+        'Login failed, please check your credentials.';
       errorNotification(msg);
     } finally {
       setLoading(false);
@@ -157,8 +165,14 @@ export const useLogin = () => {
 
   const logout = () => {
     sessionStorage.clear();
-    navigate(APPLICATION_ROUTES_URLS.LOGIN, { replace: true });
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('userDetails');
+    localStorage.removeItem('role');
+    localStorage.removeItem('userId');
+    window.location.href = APPLICATION_ROUTES_URLS.LOGIN;
   };
 
-  return { login, logout, isLoading, formik, devRole, setDevRole };
+  return { login, logout, isLoading, formik, devRole, setDevRole, isDev: IS_DEV, isProd: IS_PROD };
 };
+
+export default useLogin;

@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import useStatusWiseAlert from '&src/components/ToastNotifications/useStatusWiseAlert';
+import applicationServices from '&src/services/applications';
 
 /**
- * Custom hook to handle API calls for the new Application Flow.
- * These are mock implementations. Map them to actual backend services when ready.
+ * Custom hook to handle real backend API calls for the Application Flow.
  */
 export default function useApplicationFlowAPI() {
   const [isLoading, setIsLoading] = useState(false);
@@ -25,60 +25,69 @@ export default function useApplicationFlowAPI() {
   };
 
   // 1. Branch Submit Application
-  const submitApplicationBranch = async (applicationId, data) => {
+  const submitApplicationBranch = async (applicationId, data = {}) => {
     return handleApiCall(
       async () => {
-        // Mock API call
-        // return await axios.post(`/api/application/${applicationId}/submit`, data);
-        return new Promise(resolve => setTimeout(resolve, 800));
+        return await applicationServices.updateApplication(applicationId, {
+          ...data,
+          isApplicationSubmittedBR: true,
+          status: 'applicationSubmitted',
+        });
       },
       "Application submitted by Branch successfully."
     );
   };
 
   // 2. ZO Review
-  const submitReviewZO = async (applicationId, status, files) => {
+  const submitReviewZO = async (applicationId, statusVal, files) => {
     return handleApiCall(
       async () => {
-        // return await axios.post(`/api/application/${applicationId}/review-zo`, { status, files });
-        return new Promise(resolve => setTimeout(resolve, 800));
+        return await applicationServices.updateApplication(applicationId, {
+          isReviewByZO: statusVal === 'approved' || statusVal === true,
+          status: statusVal === 'approved' || statusVal === true ? 'approvedbyzo' : 'rejectedbyzo',
+          zhRecommendationFile: files?.zhRecommendationFile || null,
+        });
       },
-      `ZO review submitted successfully as ${status}.`
+      `ZO review recorded successfully.`
     );
   };
 
   // 3. RO Review
-  const submitReviewRO = async (applicationId, status, files) => {
+  const submitReviewRO = async (applicationId, statusVal, files) => {
     return handleApiCall(
       async () => {
-        // return await axios.post(`/api/application/${applicationId}/review-ro`, { status, files });
-        return new Promise(resolve => setTimeout(resolve, 800));
+        return await applicationServices.updateApplication(applicationId, {
+          isReviewByRO: statusVal === 'approved' || statusVal === true,
+          status: statusVal === 'approved' || statusVal === true ? 'approvedbyro' : 'rejectedbyro',
+          rhRecommendationFile: files?.rhRecommendationFile || null,
+        });
       },
-      `RO review submitted successfully as ${status}.`
+      `RO review recorded successfully.`
     );
   };
 
   // 4. CO Review
-  const submitReviewCO = async (applicationId, status) => {
+  const submitReviewCO = async (applicationId, statusVal) => {
     return handleApiCall(
       async () => {
-        // return await axios.post(`/api/application/${applicationId}/review-co`, { status });
-        return new Promise(resolve => setTimeout(resolve, 800));
+        return await applicationServices.updateApplication(applicationId, {
+          isReviewByCO: statusVal === 'approved' || statusVal === true,
+          status: statusVal === 'approved' || statusVal === true ? 'approvedbyco' : 'rejectedbyco',
+        });
       },
-      `CO review submitted successfully as ${status}.`
+      `CO review recorded successfully.`
     );
   };
 
   // 5. Update Projections
-  const updateProjections = async (applicationId, projectionsData) => {
+  const updateProjections = async (applicationId, projectionsData = {}) => {
     return handleApiCall(
       async () => {
-        try {
-          await applicationServices.updateApplication(applicationId, { isProjectionAdded: true });
-        } catch (err) {
-          console.warn("Update projections backend fallback:", err);
-        }
-        return { success: true };
+        return await applicationServices.updateApplication(applicationId, {
+          ...projectionsData,
+          isProjectionAdded: true,
+          status: 'projectionadded',
+        });
       },
       "Projections updated successfully."
     );
@@ -88,57 +97,53 @@ export default function useApplicationFlowAPI() {
   const addAggregators = async (applicationId, aggregatorIds) => {
     return handleApiCall(
       async () => {
-        try {
-          await applicationServices.updateApplication(applicationId, { isAggregatorAdded: true, status: "quoterequested" });
-        } catch (err) {
-          console.warn("Add aggregators backend fallback:", err);
-        }
-        return { success: true };
+        return await applicationServices.updateApplication(applicationId, {
+          isAggregatorAdded: true,
+          status: 'quoterequested',
+        });
       },
       "Aggregators assigned and sent for quotes successfully."
     );
   };
 
   // 7. Add Markup and send to RO
-  const addMarkupAndSendToRO = async (applicationId, markupDetails) => {
+  const addMarkupAndSendToRO = async (applicationId, markupDetails = {}) => {
     return handleApiCall(
       async () => {
-        try {
-          await applicationServices.updateApplication(applicationId, { isMarkUpAddedCO: true, isQuoteReviewCO: true, status: "reviewquote" });
-        } catch (err) {
-          console.warn("Add markup backend fallback:", err);
-        }
-        return { success: true };
+        return await applicationServices.updateApplication(applicationId, {
+          ...markupDetails,
+          isMarkUpAddedCO: true,
+          isQuoteReviewCO: true,
+          status: 'reviewquote',
+        });
       },
       "Markup added and sent to RO successfully."
     );
   };
 
   // 8. Customer Acceptance (by RO)
-  const submitCustomerAcceptance = async (applicationId, fileData) => {
+  const submitCustomerAcceptance = async (applicationId, fileData = {}) => {
     return handleApiCall(
       async () => {
-        try {
-          await applicationServices.updateApplication(applicationId, { isQuoteAcceptRO: true, status: "quoteaccepted" });
-        } catch (err) {
-          console.warn("Customer acceptance backend fallback:", err);
-        }
-        return { success: true };
+        return await applicationServices.updateApplication(applicationId, {
+          ...fileData,
+          isQuoteAcceptRO: true,
+          status: 'quoteaccepted',
+        });
       },
       "Customer acceptance recorded successfully."
     );
   };
 
   // 9. PO Details Freeze (Final Approval)
-  const finalizeApplicationPO = async (applicationId, poDetails) => {
+  const finalizeApplicationPO = async (applicationId, poDetails = {}) => {
     return handleApiCall(
       async () => {
-        try {
-          await applicationServices.updateApplication(applicationId, { isFinalApproved: true, status: "finalapproval" });
-        } catch (err) {
-          console.warn("Finalize PO backend fallback:", err);
-        }
-        return { success: true };
+        return await applicationServices.updateApplication(applicationId, {
+          ...poDetails,
+          isFinalApproved: true,
+          status: 'finalapproved',
+        });
       },
       "Purchase Order finalized and application approved."
     );
@@ -157,3 +162,4 @@ export default function useApplicationFlowAPI() {
     finalizeApplicationPO,
   };
 }
+

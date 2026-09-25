@@ -412,7 +412,7 @@ export default function ApplicationFlowTable({
 
   return (
     <Box>
-      {/* 🔹 FILTER TOGGLE ACTION BAR */}
+      {/*  FILTER TOGGLE ACTION BAR */}
       {!hideFilterHeader && (
         <>
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={1.8} flexWrap="wrap" gap={1.2}>
@@ -465,7 +465,7 @@ export default function ApplicationFlowTable({
             </Stack>
           </Box>
 
-          {/* 🔹 COLLAPSIBLE PERIOD FILTERS PANEL */}
+          {/*  COLLAPSIBLE PERIOD FILTERS PANEL */}
           <Collapse in={filtersExpanded}>
             <Paper
               elevation={0}
@@ -583,7 +583,7 @@ export default function ApplicationFlowTable({
         </>
       )}
 
-      {/* 🔹 DATA TABLE */}
+      {/*  DATA TABLE */}
       <TableContainer
         component={Paper}
         elevation={1}
@@ -767,7 +767,7 @@ export default function ApplicationFlowTable({
                       </TableCell>
                       <TableCell sx={{ minWidth: 175, py: 1, px: 1, whiteSpace: 'nowrap' }}>
                         <Stack direction="row" spacing={0.6} alignItems="center" justifyContent="center" sx={{ flexWrap: 'nowrap' }}>
-                          {/* 👁️ Available View Application Button — Only shown when NOT (CO and Admin) */}
+                          {/*  Available View Application Button — Only shown when NOT (CO and Admin) */}
                           {!(userRole === 'CO' && isAdmin) && (
                             <Tooltip title="View Application Details" arrow placement="top">
                               <IconButton
@@ -1267,7 +1267,7 @@ export default function ApplicationFlowTable({
         </Table>
       </TableContainer>
 
-      {/* 🔹 BOTTOM PAGINATION & PAGE SIZE ROW */}
+      {/*  BOTTOM PAGINATION & PAGE SIZE ROW */}
       <Stack direction="row" justifyContent="space-between" alignItems="center" mt={2} flexWrap="wrap" gap={2}>
         <Box display="flex" alignItems="center" gap={1}>
           <Typography variant="body2" color="text.secondary">Rows per page:</Typography>
@@ -1295,7 +1295,7 @@ export default function ApplicationFlowTable({
         />
       </Stack>
 
-      {/* 🔹 CO REJECTION DIALOG */}
+      {/*  CO REJECTION DIALOG */}
       <Dialog open={rejectDialogOpen} onClose={() => setRejectDialogOpen(false)} maxWidth="xs" fullWidth>
         <DialogTitle sx={{ fontWeight: 700, color: 'error.main', display: 'flex', alignItems: 'center', gap: 1 }}>
           <CancelOutlined color="error" /> Reject Customer Application
@@ -1325,7 +1325,7 @@ export default function ApplicationFlowTable({
         </DialogActions>
       </Dialog>
 
-      {/* 🔹 ALL ACTIONS CONTEXT MENU */}
+      {/*  ALL ACTIONS CONTEXT MENU */}
       <Menu
         anchorEl={actionMenuAnchor}
         open={Boolean(actionMenuAnchor)}

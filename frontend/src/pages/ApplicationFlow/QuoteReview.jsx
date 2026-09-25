@@ -15,14 +15,20 @@ import {
 } from '@mui/material';
 import { isRO } from '&src/constants/PaymentAggregratorConstant';
 
-// Dummy quote data
-const QUOTES = [
-  { id: 101, aggregatorName: 'PayU', baseRate: 1.2, status: 'received' },
-  { id: 102, aggregatorName: 'Razorpay', baseRate: 1.15, status: 'received' } // Lowest
-];
-
-const QuoteReview = ({ application, userRole, onAcceptQuote, onFinalApproval }) => {
+const QuoteReview = ({ application = {}, userRole, onAcceptQuote, onFinalApproval, quotes = [] }) => {
   const [markupRates, setMarkupRates] = useState({});
+
+  const availableQuotes = useMemo(() => {
+    if (Array.isArray(quotes) && quotes.length > 0) return quotes;
+    if (Array.isArray(application?.aggregators) && application.aggregators.length > 0) return application.aggregators;
+    return [];
+  }, [quotes, application]);
+
+  const lowestRate = useMemo(() => {
+    if (!availableQuotes.length) return null;
+    const validRates = availableQuotes.map((q) => Number(q.baseRate || q.quoteRate || 0)).filter((r) => r > 0);
+    return validRates.length > 0 ? Math.min(...validRates) : null;
+  }, [availableQuotes]);
 
   const isQuoteAcceptRO = application.isQuoteAcceptRO;
   const isCustomerAccepted = application.customerAcceptanceFile !== null || application.status === 'customeraccepted';
@@ -69,17 +75,18 @@ const QuoteReview = ({ application, userRole, onAcceptQuote, onFinalApproval }) 
               </TableRow>
             </TableHead>
             <TableBody>
-              {QUOTES.map((quote) => {
-                const isLowest = quote.baseRate === 1.15; // Just for mockup
-                const markup = markupRates[quote.id] || 0;
-                const finalRate = (quote.baseRate + Number(markup)).toFixed(2);
+              {availableQuotes.map((quote) => {
+                const base = Number(quote.baseRate || quote.quoteRate || 0);
+                const isLowest = lowestRate !== null && base === lowestRate;
+                const markup = markupRates[quote.id || quote.aggregatorId] || 0;
+                const finalRate = (base + Number(markup)).toFixed(2);
 
                 return (
-                  <TableRow key={quote.id} hover sx={{ backgroundColor: isLowest ? '#e8f5e9' : 'inherit' }}>
+                  <TableRow key={quote.id || quote.aggregatorId} hover sx={{ backgroundColor: isLowest ? '#e8f5e9' : 'inherit' }}>
                     <TableCell>
-                      {quote.aggregatorName} {isLowest && <Chip label="Lowest Quote" size="small" color="success" sx={{ ml: 1, fontSize: '0.65rem', height: 20 }} />}
+                      {quote.aggregatorName || quote.name} {isLowest && <Chip label="Lowest Quote" size="small" color="success" sx={{ ml: 1, fontSize: '0.65rem', height: 20 }} />}
                     </TableCell>
-                    <TableCell>{quote.baseRate}%</TableCell>
+                    <TableCell>{base}%</TableCell>
                     <TableCell>
                       <TextField
                         size="small"

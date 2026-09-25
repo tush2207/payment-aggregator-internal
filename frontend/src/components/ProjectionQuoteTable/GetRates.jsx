@@ -74,7 +74,7 @@ const GetRates = ({
     const saveAllRates = async () => {
         setLoading(true);
         try {
-            // ✅ Validate numbers
+            //  Validate numbers
             const isInvalidNumber = (value) =>
                 value === null ||
                 value === undefined ||
@@ -92,16 +92,16 @@ const GetRates = ({
 
                 const transactionTypeList = invalidRows.map((r) => r.transactionType);
                 errorNotification(
-                    `⚠️ Missing or invalid charge details in: ${transactionTypeList.join(", ")}`
+                    ` Missing or invalid charge details in: ${transactionTypeList.join(", ")}`
                 );
                 setLoading(false);
                 return;
             }
 
-            // ✅ Clear previous errors if validation passed
+            //  Clear previous errors if validation passed
             setErrorRowIds([]);
 
-            // ✅ Prepare final payload (keep all fields)
+            //  Prepare final payload (keep all fields)
             const finalPayload = rateDetails?.map((item) => ({
                 ...item,
                 rate: item.rate,
@@ -109,7 +109,7 @@ const GetRates = ({
             }));
 
             const sumOfRate = sumofAggregatorRates(rateDetails)
-            console.log("✅ Final Payload:", finalPayload);
+            console.log(" Final Payload:", finalPayload);
 
             const [res, resAgg, resApp] = await Promise.all([
                 aggregatorProjections.updateProjection(applicationId, aggregatorId, finalPayload),
@@ -125,21 +125,21 @@ const GetRates = ({
             );
 
             if (!allSuccess) {
-                throw new Error("❌ One or more API calls failed.");
+                throw new Error(" One or more API calls failed.");
             }
 
-            successNotification("✅ Application approved and projections added successfully.");
+            successNotification(" Application approved and projections added successfully.");
             window.location.reload();
 
             setLoading(false);
-            successNotification("✅ Rates validated and ready to save.");
+            successNotification(" Rates validated and ready to save.");
         } catch (err) {
             setLoading(false);
             console.error("Error in saveAllRates:", err);
             errorNotification(
                 err?.response?.data?.message ||
                 err?.message ||
-                "⚠️ Something went wrong. Please try again."
+                " Something went wrong. Please try again."
             );
         }
     };
@@ -179,64 +179,64 @@ const GetRates = ({
                                             <TableCell>{srNo}</TableCell>
                                             <TableCell width="50%">{row.transactionType}</TableCell>
 
-                                        {row.allow ? (
-                                            <TableCell>
-                                                <TextField
-                                                    size="small"
-                                                    variant="outlined"
-                                                    type="text"
-                                                    value={row.rate}
-                                                    error={errorRowIds.includes(row.id)}
-                                                    helperText={
-                                                        errorRowIds.includes(row.id)
-                                                            ? "Required"
-                                                            : ""
-                                                    }
-                                                    onChange={(e) => {
-                                                        const val = e.target.value;
-                                                        if (
-                                                            val === "" ||
-                                                            /^\d{0,3}(\.\d{0,3})?$/.test(val)
-                                                        ) {
-                                                            handleRateChange(row.transactionType, val);
+                                            {row.allow ? (
+                                                <TableCell>
+                                                    <TextField
+                                                        size="small"
+                                                        variant="outlined"
+                                                        type="text"
+                                                        value={row.rate}
+                                                        error={errorRowIds.includes(row.id)}
+                                                        helperText={
+                                                            errorRowIds.includes(row.id)
+                                                                ? "Required"
+                                                                : ""
                                                         }
-                                                    }}
-                                                    inputProps={{ style: { textAlign: "right" } }}
-                                                    InputProps={{
-                                                        startAdornment: (
-                                                            <TextField
-                                                                select
-                                                                value={row.unit}
-                                                                onChange={(e) =>
-                                                                    handleRateTypeChange(
-                                                                        row.transactionType,
-                                                                        e.target.value
-                                                                    )
-                                                                }
-                                                                variant="standard"
-                                                                size="small"
-                                                                sx={{
-                                                                    minWidth: 45,
-                                                                    "& .MuiSelect-select": {
-                                                                        padding: "2px 0px",
-                                                                    },
-                                                                }}
-                                                            >
-                                                                <MenuItem value={RS}>{RS}</MenuItem>
-                                                                <MenuItem value={PERCENTAGE}>
-                                                                    {PERCENTAGE}
-                                                                </MenuItem>
-                                                            </TextField>
-                                                        ),
-                                                    }}
-                                                />
-                                            </TableCell>
-                                        ) : (
-                                            <TableCell />
-                                        )}
-                                    </TableRow>
-                                );
-                            })()
+                                                        onChange={(e) => {
+                                                            const val = e.target.value;
+                                                            if (
+                                                                val === "" ||
+                                                                /^\d{0,3}(\.\d{0,3})?$/.test(val)
+                                                            ) {
+                                                                handleRateChange(row.transactionType, val);
+                                                            }
+                                                        }}
+                                                        inputProps={{ style: { textAlign: "right" } }}
+                                                        InputProps={{
+                                                            startAdornment: (
+                                                                <TextField
+                                                                    select
+                                                                    value={row.unit}
+                                                                    onChange={(e) =>
+                                                                        handleRateTypeChange(
+                                                                            row.transactionType,
+                                                                            e.target.value
+                                                                        )
+                                                                    }
+                                                                    variant="standard"
+                                                                    size="small"
+                                                                    sx={{
+                                                                        minWidth: 45,
+                                                                        "& .MuiSelect-select": {
+                                                                            padding: "2px 0px",
+                                                                        },
+                                                                    }}
+                                                                >
+                                                                    <MenuItem value={RS}>{RS}</MenuItem>
+                                                                    <MenuItem value={PERCENTAGE}>
+                                                                        {PERCENTAGE}
+                                                                    </MenuItem>
+                                                                </TextField>
+                                                            ),
+                                                        }}
+                                                    />
+                                                </TableCell>
+                                            ) : (
+                                                <TableCell />
+                                            )}
+                                        </TableRow>
+                                    );
+                                })()
                         ) : (
                             <TableRow>
                                 <TableCell colSpan={3} align="center">

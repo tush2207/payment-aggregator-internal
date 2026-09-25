@@ -19,7 +19,7 @@ const usePOGenerator = (applicationDetails, setOpenPOModal, openPOModal) => {
     validateOnBlur: true,
     validateOnChange: true,
     onSubmit: async (values) => {
-      // ✅ Validate before calling API
+      //  Validate before calling API
       console.log('values', values)
       generatePO({
         applicationId: applicationDetails?.applicationId,
@@ -77,7 +77,7 @@ const usePOGenerator = (applicationDetails, setOpenPOModal, openPOModal) => {
       // Removed refresh of application details to prevent calling get-single-applications API
       dispatch(closeWorkflowDialog());
     } catch (err) {
-      console.error("❌ Error generating PO:", err);
+      console.error(" Error generating PO:", err);
       errorNotification("Failed to generate Purchase Order. Please try again.");
     } finally {
       setLoading(false);

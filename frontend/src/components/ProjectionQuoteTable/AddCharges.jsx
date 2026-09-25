@@ -73,7 +73,7 @@ const AddCharges = ({
         setLoading(true);
         try {
             await aggregatorProjections.updateProjectionByApplication(applicationId, allCharges);
-            successNotification("✅ Bank charges updated and projections recalculated successfully.");
+            successNotification(" Bank charges updated and projections recalculated successfully.");
             setOpenModal(false);
             if (onSaveSuccess) {
                 await onSaveSuccess();
@@ -85,7 +85,7 @@ const AddCharges = ({
             errorNotification(
                 err?.response?.data?.message ||
                 err?.message ||
-                "⚠️ Something went wrong. Please try again."
+                " Something went wrong. Please try again."
             );
         }
     };

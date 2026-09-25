@@ -239,7 +239,7 @@ const AggregatorEmailDialog = ({
             </Box>
             {dispatchedAggregators.length > 1 && (
               <Typography variant="caption" sx={{ color: "#0369a1", fontWeight: 600, display: "block", mt: 0.5 }}>
-                ℹ️ Individual emails will be sent addressing each aggregator by their specific contact person or team name.
+                ℹ Individual emails will be sent addressing each aggregator by their specific contact person or team name.
               </Typography>
             )}
           </Box>
@@ -247,7 +247,7 @@ const AggregatorEmailDialog = ({
           {/* Editable Intro Paragraph */}
           <Box sx={{ mb: 2.5 }}>
             <Typography variant="caption" fontWeight={800} color="#475569" sx={{ display: "block", mb: 0.5, textTransform: "uppercase", letterSpacing: 0.4 }}>
-              ✍️ Introductory Text (Editable):
+               Introductory Text (Editable):
             </Typography>
             <TextField
               fullWidth
@@ -450,7 +450,7 @@ const AggregatorEmailDialog = ({
           {/* Mandatory Instruction Box */}
           <Box sx={{ bgcolor: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: "8px", p: 2, mb: 2 }}>
             <Typography variant="caption" fontWeight={800} color="#0369a1" textTransform="uppercase" letterSpacing={0.5} sx={{ display: "block", mb: 0.5 }}>
-              📌 Instructions for Submission:
+               Instructions for Submission:
             </Typography>
             <Typography variant="body2" sx={{ fontSize: "13px", color: "#0f172a", mb: 0.5 }}>
               • <strong>System Integration Fee &amp; AMC charges</strong> must be <strong>NIL</strong>. Kindly confirm the same in your quotation.
@@ -471,7 +471,7 @@ const AggregatorEmailDialog = ({
           {/* Dynamic Custom Remarks / Notes to Aggregator */}
           <Box sx={{ mb: 2.5, p: 2, bgcolor: "#f0f9ff", borderRadius: "8px", border: "1px solid #bae6fd" }}>
             <Typography variant="caption" fontWeight={800} color="#0369a1" sx={{ display: "block", mb: 0.8, textTransform: "uppercase", letterSpacing: 0.5 }}>
-              ✍️ Additional Remarks / Custom Instructions (Dynamically added to Email):
+               Additional Remarks / Custom Instructions (Dynamically added to Email):
             </Typography>
             <TextField
               fullWidth
@@ -605,7 +605,7 @@ const AggregatorEmailDialog = ({
               borderRadius: "6px"
             }}
           >
-            {loading ? "Sending..." : "🚀 Confirm & Dispatch Quotation Requests"}
+            {loading ? "Sending..." : " Confirm & Dispatch Quotation Requests"}
           </Button>
         </Stack>
       </DialogActions>
