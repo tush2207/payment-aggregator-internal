@@ -1,41 +1,51 @@
 @echo off
 setlocal enabledelayedexpansion
+title Universal Frontend Server (100% Pure CMD)
 
 :: ============================================================
-::  Start-Frontend.bat  --  DAP Frontend (Vite / React)
-::  Location: scripts/run/
+:: Universal Start-Frontend.bat (100% Pure CMD / Batch)
+:: Generic Frontend launcher for Vite, React, Next.js, Vue, Angular.
+:: Location: scripts/run/
 :: ============================================================
 
-:: ── Resolve project root reliably (handles spaces in path) ───────────────────
-:: "for %%i" resolves ..\..\  to the actual absolute path -- no pushd/popd needed
-for %%i in ("%~dp0..\..") do set "PROJECT_ROOT=%%~fi"
-set "FRONTEND_DIR=%PROJECT_ROOT%\frontend"
+:: ── Resolve project root dynamically ─────────────────────────
+pushd "%~dp0..\.."
+set "PROJECT_ROOT=%CD%"
+popd
 
-title DAP -- Frontend  Vite :5174
+for %%I in ("%PROJECT_ROOT%") do set "PROJECT_NAME=%%~nxI"
+
+:: Auto-detect Frontend directory
+set "FRONTEND_DIR="
+if exist "%PROJECT_ROOT%\frontend" (
+    set "FRONTEND_DIR=%PROJECT_ROOT%\frontend"
+) else if exist "%PROJECT_ROOT%\client" (
+    set "FRONTEND_DIR=%PROJECT_ROOT%\client"
+) else if exist "%PROJECT_ROOT%\web" (
+    set "FRONTEND_DIR=%PROJECT_ROOT%\web"
+) else if exist "%PROJECT_ROOT%\ui" (
+    set "FRONTEND_DIR=%PROJECT_ROOT%\ui"
+) else if exist "%PROJECT_ROOT%\package.json" (
+    set "FRONTEND_DIR=%PROJECT_ROOT%"
+)
+
+title %PROJECT_NAME% -- Frontend
 
 cls
 echo.
 echo  +=========================================================+
-echo  ^|                                                         ^|
-echo  ^|   DAP  --  FRONTEND  ^|  React / Vite                   ^|
-echo  ^|   Digital Ambassador Portal                             ^|
-echo  ^|                                                         ^|
-echo  ^|   URL      :  http://localhost:5174                     ^|
-echo  ^|   API Proxy:  /api  ->  http://localhost:8000           ^|
-echo  ^|   HMR      :  ON  (Vite hot module replacement)         ^|
-echo  ^|                                                         ^|
+echo  ^|   %PROJECT_NAME%  --  FRONTEND SERVICE
+echo  ^|   DIR : %FRONTEND_DIR%
 echo  +=========================================================+
 echo.
 
-:: ── Validate frontend directory ───────────────────────────────────────────────
-if not exist "%FRONTEND_DIR%\package.json" (
-    echo  [ERROR] Could not find: %FRONTEND_DIR%\package.json
-    echo  Expected frontend at: %FRONTEND_DIR%
+if not defined FRONTEND_DIR (
+    echo  [ERROR] Could not find frontend directory with package.json.
     pause
     exit /b 1
 )
 
-:: ── Install deps if node_modules missing ─────────────────────────────────────
+:: ── Install deps if node_modules missing ─────────────────────
 if not exist "%FRONTEND_DIR%\node_modules" (
     echo  [!] node_modules not found. Running npm install...
     echo.
@@ -43,13 +53,10 @@ if not exist "%FRONTEND_DIR%\node_modules" (
     echo.
 )
 
-echo  [OK] Directory : %FRONTEND_DIR%
-echo.
-echo  Starting Vite dev server...
+echo  Starting Frontend dev server...
 echo  ---------------------------------------------------------
 echo.
 
-:: Use --prefix so npm runs in the frontend dir regardless of current directory
 npm run dev --prefix "%FRONTEND_DIR%"
 
 echo.

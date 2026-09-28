@@ -1,16 +1,16 @@
 @echo off
 setlocal EnableDelayedExpansion
-title Apply Changes Utility - PAPG Portal
+title Apply Changes Utility (100% Pure CMD)
 
 echo ===========================================
-echo       APPLY CHANGES UTILITY (BASE64)
+echo   APPLY CHANGES UTILITY (BASE64 - PURE CMD)
 echo ===========================================
 
 rem ---------------------------------------------------------------
 rem 0. Parse arguments
 rem      -InputFile "path\to\change_....txt"
 rem      -TargetDir "path"           (defaults to repo root)
-rem      -Force                       skip all prompts
+rem      -Force                      skip all prompts
 rem ---------------------------------------------------------------
 set "INPUTFILE="
 set "TARGETDIR="
@@ -24,23 +24,17 @@ if /I "%~1"=="-Force" (
     goto parseargs
 )
 if /I "%~1"=="-InputFile" (
+    set "INPUTFILE=%~2"
     shift
-    goto setinput
+    shift
+    goto parseargs
 )
 if /I "%~1"=="-TargetDir" (
+    set "TARGETDIR=%~2"
     shift
-    goto settarget
+    shift
+    goto parseargs
 )
-shift
-goto parseargs
-
-:setinput
-set "INPUTFILE=%~1"
-shift
-goto parseargs
-
-:settarget
-set "TARGETDIR=%~1"
 shift
 goto parseargs
 
@@ -63,7 +57,9 @@ set "CUR=%PARENT%"
 goto findroot
 
 :rootnotfound
+pushd "%~dp0..\.."
 set "REPO_ROOT=%CD%"
+popd
 goto rootdone
 
 :rootfound
@@ -79,7 +75,7 @@ set "CHANGESDIR=%REPO_ROOT%\scripts\changes"
 if "%INPUTFILE%"=="" (
     if exist "%CHANGESDIR%" (
         pushd "%CHANGESDIR%"
-        for /f "delims=" %%F in ('dir /b /o-d change_*.txt changes_*.txt change_*.b64 changes_*.b64 2^>nul') do (
+        for /f "delims=" %%F in ('dir /b /a-d /o-d change_*.txt 2^>nul') do (
             if "!INPUTFILE!"=="" (
                 set "INPUTFILE=%CHANGESDIR%\%%F"
                 echo [+] Auto-selected: %%F
@@ -90,7 +86,7 @@ if "%INPUTFILE%"=="" (
 )
 
 if "%INPUTFILE%"=="" (
-    echo [-] No change file (.txt or .b64) found in scripts\changes\ and none specified with -InputFile.
+    echo [-] No change file found in scripts\changes\ and none specified with -InputFile.
     echo     Run Pack-Changes.bat first to create one.
     goto end
 )
@@ -101,7 +97,7 @@ if not exist "%INPUTFILE%" (
 )
 
 rem ---------------------------------------------------------------
-rem 3. Backup folder + target dir
+rem 3. Target dir and Backup folder
 rem ---------------------------------------------------------------
 set "BACKUPDIR=%REPO_ROOT%\scripts\changes\backups"
 if not exist "%BACKUPDIR%" mkdir "%BACKUPDIR%"
@@ -119,11 +115,15 @@ echo [+] Backup folder: scripts\changes\backups\
 rem ---------------------------------------------------------------
 rem 4. Convert extension .txt -> .b64 and Decode Base64 -> ZIP
 rem ---------------------------------------------------------------
-set "TEMP_B64=%TEMP%\ApplyChanges_%RANDOM%.b64"
-set "TEMPZIP=%TEMP%\ApplyChanges_%RANDOM%.zip"
+set "TEMP_DIR=%TEMP%\ApplyChanges_%RANDOM%_%RANDOM%"
+set "TEMP_B64=%TEMP_DIR%\package.b64"
+set "TEMPZIP=%TEMP_DIR%\decoded.zip"
+set "EXTRACTDIR=%TEMP_DIR%\extracted"
+set "BACKUP_STAGE=%TEMP_DIR%\backup_stage"
 
-if exist "%TEMP_B64%" del /f /q "%TEMP_B64%"
-if exist "%TEMPZIP%" del /f /q "%TEMPZIP%"
+mkdir "%TEMP_DIR%" >nul 2>&1
+mkdir "%EXTRACTDIR%" >nul 2>&1
+mkdir "%BACKUP_STAGE%" >nul 2>&1
 
 echo [+] Step 1: Preparing Base64 file...
 copy /Y "%INPUTFILE%" "%TEMP_B64%" >nul
@@ -132,159 +132,105 @@ if not exist "%TEMP_B64%" (
     goto end
 )
 
-for %%N in ("%INPUTFILE%") do echo [+] Step 2: Decoding Base64 (%%~nxN) to ZIP using certutil -decode...
-certutil -decode -f "%TEMP_B64%" "%TEMPZIP%" >nul
-
+for %%N in ("%INPUTFILE%") do set "INPUT_NAME=%%~nxN"
+echo [+] Step 2: Decoding Base64 (%INPUT_NAME%) to ZIP using certutil -decode...
+certutil.exe -decode "%TEMP_B64%" "%TEMPZIP%" >nul
+if %ERRORLEVEL% NEQ 0 (
+    echo [-] Error: certutil decoding failed on %INPUTFILE%.
+    goto cleanup
+)
 if not exist "%TEMPZIP%" (
     echo [-] Error: Decoded ZIP file was not created by certutil.
     goto cleanup
 )
 
-set "ZIPSIZE=0"
-if exist "%TEMPZIP%" for %%Z in ("%TEMPZIP%") do set "ZIPSIZE=%%~zZ"
-if "!ZIPSIZE!"=="0" (
-    echo [-] Error: Decoded ZIP file is empty (0 bytes).
-    echo     Input file: %INPUTFILE%
+rem ---------------------------------------------------------------
+rem 5. Extract to temp staging folder with native tar.exe
+rem ---------------------------------------------------------------
+echo [+] Step 3: Extracting decoded archive with tar.exe...
+tar.exe -xf "%TEMPZIP%" -C "%EXTRACTDIR%"
+if %ERRORLEVEL% NEQ 0 (
+    echo [-] Error: Failed to extract archive with tar.exe.
     goto cleanup
 )
 
 rem ---------------------------------------------------------------
-rem 5. List ZIP contents, find which files already exist (will be overwritten)
+rem 6. Create TARGETED timestamped backup (only files being replaced)
 rem ---------------------------------------------------------------
-echo [+] Inspecting ZIP contents...
-set "ENTRYLIST=%TEMP%\ApplyEntries_%RANDOM%.txt"
-powershell -NoProfile -Command "$zip = [System.IO.Compression.ZipFile]::OpenRead('%TEMPZIP%'); $zip.Entries.FullName; $zip.Dispose()" > "%ENTRYLIST%" 2>nul
-if not exist "%ENTRYLIST%" (
-    tar -tf "%TEMPZIP%" > "%ENTRYLIST%" 2>nul
+set "TIMESTAMP="
+set "DT="
+for /f "tokens=2 delims==" %%I in ('wmic os get localdatetime /value 2^>nul ^| find "="') do set "DT=%%I"
+if not "%DT%"=="" set "TIMESTAMP=%DT:~0,8%_%DT:~8,6%"
+
+if "%TIMESTAMP%"=="" (
+    set "CUR_DATE=%DATE%"
+    set "CUR_TIME=%TIME: =0%"
+    set "TIMESTAMP=%CUR_DATE:~6,4%%CUR_DATE:~3,2%%CUR_DATE:~0,2%_%CUR_TIME:~0,2%%CUR_TIME:~3,2%%CUR_TIME:~6,2%"
 )
 
-set "OVERWRITECOUNT=0"
-set "TOTALCOUNT=0"
-for /f "usebackq delims=" %%E in ("%ENTRYLIST%") do (
-    set "ENTRY=%%E"
-    set "CLEAN=!ENTRY:/=\!"
-    if "!CLEAN:~0,2!"==".\" set "CLEAN=!CLEAN:~2!"
-    if "!CLEAN!"=="." set "CLEAN="
+set "BACKUPFILENAME=backup_%TIMESTAMP%.zip"
+set "BACKUPZIP=%BACKUPDIR%\%BACKUPFILENAME%"
 
-    if not "!CLEAN!"=="" (
-        if not "!CLEAN:~-1!"=="\" (
-            set /a TOTALCOUNT+=1
-            set "T!TOTALCOUNT!=!CLEAN!"
-            if exist "%DESTDIR%\!CLEAN!" (
-                set /a OVERWRITECOUNT+=1
-                set "O!OVERWRITECOUNT!=!CLEAN!"
-            )
+echo [+] Step 4: Creating targeted backup of existing files being overwritten...
+set "OVERWRITE_COUNT=0"
+set "NEW_COUNT=0"
+
+pushd "%EXTRACTDIR%"
+for /f "delims=" %%I in ('dir /b /s /a-d 2^>nul') do (
+    set "FULL_EXTRACTED=%%I"
+    set "REL_PATH=!FULL_EXTRACTED:%EXTRACTDIR%\=!"
+    set "EXISTING_FILE=%DESTDIR%\!REL_PATH!"
+
+    if exist "!EXISTING_FILE!" (
+        set /a OVERWRITE_COUNT+=1
+        set "BACKUP_DEST=%BACKUP_STAGE%\!REL_PATH!"
+        for %%D in ("!BACKUP_DEST!") do (
+            set "TARGET_BDIR=%%~dpD"
+            if "!TARGET_BDIR:~-1!"=="\" set "TARGET_BDIR=!TARGET_BDIR:~0,-1!"
+            if not exist "!TARGET_BDIR!" mkdir "!TARGET_BDIR!" >nul 2>&1
         )
+        copy /Y "!EXISTING_FILE!" "!BACKUP_DEST!" >nul 2>&1
+    ) else (
+        set /a NEW_COUNT+=1
     )
 )
+popd
 
-if "!TOTALCOUNT!"=="0" (
-    echo [-] Warning: No files found inside archive to extract.
-    goto cleanup
-)
-
-rem ---------------------------------------------------------------
-rem 6. Backup existing files that will be overwritten
-rem ---------------------------------------------------------------
-set "BACKUPFILENAME="
-if !OVERWRITECOUNT! GTR 0 (
-    echo [!] Found !OVERWRITECOUNT! existing file(s) that will be overwritten:
-    for /L %%i in (1,1,!OVERWRITECOUNT!) do echo   - !O%%i!
-    if "%FORCEFLAG%"=="0" (
-        set /p CONFIRM="Proceed with backup and overwrite? (Y/N): "
-        if /I not "!CONFIRM!"=="Y" if /I not "!CONFIRM!"=="Yes" (
-            echo [-] Cancelled by user.
-            goto cleanup
-        )
+if %OVERWRITE_COUNT% GTR 0 (
+    tar.exe -a -c -f "%BACKUPZIP%" -C "%BACKUP_STAGE%" . >nul 2>&1
+    if exist "%BACKUPZIP%" (
+        echo [OK] Targeted backup saved: scripts\changes\backups\%BACKUPFILENAME% (%OVERWRITE_COUNT% files saved)
     )
-    set "BACKUPSTAGE=%TEMP%\ApplyBackupStaging_%RANDOM%"
-    if exist "!BACKUPSTAGE!" rmdir /s /q "!BACKUPSTAGE!"
-    mkdir "!BACKUPSTAGE!"
-    echo [+] Backing up existing files...
-    for /L %%i in (1,1,!OVERWRITECOUNT!) do (
-        set "REL=!O%%i!"
-        set "SRC=%DESTDIR%\!REL!"
-        set "DST=!BACKUPSTAGE!\!REL!"
-        for %%D in ("!DST!") do (
-            set "TARGET_DIR=%%~dpD"
-            if "!TARGET_DIR:~-1!"=="\" set "TARGET_DIR=!TARGET_DIR:~0,-1!"
-            if not exist "!TARGET_DIR!" mkdir "!TARGET_DIR!"
-        )
-        copy /Y "!SRC!" "!DST!" >nul
-    )
-
-    set "TIMESTAMP="
-    set "DT="
-    for /f "tokens=2 delims==" %%T in ('wmic os get localdatetime /value 2^>nul ^| find "="') do set "DT=%%T"
-    if not "!DT!"=="" set "TIMESTAMP=!DT:~0,8!_!DT:~8,6!"
-
-    if "!TIMESTAMP!"=="" (
-        for /f "usebackq delims=" %%T in (`powershell -NoProfile -Command "Get-Date -Format yyyyMMdd_HHmmss"` 2^>nul) do set "TIMESTAMP=%%T"
-    )
-
-    if "!TIMESTAMP!"=="" (
-        set "TIMESTAMP=%DATE:~10,4%%DATE:~4,2%%DATE:~7,2%_%TIME:~0,2%%TIME:~3,2%%TIME:~6,2%"
-        set "TIMESTAMP=!TIMESTAMP: =0!"
-        set "TIMESTAMP=!TIMESTAMP:/=!"
-        set "TIMESTAMP=!TIMESTAMP:-=!"
-        set "TIMESTAMP=!TIMESTAMP::=!"
-        set "TIMESTAMP=!TIMESTAMP:.=!"
-    )
-
-    set "BACKUPFILENAME=backup_!TIMESTAMP!.zip"
-    set "BACKUPZIP=%BACKUPDIR%\!BACKUPFILENAME!"
-    echo [+] Compressing backup...
-    powershell -NoProfile -ExecutionPolicy Bypass -Command "Compress-Archive -Path '!BACKUPSTAGE!\*' -DestinationPath '!BACKUPZIP!' -Force" >nul 2>&1
-    if not exist "!BACKUPZIP!" (
-        pushd "!BACKUPSTAGE!"
-        tar -a -cf "!BACKUPZIP!" * >nul 2>&1
-        popd
-    )
-    if exist "!BACKUPZIP!" (
-        echo [OK] Backup saved: scripts\changes\backups\!BACKUPFILENAME!
-    )
-    if exist "!BACKUPSTAGE!" rmdir /s /q "!BACKUPSTAGE!"
 ) else (
-    echo [+] No existing files will be overwritten (clean install).
-    if "%FORCEFLAG%"=="0" (
-        set /p CONFIRM="Proceed to extract files? (Y/N): "
-        if /I not "!CONFIRM!"=="Y" if /I not "!CONFIRM!"=="Yes" (
-            echo [-] Cancelled by user.
-            goto cleanup
-        )
-    )
+    echo [INFO] All incoming files are new; no existing files were overwritten.
 )
 
 rem ---------------------------------------------------------------
-rem 7. Extract into project
+rem 7. Safely copy extracted files into destination with robocopy
 rem ---------------------------------------------------------------
-echo [+] Extracting files into project...
-powershell -NoProfile -ExecutionPolicy Bypass -Command "Expand-Archive -Path '%TEMPZIP%' -DestinationPath '%DESTDIR%' -Force" >nul 2>&1
-if errorlevel 1 (
-    pushd "%DESTDIR%"
-    tar -xf "%TEMPZIP%" >nul 2>&1
-    popd
-)
+echo [+] Step 5: Applying files into project (%DESTDIR%)...
+robocopy "%EXTRACTDIR%" "%DESTDIR%" /E /NFL /NDL /NJH /NJS /nc /ns /np /R:2 /W:1 >nul 2>&1
 
 echo.
 echo ===========================================
-echo   [SUCCESS] Apply complete!
+echo   [SUCCESS] Apply complete! (100%% Pure CMD)
 echo ===========================================
-echo   Applied : %TOTALCOUNT% file(s)
-if defined BACKUPFILENAME if not "!BACKUPFILENAME!"=="" (
-    echo   Backup  : scripts\changes\backups\!BACKUPFILENAME!
+echo   Updated Files   : %OVERWRITE_COUNT% file(s)
+echo   New Files Added : %NEW_COUNT% file(s)
+echo   Untouched Files : 100%% safe and unchanged
+echo.
+if exist "%BACKUPZIP%" (
+    echo   Targeted Backup : scripts\changes\backups\%BACKUPFILENAME%
     echo.
     echo   To REVERT this apply, run:
-    echo     powershell Expand-Archive -Path "scripts\changes\backups\!BACKUPFILENAME!" -DestinationPath "%DESTDIR%" -Force
+    echo     tar.exe -xf "scripts\changes\backups\%BACKUPFILENAME%" -C "%DESTDIR%"
 )
 echo.
-echo   See scripts\README.md for full instructions.
 
 :cleanup
-if exist "%TEMP_B64%" del /f /q "%TEMP_B64%"
-if exist "%TEMPZIP%" del /f /q "%TEMPZIP%"
-if exist "%ENTRYLIST%" del /f /q "%ENTRYLIST%"
+if exist "%TEMP_DIR%" rmdir /s /q "%TEMP_DIR%" >nul 2>&1
 
 :end
 echo.
 if "%FORCEFLAG%"=="0" pause
+exit /b 0

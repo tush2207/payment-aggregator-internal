@@ -123,6 +123,8 @@ const ApiUrls = {
   ADD_HELPDESK: "/helpdesk",
   UPDATE_HELPDESK: (ticketId) => `/helpdesk/${ticketId}`,
   DELETE_HELPDESK: (ticketId) => `/helpdesk/${ticketId}`,
+  GET_APPLICATION_QUERIES_SUMMARY: (appId) => `/helpdesk/application/${appId}/summary`,
+  ADD_HELPDESK_COMMENT: (ticketId) => `/helpdesk/${ticketId}/comment`,
 };
 
 export default ApiUrls;

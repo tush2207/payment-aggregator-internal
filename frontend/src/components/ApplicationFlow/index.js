@@ -10,3 +10,4 @@ export { default as ApplicationFlowDialog } from './ApplicationFlowDialog';
 export { default as RoleBasedWorkflowStepper } from './RoleBasedWorkflowStepper';
 export { default as WorkflowTabs } from './WorkflowTabs';
 export { default as ProjectDetailsTable } from './ProjectDetailsTable';
+export { default as ApplicationQueryModal } from './ApplicationQueryModal';

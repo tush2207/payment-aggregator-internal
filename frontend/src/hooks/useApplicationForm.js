@@ -117,19 +117,25 @@ const useApplicationForm = ({
   }, [formClosed]);
 
   // ---------------- BUSINESS LOGIC ----------------
-  const buildPayload = (values) => ({
-    ...values,
-    totalAnnualTransaction: values?.avgTransactionYearly * values?.avgTransactionSize,
-    totalBankCollection: values?.avgTransactionYearly * values?.avgTransactionSize,
-    aggregateDepositAmt: values?.avgTransactionYearly * values?.avgTransactionSize,
-    createdByBRId: values?.applicationId ? values?.createdByBRId : (user_Id || userDetails?.userId || userDetails?.id || userDetails?.employeeId),
-    branchId: values?.applicationId ? values?.branchId : (branchId ?? userDetails?.branchId),
-    regionId: values?.applicationId ? values?.regionId : (regionId ?? userDetails?.regionId),
-    zoneId: values?.applicationId ? values?.zoneId : (zoneId ?? userDetails?.zoneId),
-    branchName: values?.branchName || (values?.applicationId ? values?.branchName : branchName) || userDetails?.branchName || "",
-    regionName: values?.regionName || (values?.applicationId ? values?.regionName : regionName) || userDetails?.regionName || "",
-    zoneName: values?.zoneName || (values?.applicationId ? values?.zoneName : zoneName) || userDetails?.zoneName || "",
-  });
+  const buildPayload = (values) => {
+    const yearly = Number(values?.avgTransactionYearly) || 0;
+    const size = Number(values?.avgTransactionSize) || 0;
+    const calculatedTotal = yearly * size;
+
+    return {
+      ...values,
+      totalAnnualTransaction: calculatedTotal > 0 ? calculatedTotal : null,
+      totalBankCollection: calculatedTotal > 0 ? calculatedTotal : null,
+      aggregateDepositAmt: calculatedTotal > 0 ? calculatedTotal : null,
+      createdByBRId: values?.applicationId ? values?.createdByBRId : (user_Id || userDetails?.userId || userDetails?.id || userDetails?.employeeId),
+      branchId: values?.applicationId ? values?.branchId : (branchId ?? userDetails?.branchId),
+      regionId: values?.applicationId ? values?.regionId : (regionId ?? userDetails?.regionId),
+      zoneId: values?.applicationId ? values?.zoneId : (zoneId ?? userDetails?.zoneId),
+      branchName: values?.branchName || (values?.applicationId ? values?.branchName : branchName) || userDetails?.branchName || "",
+      regionName: values?.regionName || (values?.applicationId ? values?.regionName : regionName) || userDetails?.regionName || "",
+      zoneName: values?.zoneName || (values?.applicationId ? values?.zoneName : zoneName) || userDetails?.zoneName || "",
+    };
+  };
 
   const addOrUpdate = async (values) => {
     const payload = buildPayload(values);

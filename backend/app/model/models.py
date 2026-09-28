@@ -178,6 +178,10 @@ class HelpDesk(Base):
     remark = Column(Text, nullable=True)
     attachmentUrl = Column("ATTACHMENTURL", String(512), nullable=True)
     attachmentName = Column("ATTACHMENTNAME", String(256), nullable=True)
+    attachments = Column(Text, nullable=True) # JSON array of {fileId, fileName, url, size}
+    changedFields = Column(Text, nullable=True) # JSON of fields modified or clarifications made
+    targetOffice = Column(String(50), default="BO", nullable=True) # 'BO', 'RO', 'ZO', 'CO'
+    queryType = Column(String(100), default="APPLICATION_QUERY", nullable=True)
 
 class VEmployeeAllDetailsInDB(MSSQLBase):
     __tablename__ = "VEmployeeAllDetails"

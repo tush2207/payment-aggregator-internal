@@ -1,43 +1,104 @@
-# Deployment & Packaging Utility Scripts
+# Deploying Changes — `scripts/deploy/`
 
-This folder contains automated packaging and deployment utilities for the **Payment Aggregator Request Automation Portal (PAPG)**, matching the Digital Ambassador Portal (DAP) packaging workflow.
+This folder handles **packaging and applying code changes** between environments
+(Dev → UAT → Production) without needing git access on the target server.
+
+These are plain **Command Prompt** batch files — no PowerShell required.
+They use `git`, `tar` (built into Windows 10 1803+ / Windows 11), and
+`certutil` (built into every Windows version).
+
+## Files
+
+| File | Purpose |
+|------|---------|
+| `Pack-Changes.bat` | Detect git modified & untracked files, package into `.txt` (Base64) archive |
+| `Apply-Changes.bat` | Convert `.txt` extension to `.b64`, decode to ZIP, and apply files |
+| `Test-Deploy.bat` | Run end-to-end automated tests for packaging and applying changes |
+
+**Output goes to:** `scripts\changes\` (auto-created)
 
 ---
 
-##  File Overview
+## Workflow
 
-| Script | Description |
-|---|---|
-| `Pack-Changes.bat` | Detects git-changed files (or accepts a manual list), packages them into a ZIP archive, and Base64-encodes into a single deployable `.txt` / `.b64` file in `scripts\changes\`. |
-| `Apply-Changes.bat` | Automatically selects the newest `.txt` package, backs up any existing destination files that will be overwritten to `scripts\changes\backups\`, decodes the archive, and extracts the changes into the project root. |
-| `Test-Deploy.bat` | Creates a temporary test artifact, runs `Pack-Changes.bat`, applies it into a sandbox folder, verifies byte-exact content, and cleans up. |
+### Step 1 — Pack (on source machine)
 
----
+Open **Command Prompt**, `cd` into the repo (or anywhere inside it), then:
 
-##  How to Use
-
-### 1. Packaging Changes (Source Machine)
-Run:
-```bat
+```cmd
+:: Auto-detect all git modified AND new (untracked) files
 scripts\deploy\Pack-Changes.bat
-```
-- It inspects `git status`, displays modified files, confirms with you, and saves `scripts\changes\change_YYYYMMDD_HHMMSS.txt`.
 
-### 2. Applying Changes (Target Server / UAT / PROD)
-1. Copy `scripts\changes\change_YYYYMMDD_HHMMSS.txt` to the target machine's repository.
-2. Run:
-```bat
-scripts\deploy\Apply-Changes.bat
+:: Exclude new (untracked) files if desired
+scripts\deploy\Pack-Changes.bat -ExcludeUntracked
+
+:: Pack specific files only, no prompts
+scripts\deploy\Pack-Changes.bat -Files "backend\app\core\config.py" -NonInteractive
 ```
-- Backs up overwritten files to `scripts\changes\backups\backup_TIMESTAMP.zip`.
-- Extracts all updated source code cleanly.
+
+**Pack Flow:**
+1. Check file changes (`git status --porcelain`)
+2. Convert changed files to ZIP (`change_YYYYMMDD_HHMMSS.zip`)
+3. Convert to Base64 using `certutil -encode -f`
+4. Convert extension `.b64` to `.txt`
+5. Save as `change_currentdate_currentTime.txt`
+
+**Creates in `scripts\changes\`:**
+```
+change_20260801_112225.txt   <- share/copy this to deploy
+change_20260801_112225.zip   <- same content, open for inspection
+```
+
+### Step 2 — Apply (on target machine)
+
+Copy the `.txt` (or `.b64`) file into `scripts\changes\` on the target, then from Command
+Prompt in the repo root:
+
+```cmd
+:: Auto-picks the latest change_*.txt in scripts\changes\
+scripts\deploy\Apply-Changes.bat
+
+:: Apply a specific file
+scripts\deploy\Apply-Changes.bat -InputFile scripts\changes\change_20260801_112225.txt
+
+:: Apply with no prompts (automation / CI)
+scripts\deploy\Apply-Changes.bat -Force
+```
+
+**Apply Flow:**
+1. Convert extension `.txt` to `.b64`
+2. Convert to ZIP using `certutil -decode -f`
+3. Backup existing files (`scripts\changes\backups\backup_YYYYMMDD_HHMMSS.zip`) and apply file changes into project
+
+### Step 3 — Test
+
+Run the automated test script to verify packaging and applying works correctly on your system:
+
+```cmd
+scripts\deploy\Test-Deploy.bat
+```
+
+### Step 4 — Revert (undo an apply)
+
+```cmd
+:: List available backups
+dir scripts\changes\backups\
+
+:: Restore from a specific backup
+tar -xf "scripts\changes\backups\backup_20260720_102000.zip" -C "."
+```
 
 ---
 
-##  Production Frontend Build & Dist Sync
-To build the optimized frontend and deploy directly to `backend/app/dist`:
-```bash
-cd frontend
-npm run build:prod
-```
-This automatically creates a timestamped zip archive in `backend/app/version/`, deletes old dist, compiles with Vite production optimizations, and syncs the distribution bundle to both `backend/app/dist` and `backend/dist`.
+## Requirements
+
+- **Git** in PATH (for change detection in Pack)
+- **tar** in PATH — bundled with Windows 10 (build 1803+) and Windows 11 by default
+- **certutil** — bundled with every Windows version
+
+No execution-policy setup, no `Unblock-File`, no PowerShell flags needed —
+just double-click the `.bat` files or run them from `cmd.exe`.
+
+---
+
+See [`scripts/README.md`](../README.md) for the full project guide.

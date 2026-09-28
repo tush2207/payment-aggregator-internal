@@ -1,107 +1,93 @@
-# Digital Ambassador Portal — Scripts Guide
+# Universal Project Scripts (100% Pure CMD / Batch)
 
-Scripts are organized into two folders:
+Generic, portable, and drop-in ready development, deployment, and file-sharing scripts for **ANY project**.  
+Uses 100% native Windows tools (`tar.exe`, `certutil.exe`, `robocopy.exe`, `netstat`, `taskkill`) with **zero dependencies** and **no PowerShell required**.
 
-```
+---
+
+## 📁 Directory Structure
+
+```text
 scripts/
-├── run/                       <- Start the project (servers)
-│   ├── Start-Dev.bat          <- Launch BOTH backend + frontend
-│   ├── Start-Backend.bat      <- Backend only (FastAPI :8000)
-│   ├── Start-Frontend.bat     <- Frontend only (Vite :5174)
+├── share/                     <- Delta File Sharing (< 8.5 MB packages)
+│   ├── Pack-Share.bat         <- Packs ONLY modified/added files into Base64 .txt (< 8.5 MB)
+│   ├── Apply-Share.bat        <- Creates targeted backup & safely updates ONLY the packed files
 │   └── README.md
 │
-├── deploy/                    <- Package & deploy code changes
-│   ├── Pack-Changes.bat       <- Pack git modified & untracked files into .txt
-│   ├── Apply-Changes.bat      <- Apply a .txt / .b64 change archive to the project
-│   ├── Test-Deploy.bat        <- Automated test suite for deploy scripts
+├── run/                       <- Universal Multi-Service Runner
+│   ├── Start-Dev.bat          <- Launches both Backend & Frontend in dual windows
+│   ├── Start-Backend.bat      <- Auto-detects FastAPI, Flask, Django, Node, Go, Spring Boot
+│   ├── Start-Frontend.bat     <- Auto-detects React, Vite, Next.js, Vue, Angular
 │   └── README.md
 │
-├── changes/                   <- Auto-created by Pack-Changes.bat
-│   ├── change_YYYYMMDD_HHMMSS.txt <- Share this to deploy
-│   ├── change_YYYYMMDD_HHMMSS.zip <- For inspection
-│   └── backups/               <- Auto-backup before each apply
+├── deploy/                    <- Patch & Deploy Utility
+│   ├── Pack-Changes.bat       <- Packs Git changes/explicit files with < 8.5 MB limit
+│   ├── Apply-Changes.bat      <- Non-destructive patch applier with targeted rollback
+│   ├── Test-Deploy.bat        <- Automated test suite verifying pack -> apply -> rollback
+│   └── README.md
 │
-└── README.md                  <- This file
+├── kill-ports.bat             <- Frees active dev ports (9003, 3001, 5173, 8000, 3000, etc.)
+├── changes/                   <- Output directory for deployment change archives
+├── share-packages/            <- Output directory for delta .txt packages (< 8.5 MB)
+├── backups/                   <- Lightweight targeted pre-apply backups (only overwritten files)
+└── README.md                  <- This guide
 ```
 
 ---
 
-## Running the Project
+## ⚡ 1. Share Delta Files (`scripts\share\`)
 
-### VS Code (2 terminal tabs inside IDE)
+Designed for sharing file updates across machines via chat/email/tickets where files must stay under **8.5 MB (8,912,896 bytes)**.
 
-Press **`Ctrl+Shift+B`** — opens Backend + Frontend tabs automatically.
-
-Or: `Ctrl+Shift+P` → **Tasks: Run Task**
-
-| Task | Action |
-|------|--------|
-| `DAP: Start All [DEV]` | Both servers — DEV mode |
-| `DAP: Start All [UAT]` | Both servers — UAT mode |
-| `DAP: Backend [DEV]` | Backend only |
-| `DAP: Frontend` | Frontend only |
-| `DAP: Pack Changes` | Run Pack-Changes.bat |
-| `DAP: Apply Changes` | Run Apply-Changes.bat |
-
-### CMD (2 separate windows)
-
+### **Pack ONLY Changed Files:**
 ```cmd
-scripts\run\Start-Dev.bat           DEV mode (default)
-scripts\run\Start-Dev.bat UAT       UAT mode
-scripts\run\Start-Backend.bat DEV   Backend only
-scripts\run\Start-Frontend.bat      Frontend only
+scripts\share\Pack-Share.bat
 ```
+- Automatically detects changed / uncommitted files via `git status` (or prompts for files).
+- Preserves relative project paths.
+- Compresses with `tar.exe` and encodes to Base64 `.txt`.
+- Enforces strict size validation (< 8.5 MB).
+- Saves to `share-packages\<ProjectName>_share_<TIMESTAMP>.txt`.
+
+### **Apply Delta Package:**
+```cmd
+scripts\share\Apply-Share.bat
+```
+*(Or drag and drop any `.txt` package directly onto `Apply-Share.bat`)*
+- Backs up **ONLY** the specific existing files that are being replaced (saved to `backups\`).
+- Overwrites / adds only the packaged files.
+- **100% Non-destructive:** All other project files remain completely untouched.
 
 ---
 
-## Deploying Changes
+## 🚀 2. Run Services (`scripts\run\`)
 
-### Pack (create patch from your changes)
+Works out-of-the-box on any project by auto-detecting the technology stack:
 
 ```cmd
-scripts\deploy\Pack-Changes.bat                   :: auto-detect modified + untracked files
-scripts\deploy\Pack-Changes.bat -NonInteractive   :: no prompts
+scripts\run\Start-Dev.bat
 ```
+- Spawns Backend and Frontend in separate labeled CMD windows.
+- Auto-detects Python virtual environments (`.venv\`, `venv\`) or Node runtimes.
+- Auto-copies `.env.example` -> `.env` if missing.
 
-### Apply (deploy patch to another machine)
+---
 
-```cmd
-scripts\deploy\Apply-Changes.bat          :: auto-picks latest .b64
-scripts\deploy\Apply-Changes.bat -Force   :: no prompts
-```
-
-### Test
+## 📦 3. Patch & Deploy (`scripts\deploy\`)
 
 ```cmd
+scripts\deploy\Pack-Changes.bat
+scripts\deploy\Apply-Changes.bat
 scripts\deploy\Test-Deploy.bat
 ```
-
-### Revert (undo an apply)
-
-```cmd
-tar -xf "scripts\changes\backups\backup_xxx.zip" -C "."
-```
+- Package Git changes or specific files into `scripts\changes\change_<TIMESTAMP>.txt`.
+- Apply patches on target environments with automatic targeted rollback zip generation.
 
 ---
 
-## Environment Setup (Backend)
-
-| File | Committed? | Used for |
-|------|-----------|---------|
-| `backend/.env.dev.example` | YES | Template — copy to `.env.dev` |
-| `backend/.env.prod.example` | YES | Template — copy to `.env.prod` |
-| `backend/.env.dev` | NO | Real DEV/UAT credentials |
-| `backend/.env.prod` | NO | Real PROD credentials |
+## 🛑 4. Free Ports (`scripts\kill-ports.bat`)
 
 ```cmd
-copy backend\.env.dev.example backend\.env.dev
+scripts\kill-ports.bat
 ```
-Then fill in your real credentials.
-
-| `API_ENV` | Env File | DB URL Used |
-|-----------|---------|------------|
-| `DEV` | `.env.dev` | `DEV_DB_URL` — local Oracle |
-| `UAT` | `.env.dev` | `UAT_DB_URL` — UAT server |
-| `PROD` | `.env.prod` | `PROD_DB_URL` — production |
-
-See [`scripts/run/README.md`](run/README.md) and [`scripts/deploy/README.md`](deploy/README.md) for details.
+- Frees common development ports (9003, 3001, 5173, 5174, 8000, 8080, 3000).

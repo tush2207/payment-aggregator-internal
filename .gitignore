@@ -78,3 +78,8 @@ backend/paws_service.log
 frontend/src.zip
 sent_emails/
 backend/sent_emails/
+*.zip
+*.7z
+*.txt
+frontend/dev-dist
+frontend/dev-dist/sw.js.map

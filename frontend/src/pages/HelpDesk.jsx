@@ -40,6 +40,12 @@ import {
   FilterAltOffRounded,
   FileDownloadRounded,
   AttachFileRounded,
+  InsertDriveFileRounded,
+  PictureAsPdfRounded,
+  ImageRounded,
+  TableChartRounded,
+  DescriptionRounded,
+  FolderZipRounded,
 } from '@mui/icons-material';
 
 import ConfirmationDialogWithReason from '&src/components/Dialog/ConfirmationDialogWithReason';
@@ -51,11 +57,47 @@ import StatusChipOrSelect from '&src/components/StatusChipOrSelect';
 import useStatusWiseAlert from '&src/components/ToastNotifications/useStatusWiseAlert';
 import { isBO, isCO } from '&src/constants/PaymentAggregratorConstant';
 import useToggle from '&src/hooks/useToggle';
-import ManageHelpDeskForm from '&src/modules/HelpDesk/ManageHelpDeskForm';
+import useQueryWebSocket from '&src/hooks/useQueryWebSocket';
+import ApplicationQueryModal from '&src/components/ApplicationFlow/ApplicationQueryModal';
 import HelpdeskServices from '&src/services/helpdesk';
 import { formatDateOnly, formatTimeOnly } from '&src/utils';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
+
+const getAttachmentIcon = (fileName, size = 15) => {
+  if (!fileName) return <InsertDriveFileRounded sx={{ fontSize: size, color: '#64748b' }} />;
+  const ext = fileName.split('.').pop()?.toLowerCase();
+  if (ext === 'pdf') return <PictureAsPdfRounded sx={{ fontSize: size, color: '#ef4444' }} />;
+  if (['png', 'jpg', 'jpeg', 'webp', 'svg', 'gif'].includes(ext)) return <ImageRounded sx={{ fontSize: size, color: '#3b82f6' }} />;
+  if (['xlsx', 'xls', 'csv'].includes(ext)) return <TableChartRounded sx={{ fontSize: size, color: '#10b981' }} />;
+  if (['doc', 'docx'].includes(ext)) return <DescriptionRounded sx={{ fontSize: size, color: '#2563eb' }} />;
+  if (['zip', 'rar', '7z'].includes(ext)) return <FolderZipRounded sx={{ fontSize: size, color: '#f59e0b' }} />;
+  return <InsertDriveFileRounded sx={{ fontSize: size, color: '#64748b' }} />;
+};
+
+const getRowAttachments = (row) => {
+  if (!row) return [];
+  const list = [];
+  if (row.attachments) {
+    try {
+      const parsed = typeof row.attachments === 'string' ? JSON.parse(row.attachments) : row.attachments;
+      if (Array.isArray(parsed)) {
+        list.push(...parsed);
+      }
+    } catch (e) {
+      console.warn("Failed to parse attachments JSON", e);
+    }
+  }
+  if (list.length === 0 && row.attachmentUrl) {
+    list.push({
+      fileId: null,
+      fileName: row.attachmentName || 'Attachment',
+      url: row.attachmentUrl,
+      size: null,
+    });
+  }
+  return list;
+};
 
 const ManageHelpDesk = () => {
   const theme = useTheme();
@@ -84,24 +126,31 @@ const ManageHelpDesk = () => {
     setOpen(true);
   };
 
-  const fetchAllTicketsData = async () => {
-    setShowLoader(true);
+  const fetchAllTicketsData = async (silent = false) => {
+    if (!silent) setShowLoader(true);
     try {
       const response = await HelpdeskServices.getAllHelpdesks();
       setAllTicketsDetails(response?.data || {});
-      successNotification('Fetched helpdesk data successfully');
-      handleClose();
     } catch (error) {
       setAllTicketsDetails({});
-      errorNotification(error?.response?.data?.message || 'Failed to fetch tickets');
+      if (!silent) {
+        errorNotification(error?.response?.data?.message || 'Failed to fetch tickets');
+      }
     } finally {
-      setShowLoader(false);
+      if (!silent) setShowLoader(false);
     }
   };
 
   useEffect(() => {
     fetchAllTicketsData();
   }, []);
+
+  // Real-time WebSocket sync across all roles (silent refresh without closing modals)
+  useQueryWebSocket('global', (event) => {
+    if (event) {
+      fetchAllTicketsData(true);
+    }
+  }, true);
 
   const handleDelete = async () => {
     setShowLoader(true);
@@ -493,10 +542,9 @@ const ManageHelpDesk = () => {
               <TableCell sx={{ color: '#ffffff', fontWeight: 700, py: 1.5, borderRight: '1px solid rgba(255,255,255,0.25)' }}>Created At</TableCell>
               <TableCell sx={{ color: '#ffffff', fontWeight: 700, py: 1.5, textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.25)' }}>App ID</TableCell>
               <TableCell sx={{ color: '#ffffff', fontWeight: 700, py: 1.5, borderRight: '1px solid rgba(255,255,255,0.25)' }}>Ticket / Issue</TableCell>
-              <TableCell sx={{ color: '#ffffff', fontWeight: 700, py: 1.5, borderRight: '1px solid rgba(255,255,255,0.25)' }}>Account No</TableCell>
+              <TableCell sx={{ color: '#ffffff', fontWeight: 700, py: 1.5, textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.25)' }}>Account No</TableCell>
               <TableCell sx={{ color: '#ffffff', fontWeight: 700, py: 1.5, borderRight: '1px solid rgba(255,255,255,0.25)' }}>Customer Name</TableCell>
               <TableCell sx={{ color: '#ffffff', fontWeight: 700, py: 1.5, borderRight: '1px solid rgba(255,255,255,0.25)' }}>Description</TableCell>
-              <TableCell sx={{ color: '#ffffff', fontWeight: 700, py: 1.5, textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.25)' }}>Attachment</TableCell>
               <TableCell sx={{ color: '#ffffff', fontWeight: 700, py: 1.5, textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.25)' }}>Priority</TableCell>
               <TableCell sx={{ color: '#ffffff', fontWeight: 700, py: 1.5, textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.25)' }}>Status</TableCell>
               <TableCell sx={{ color: '#ffffff', fontWeight: 700, py: 1.5, textAlign: 'center' }}>Actions</TableCell>
@@ -555,68 +603,97 @@ const ManageHelpDesk = () => {
                       </Typography>
                     </TableCell>
 
-                    <TableCell sx={{ fontSize: '12.5px', color: 'text.secondary', whiteSpace: 'nowrap' }}>
-                      {row.accountNo ? row.accountNo : '-'}
+                    <TableCell align="center" sx={{ fontSize: '12.5px', whiteSpace: 'nowrap' }}>
+                      {row.accountNo && String(row.accountNo) !== '0' && String(row.accountNo) !== 'null' && String(row.accountNo).toLowerCase() !== 'new' && String(row.accountNo).toLowerCase() !== 'n/a' && String(row.accountNo).toLowerCase() !== 'na' ? (
+                        <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '12px', fontWeight: 600, color: '#1e293b' }}>
+                          {row.accountNo}
+                        </Typography>
+                      ) : (
+                        <Chip
+                          label="New"
+                          size="small"
+                          sx={{
+                            height: 20,
+                            fontSize: '10px',
+                            fontWeight: 700,
+                            bgcolor: '#dcfce7',
+                            color: '#15803d',
+                            border: '1px solid #86efac',
+                            borderRadius: '4px',
+                            px: 0.4,
+                          }}
+                        />
+                      )}
                     </TableCell>
 
                     <TableCell sx={{ fontWeight: 600, fontSize: '12.5px', color: 'text.primary' }}>
                       {row.customerName || 'N/A'}
                     </TableCell>
 
-                    <TableCell sx={{ maxWidth: 220 }}>
+                    <TableCell sx={{ maxWidth: 260 }}>
                       <Typography variant="body2" sx={{ fontSize: '12px', color: 'text.secondary', wordBreak: 'break-word' }}>
                         {row.description || 'N/A'}
                       </Typography>
                     </TableCell>
 
                     <TableCell align="center">
-                      {row.attachmentUrl ? (
-                        <Tooltip title={`Download ${row.attachmentName || 'Attachment'}`} arrow>
-                          <Button
+                      {(() => {
+                        const p = String(row.priority || 'Medium').toLowerCase();
+                        const isHigh = p === 'high' || p === 'urgent';
+                        const isLow = p === 'low';
+                        const label = isHigh ? (p === 'urgent' ? 'Urgent' : 'High') : isLow ? 'Low' : 'Medium';
+
+                        return (
+                          <Chip
+                            label={label}
                             size="small"
-                            variant="outlined"
-                            href={row.attachmentUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            download={row.attachmentName || 'attachment'}
-                            startIcon={<AttachFileRounded sx={{ fontSize: 13 }} />}
                             sx={{
-                              height: 24,
-                              fontSize: '10.5px',
-                              textTransform: 'none',
-                              py: 0,
-                              px: 0.8,
-                              borderRadius: '4px',
-                              borderColor: '#93c5fd',
-                              color: '#1d4ed8',
-                              bgcolor: '#eff6ff',
-                              maxWidth: 110,
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                              '&:hover': { bgcolor: '#dbeafe' },
+                              fontWeight: 700,
+                              fontSize: '11px',
+                              height: 23,
+                              bgcolor: isHigh ? '#fee2e2' : isLow ? '#dcfce7' : '#e0f2fe',
+                              color: isHigh ? '#b91c1c' : isLow ? '#15803d' : '#0369a1',
+                              border: '1px solid',
+                              borderColor: isHigh ? '#fca5a5' : isLow ? '#86efac' : '#7dd3fc',
+                              borderRadius: '6px',
                             }}
-                          >
-                            {row.attachmentName || 'File'}
-                          </Button>
-                        </Tooltip>
-                      ) : (
-                        <Typography variant="caption" color="text.disabled">-</Typography>
-                      )}
+                          />
+                        );
+                      })()}
                     </TableCell>
 
                     <TableCell align="center">
-                      <StatusChipOrSelect value={row.priority} type="priority" />
-                    </TableCell>
+                      {(() => {
+                        const s = String(row.status || 'Open').toLowerCase();
+                        const isResolved = s === 'resolved' || s === 'closed';
+                        const isReverted = s === 'reverted_by_branch' || s === 'branch reverted' || s === 'reverted';
+                        const isInProg = s === 'inprogress' || s === 'in progress' || s === 'in review' || s === 'in_review';
 
-                    <TableCell align="center">
-                      <StatusChipOrSelect value={row.status} />
+                        const label = isResolved ? 'Resolved' : isReverted ? 'Branch Reverted' : isInProg ? 'In Progress' : 'Open';
+
+                        return (
+                          <Chip
+                            label={label}
+                            size="small"
+                            sx={{
+                              fontWeight: 700,
+                              fontSize: '11px',
+                              height: 23,
+                              bgcolor: isResolved ? '#dcfce7' : isReverted ? '#fef3c7' : isInProg ? '#e0e7ff' : '#eff6ff',
+                              color: isResolved ? '#15803d' : isReverted ? '#b45309' : isInProg ? '#4338ca' : '#1d4ed8',
+                              border: '1px solid',
+                              borderColor: isResolved ? '#86efac' : isReverted ? '#fde68a' : isInProg ? '#a5b4fc' : '#bfdbfe',
+                              borderRadius: '6px',
+                            }}
+                          />
+                        );
+                      })()}
                     </TableCell>
 
                     <TableCell align="center">
                       <Stack direction="row" spacing={0.8} justifyContent="center">
                         {isCO ? (
-                          <Tooltip title="Reply / Update Ticket" arrow>
+                          <Tooltip title="Open Query Chat & Reply" arrow>
                             <IconButton
                               size="small"
                               onClick={() => onEditClick(row)}
@@ -631,7 +708,7 @@ const ManageHelpDesk = () => {
                             </IconButton>
                           </Tooltip>
                         ) : (
-                          <Tooltip title="View Query" arrow>
+                          <Tooltip title="Open Query Chat & Discussion" arrow>
                             <IconButton
                               size="small"
                               onClick={() => onEditClick(row)}
@@ -670,7 +747,7 @@ const ManageHelpDesk = () => {
               })
             ) : (
               <TableRow>
-                <TableCell colSpan={9} align="center" sx={{ py: 6 }}>
+                <TableCell colSpan={10} align="center" sx={{ py: 6 }}>
                   <NoData message={searchQuery ? 'No matching tickets found' : 'No tickets available'} />
                 </TableCell>
               </TableRow>
@@ -732,19 +809,32 @@ const ManageHelpDesk = () => {
         </Box>
       </TableContainer>
 
-      {/* ── Add / Edit Dialog ── */}
-      <DialogWithHeader
-        open={open}
-        onClose={handleClose}
-        headerText={ticketData ? 'Ticket Information' : 'Add New Query'}
-      >
-        <ManageHelpDeskForm
-          updateDetails={ticketData}
-          fetchAllTickets={fetchAllTicketsData}
-          handleClose={handleClose}
-          formClosed={open || confirmDialogOpen}
+      {/* ── Real-time Interactive Query & WebSocket Chat Window ── */}
+      {open && (
+        <ApplicationQueryModal
+          open={open}
+          onClose={handleClose}
+          application={
+            ticketData?.applicationNo
+              ? {
+                  applicationId: ticketData.applicationNo,
+                  customerName: ticketData.customerName,
+                  branchName: ticketData.branchName,
+                  regionName: ticketData.regionName,
+                  zoneName: ticketData.zoneName,
+                  accountNo: ticketData.accountNo,
+                  email: ticketData.customerEmail,
+                  mobileNo: ticketData.customerMobileNo,
+                }
+              : null
+          }
+          initialTicket={ticketData}
+          initialTicketId={ticketData?.id}
+          initialShowNewQuery={!ticketData}
+          isHelpDeskGlobalMode={true}
+          onQueriesCountUpdated={() => fetchAllTicketsData()}
         />
-      </DialogWithHeader>
+      )}
 
       {/* ── Delete Confirmation Dialog ── */}
       <ConfirmationDialogWithReason

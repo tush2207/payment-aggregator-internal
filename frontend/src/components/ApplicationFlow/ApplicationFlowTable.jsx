@@ -1,11 +1,11 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   Paper, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, IconButton, Tooltip, Stack, Pagination,
   Typography, Box, TextField, MenuItem, Grid, Collapse, Dialog, DialogTitle, DialogContent, DialogActions, Button,
-  Chip, Menu, ListItemIcon, ListItemText, Divider
+  Chip, Menu, ListItemIcon, ListItemText, Divider, Badge
 } from '@mui/material';
-import { KeyboardArrowDown, KeyboardArrowUp, Visibility, Edit, Delete, Timeline, FilterList, Download, CancelOutlined, SearchRounded, FileDownloadRounded, FilterAltRounded, RestartAltRounded, AddCircleRounded, PostAddRounded, ArrowForwardRounded, Inventory2Outlined, ArticleOutlined, ForumOutlined, TaskAltRounded, MoreVertRounded, CheckCircleRounded } from '@mui/icons-material';
+import { KeyboardArrowDown, KeyboardArrowUp, Visibility, Edit, Delete, Timeline, FilterList, Download, CancelOutlined, SearchRounded, FileDownloadRounded, FilterAltRounded, RestartAltRounded, AddCircleRounded, PostAddRounded, ArrowForwardRounded, Inventory2Outlined, ArticleOutlined, ForumOutlined, TaskAltRounded, MoreVertRounded, CheckCircleRounded, QuestionAnswerRounded, LockRounded } from '@mui/icons-material';
 import { useDispatch, useSelector } from 'react-redux';
 import { openWorkflowDialog, selectUserRole } from '&src/store/applicationFlowSlice';
 import usePOGenerator from '&src/hooks/usePOGenerator';
@@ -15,11 +15,14 @@ import StatusChipOrSelect from '&src/components/StatusChipOrSelect';
 import RoleBasedStepper from '&src/components/RoleBasedStepper';
 import { isCO, isRO, PAYMENT_AGGREGATOR_WORKFLOW, deriveApplicationStatus } from '&src/constants/PaymentAggregratorConstant';
 import applicationServices from '&src/services/applications';
+import HelpdeskServices from '&src/services/helpdesk';
 import useStatusWiseAlert from '&src/components/ToastNotifications/useStatusWiseAlert';
+import useQueryWebSocket from '&src/hooks/useQueryWebSocket';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import { useSearchParams } from 'react-router-dom';
 import ApplicationHelpdeskSection from './ApplicationHelpdeskSection';
+import ApplicationQueryModal from './ApplicationQueryModal';
 
 // Helpers to get current financial year and month dynamically
 const getCurrentFinancialYear = () => {
@@ -238,6 +241,70 @@ export default function ApplicationFlowTable({
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [helpdeskModalApp, setHelpdeskModalApp] = useState(null);
+  const [queryModalApp, setQueryModalApp] = useState(null);
+  const [queryCounts, setQueryCounts] = useState({});
+  const [viewedQueryApps, setViewedQueryApps] = useState(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem('viewedQueryApps') || '{}');
+    } catch {
+      return {};
+    }
+  });
+
+  // Fetch initial query counts for displayed applications
+  const fetchQueryCounts = useCallback(async () => {
+    try {
+      const res = await HelpdeskServices.getAllHelpdesks();
+      const allList = res?.data?.ticketsList || res?.data || [];
+      const counts = {};
+      if (Array.isArray(allList)) {
+        allList.forEach((t) => {
+          if (t && t.applicationNo) {
+            const id = Number(t.applicationNo);
+            const statusStr = String(t.status || '').toLowerCase();
+            const isResolved = statusStr === 'resolved' || statusStr === 'closed';
+            if (!isResolved) {
+              const lastViewedTime = viewedQueryApps[id];
+              const ticketTime = t.updatedAt ? new Date(t.updatedAt).getTime() : (t.createdAt ? new Date(t.createdAt).getTime() : 0);
+              
+              // Only show badge if ticket has new unviewed activity
+              if (!lastViewedTime || ticketTime > lastViewedTime) {
+                counts[id] = (counts[id] || 0) + 1;
+              }
+            }
+          }
+        });
+      }
+      setQueryCounts(counts);
+    } catch (e) {
+      console.debug("Failed to fetch helpdesk counts:", e);
+    }
+  }, [viewedQueryApps]);
+
+  useEffect(() => {
+    fetchQueryCounts();
+  }, [fetchQueryCounts]);
+
+  const handleOpenQueryModal = (customer) => {
+    const appId = customer?.applicationId;
+    if (appId) {
+      const now = Date.now();
+      setViewedQueryApps((prev) => {
+        const updated = { ...prev, [appId]: now };
+        try {
+          sessionStorage.setItem('viewedQueryApps', JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
+      setQueryCounts((prev) => ({ ...prev, [appId]: 0 }));
+    }
+    setQueryModalApp(customer);
+  };
+
+  // Global WebSocket listener to update badges live across sessions
+  useQueryWebSocket('global', () => {
+    fetchQueryCounts();
+  });
 
   const isFirstRender = React.useRef(true);
 
@@ -767,26 +834,75 @@ export default function ApplicationFlowTable({
                       </TableCell>
                       <TableCell sx={{ minWidth: 175, py: 1, px: 1, whiteSpace: 'nowrap' }}>
                         <Stack direction="row" spacing={0.6} alignItems="center" justifyContent="center" sx={{ flexWrap: 'nowrap' }}>
-                          {/*  Available View Application Button — Only shown when NOT (CO and Admin) */}
-                          {!(userRole === 'CO' && isAdmin) && (
-                            <Tooltip title="View Application Details" arrow placement="top">
-                              <IconButton
-                                size="small"
-                                onClick={() => onView ? onView(customer) : dispatch(openWorkflowDialog(customer))}
-                                sx={{
-                                  width: 28,
-                                  height: 28,
-                                  p: '4px',
-                                  border: '1px solid #cbd5e1',
-                                  borderRadius: '6px',
-                                  bgcolor: '#f8fafc',
-                                  color: '#0E4F8D',
-                                  '&:hover': { bgcolor: '#f1f5f9', color: '#176FC1' }
-                                }}
-                              >
-                                <Visibility sx={{ fontSize: 16 }} />
-                              </IconButton>
-                            </Tooltip>
+                          {/*  Only render separate View & Query icons for in-progress applications (for Final Approved, all options are in Application Flow dropdown) */}
+                          {!customer?.isFinalApproved && (
+                            <>
+                              {!(userRole === 'CO' && isAdmin) && (
+                                <Tooltip title="View Application Details" arrow placement="top">
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => onView ? onView(customer) : dispatch(openWorkflowDialog(customer))}
+                                    sx={{
+                                      width: 28,
+                                      height: 28,
+                                      p: '4px',
+                                      border: '1px solid #cbd5e1',
+                                      borderRadius: '6px',
+                                      bgcolor: '#f8fafc',
+                                      color: '#0E4F8D',
+                                      '&:hover': { bgcolor: '#f1f5f9', color: '#176FC1' }
+                                    }}
+                                  >
+                                    <Visibility sx={{ fontSize: 16 }} />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
+
+                              {/* Query & Clarifications Action Button with Live Badge */}
+                              {(() => {
+                                const appQueryCount = queryCounts[customer.applicationId] || 0;
+                                return (
+                                  <Tooltip title={`Queries & Clarifications (${appQueryCount} active)`} arrow placement="top">
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => handleOpenQueryModal(customer)}
+                                      sx={{
+                                        width: 28,
+                                        height: 28,
+                                        p: '4px',
+                                        border: '1px solid',
+                                        borderColor: appQueryCount > 0 ? '#fb923c' : '#cbd5e1',
+                                        borderRadius: '6px',
+                                        bgcolor: appQueryCount > 0 ? '#fff7ed' : '#f8fafc',
+                                        color: appQueryCount > 0 ? '#ea580c' : '#0E4F8D',
+                                        '&:hover': {
+                                          bgcolor: appQueryCount > 0 ? '#ffedd5' : '#f1f5f9',
+                                          color: appQueryCount > 0 ? '#c2410c' : '#176FC1',
+                                        },
+                                      }}
+                                    >
+                                      <Badge
+                                        badgeContent={appQueryCount}
+                                        color="error"
+                                        max={99}
+                                        sx={{
+                                          '& .MuiBadge-badge': {
+                                            fontSize: '9px',
+                                            height: 14,
+                                            minWidth: 14,
+                                            px: '3px',
+                                            right: -2,
+                                            top: -2,
+                                          },
+                                        }}
+                                      >
+                                        <QuestionAnswerRounded sx={{ fontSize: 15 }} />
+                                      </Badge>
+                                    </IconButton>
+                                  </Tooltip>
+                                );
+                              })()}
+                            </>
                           )}
 
                           {/* Role-based action buttons */}
@@ -1404,7 +1520,33 @@ export default function ApplicationFlowTable({
           </ListItemIcon>
           <ListItemText primary="Download Sanction Letter (.docx)" primaryTypographyProps={{ fontSize: '12.5px', fontWeight: 600 }} />
         </MenuItem>
+
+        <MenuItem
+          onClick={() => {
+            const cust = actionMenuCustomer;
+            handleCloseActionMenu();
+            setQueryModalApp(cust);
+          }}
+          sx={{ fontSize: '12.5px', py: 1, gap: 1.2 }}
+        >
+          <ListItemIcon sx={{ minWidth: 24, color: '#ea580c' }}>
+            <QuestionAnswerRounded fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Queries & Change Window" primaryTypographyProps={{ fontSize: '12.5px', fontWeight: 600 }} />
+        </MenuItem>
       </Menu>
+
+      {/* Real-time Interactive Query Modal with Multi-File Upload, Branch Revert & Change Window */}
+      {queryModalApp && (
+        <ApplicationQueryModal
+          open={Boolean(queryModalApp)}
+          onClose={() => setQueryModalApp(null)}
+          application={queryModalApp}
+          onQueriesCountUpdated={(cnt) => {
+            setQueryCounts((prev) => ({ ...prev, [queryModalApp?.applicationId]: cnt }));
+          }}
+        />
+      )}
     </Box>
   );
 }

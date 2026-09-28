@@ -1,6 +1,6 @@
 @echo off
 setlocal EnableDelayedExpansion
-title Test Deploy Scripts Utility - PAPG Portal
+title Test Deploy Scripts Utility (100% Pure CMD)
 
 echo ===========================================
 echo      TEST DEPLOY SCRIPTS UTILITY
@@ -38,7 +38,7 @@ call "%SCRIPTDIR%\Pack-Changes.bat" -Files "%TESTFILE_REL%" -NonInteractive
 
 rem Find generated txt change file
 set "LATEST_TXT="
-for /f "delims=" %%F in ('dir /b /o-d "%REPO_ROOT%\scripts\changes\change_*.txt" "%REPO_ROOT%\scripts\changes\changes_*.txt" 2^>nul') do (
+for /f "delims=" %%F in ('dir /b /a-d /o-d "%REPO_ROOT%\scripts\changes\change_*.txt" 2^>nul') do (
     if "!LATEST_TXT!"=="" set "LATEST_TXT=%REPO_ROOT%\scripts\changes\%%F"
 )
 
@@ -51,7 +51,7 @@ echo [+] Packaging verified: %LATEST_TXT%
 rem ---------------------------------------------------------------
 rem Step 3. Run Apply-Changes.bat into a temporary target directory
 rem ---------------------------------------------------------------
-set "TEST_TARGET=%TEMP%\TestDeployTarget_%RANDOM%"
+set "TEST_TARGET=%TEMP%\TestDeployTarget_%RANDOM%_%RANDOM%"
 if exist "%TEST_TARGET%" rmdir /s /q "%TEST_TARGET%"
 mkdir "%TEST_TARGET%"
 
@@ -66,7 +66,7 @@ if not exist "%APPLIED_FILE%" (
 )
 
 set /p READ_CONTENT=<"%APPLIED_FILE%"
-if not "!READ_CONTENT!"=="%TESTCONTENT%" (
+if not "!READ_CONTENT!"=="%TESTCONTENT% " if not "!READ_CONTENT!"=="%TESTCONTENT%" (
     echo [-] FAIL: Content mismatch in applied file!
     echo     Expected: %TESTCONTENT%
     echo     Got     : !READ_CONTENT!

@@ -192,7 +192,7 @@ export const helpDeskFormSchema = Yup.object({
     customerMobileNo: Yup.string()
         .matches(/^\d{10}$/, 'Mobile number must be 10 digits')
         .required('Mobile number is required'),
-    accountNo: Yup.string().required('Account Number is required'),
+    accountNo: Yup.string().nullable().notRequired(),
     branchName: Yup.string().required('Branch is required'),
     zoneName: Yup.string().required('Zone is required'),
     regionName: Yup.string().required('Region is required'),

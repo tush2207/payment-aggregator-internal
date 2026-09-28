@@ -1,21 +1,15 @@
 @echo off
 setlocal EnableDelayedExpansion
-title Pack Changes Utility - PAPG Portal
+title Pack Changes Utility (100% Pure CMD)
 
 echo ===========================================
-echo        PACK CHANGES UTILITY (BASE64)
+echo   PACK CHANGES UTILITY (BASE64 - PURE CMD)
 echo ===========================================
 
-rem ---------------------------------------------------------------
-rem 0. Parse arguments
-rem      -ExcludeUntracked        skip git-untracked (new) files
-rem      -IncludeUntracked        include git-untracked files (default)
-rem      -NonInteractive           skip all prompts
-rem      -Files "a.txt,b\c.txt"    explicit comma-separated file list
-rem ---------------------------------------------------------------
 set "INCLUDEUNTRACKED=1"
 set "NONINTERACTIVE=0"
 set "EXPLICITFILES="
+set "MAX_BYTES=8912896"
 
 :parseargs
 if "%~1"=="" goto argsdone
@@ -35,22 +29,16 @@ if /I "%~1"=="-NonInteractive" (
     goto parseargs
 )
 if /I "%~1"=="-Files" (
+    set "EXPLICITFILES=%~2"
     shift
-    goto setfiles
+    shift
+    goto parseargs
 )
-shift
-goto parseargs
-
-:setfiles
-set "EXPLICITFILES=%~1"
 shift
 goto parseargs
 
 :argsdone
 
-rem ---------------------------------------------------------------
-rem 1. Find Git repository root (walk up from current directory)
-rem ---------------------------------------------------------------
 set "REPO_ROOT="
 set "CUR=%CD%"
 
@@ -65,8 +53,9 @@ set "CUR=%PARENT%"
 goto findroot
 
 :rootnotfound
-echo [-] Git repository root not found. Defaulting to current directory: %CD%
+pushd "%~dp0..\.."
 set "REPO_ROOT=%CD%"
+popd
 goto rootdone
 
 :rootfound
@@ -75,18 +64,16 @@ echo [+] Found Git repository root: %REPO_ROOT%
 :rootdone
 if "%REPO_ROOT:~-1%"=="\" set "REPO_ROOT=%REPO_ROOT:~0,-1%"
 
-rem ---------------------------------------------------------------
-rem 2. Build the list of files to pack
-rem ---------------------------------------------------------------
 set "FILECOUNT=0"
 
 if not "%EXPLICITFILES%"=="" (
     echo [+] Using manually specified files.
-    for %%F in ("%EXPLICITFILES:,=" "%") do (
+    set "CLEANFILES=%EXPLICITFILES:"=%"
+    set "CLEANFILES=!CLEANFILES:,= !"
+    for %%F in (!CLEANFILES!) do (
         set "RAW=%%~F"
         if not "!RAW!"=="" (
             set "RAW=!RAW:/=\!"
-            set "RAW=!RAW:"=!"
             if not "!RAW:~-1!"=="\" (
                 set /a FILECOUNT+=1
                 set "F!FILECOUNT!=!RAW!"
@@ -103,13 +90,11 @@ if not "%EXPLICITFILES%"=="" (
         if "!FPATH:~0,1!"==" " set "FPATH=!FPATH:~1!"
         set "FPATH=!FPATH:"=!"
 
-        rem Filter deleted files
         if not "!STAT!"=="D" if not "!STAT!"=="RD" (
             set "SKIP=0"
             if "!STAT!"=="??" if "%INCLUDEUNTRACKED%"=="0" set "SKIP=1"
 
             if "!SKIP!"=="0" (
-                rem Handle rename syntax "old -> new"
                 if not "!FPATH: -> =!"=="!FPATH!" (
                     for /f "tokens=2 delims=>" %%X in ("!FPATH!") do set "FPATH=%%X"
                     if "!FPATH:~0,1!"==" " set "FPATH=!FPATH:~1!"
@@ -117,9 +102,12 @@ if not "%EXPLICITFILES%"=="" (
 
                 set "FPATH=!FPATH:/=\!"
 
-                if not "!FPATH:~-1!"=="\" (
-                    set /a FILECOUNT+=1
-                    set "F!FILECOUNT!=!FPATH!"
+                echo !FPATH! | findstr /i /b "scripts\\changes\\ share-packages\\ old-version\\ backups\\ node_modules\\ .venv\\ .git\\" >nul
+                if errorlevel 1 (
+                    if not "!FPATH:~-1!"=="\" (
+                        set /a FILECOUNT+=1
+                        set "F!FILECOUNT!=!FPATH!"
+                    )
                 )
             )
         )
@@ -132,11 +120,12 @@ if "%FILECOUNT%"=="0" (
     if "%NONINTERACTIVE%"=="0" (
         set /p MANUAL="Enter file paths to pack (comma-separated, relative to root) or press Enter to cancel: "
         if not "!MANUAL!"=="" (
-            for %%F in ("!MANUAL:,=" "!") do (
+            set "CLEANMANUAL=!MANUAL:"=!"
+            set "CLEANMANUAL=!CLEANMANUAL:,= !"
+            for %%F in (!CLEANMANUAL!) do (
                 set "RAW=%%~F"
                 if not "!RAW!"=="" (
                     set "RAW=!RAW:/=\!"
-                    set "RAW=!RAW:"=!"
                     if not "!RAW:~-1!"=="\" (
                         set /a FILECOUNT+=1
                         set "F!FILECOUNT!=!RAW!"
@@ -157,17 +146,14 @@ echo Files to package:
 for /L %%i in (1,1,%FILECOUNT%) do echo   - !F%%i!
 
 if "%NONINTERACTIVE%"=="0" (
-    set /p CONFIRM="Do you want to package these %FILECOUNT% file(s)? (Y/N): "
+    set /p CONFIRM="Do you want to package these %FILECOUNT% files? (Y/N): "
     if /I not "!CONFIRM!"=="Y" if /I not "!CONFIRM!"=="Yes" (
         echo [-] Cancelled by user.
         goto end
     )
 )
 
-rem ---------------------------------------------------------------
-rem 3. Copy files into a staging folder, preserving folder structure
-rem ---------------------------------------------------------------
-set "STAGE=%TEMP%\PackChanges_%RANDOM%"
+set "STAGE=%TEMP%\PackChanges_%RANDOM%_%RANDOM%"
 if exist "%STAGE%" rmdir /s /q "%STAGE%"
 mkdir "%STAGE%"
 
@@ -183,9 +169,9 @@ for /L %%i in (1,1,%FILECOUNT%) do (
             for %%D in ("!DEST!") do (
                 set "TARGET_DIR=%%~dpD"
                 if "!TARGET_DIR:~-1!"=="\" set "TARGET_DIR=!TARGET_DIR:~0,-1!"
-                if not exist "!TARGET_DIR!" mkdir "!TARGET_DIR!"
+                if not exist "!TARGET_DIR!" mkdir "!TARGET_DIR!" >nul 2>&1
             )
-            copy /Y "!SRC!" "!DEST!" >nul
+            copy /Y "!SRC!" "!DEST!" >nul 2>&1
             if not errorlevel 1 (
                 set /a SUCCESSCOUNT+=1
                 echo   [+] Packed: !FITEM!
@@ -203,9 +189,6 @@ if "%SUCCESSCOUNT%"=="0" (
     goto cleanup
 )
 
-rem ---------------------------------------------------------------
-rem 4. Output folder: scripts\changes\
-rem ---------------------------------------------------------------
 set "CHANGESDIR=%REPO_ROOT%\scripts\changes"
 if not exist "%CHANGESDIR%" (
     mkdir "%CHANGESDIR%"
@@ -218,16 +201,9 @@ for /f "tokens=2 delims==" %%T in ('wmic os get localdatetime /value 2^>nul ^| f
 if not "%DT%"=="" set "TIMESTAMP=%DT:~0,8%_%DT:~8,6%"
 
 if "%TIMESTAMP%"=="" (
-    for /f "usebackq delims=" %%T in (`powershell -NoProfile -Command "Get-Date -Format yyyyMMdd_HHmmss"` 2^>nul) do set "TIMESTAMP=%%T"
-)
-
-if "%TIMESTAMP%"=="" (
-    set "TIMESTAMP=%DATE:~10,4%%DATE:~4,2%%DATE:~7,2%_%TIME:~0,2%%TIME:~3,2%%TIME:~6,2%"
-    set "TIMESTAMP=!TIMESTAMP: =0!"
-    set "TIMESTAMP=!TIMESTAMP:/=!"
-    set "TIMESTAMP=!TIMESTAMP:-=!"
-    set "TIMESTAMP=!TIMESTAMP::=!"
-    set "TIMESTAMP=!TIMESTAMP:.=!"
+    set "CUR_DATE=%DATE%"
+    set "CUR_TIME=%TIME: =0%"
+    set "TIMESTAMP=%CUR_DATE:~6,4%%CUR_DATE:~3,2%%CUR_DATE:~0,2%_%CUR_TIME:~0,2%%CUR_TIME:~3,2%%CUR_TIME:~6,2%"
 )
 
 set "BASENAME=change_%TIMESTAMP%"
@@ -235,16 +211,10 @@ set "FINALZIP=%CHANGESDIR%\%BASENAME%.zip"
 set "FINALB64=%CHANGESDIR%\%BASENAME%.b64"
 set "FINALTXT=%CHANGESDIR%\%BASENAME%.txt"
 
-echo [+] Creating ZIP archive...
+echo [+] Creating ZIP archive using native tar.exe...
 if exist "%FINALZIP%" del /f /q "%FINALZIP%"
 
-powershell -NoProfile -ExecutionPolicy Bypass -Command "Compress-Archive -Path '%STAGE%\*' -DestinationPath '%FINALZIP%' -Force" >nul 2>&1
-
-if not exist "%FINALZIP%" (
-    pushd "%STAGE%"
-    tar -a -cf "%FINALZIP%" * >nul 2>&1
-    popd
-)
+tar.exe -a -c -f "%FINALZIP%" -C "%STAGE%" .
 
 if not exist "%FINALZIP%" (
     echo [-] Failed to create ZIP archive.
@@ -269,42 +239,46 @@ if not exist "%FINALB64%" (
     goto cleanup
 )
 
-set "B64SIZE=0"
-if exist "%FINALB64%" for %%B in ("%FINALB64%") do set "B64SIZE=%%~zB"
-if "!B64SIZE!"=="0" (
-    echo [-] Error: Encoded Base64 file is empty.
-    goto cleanup
-)
-
 echo [+] Converting extension from .b64 to .txt...
 if exist "%FINALTXT%" del /f /q "%FINALTXT%"
-move /y "%FINALB64%" "%FINALTXT%" >nul
-
-if not exist "%FINALTXT%" (
-    echo [-] Error: Failed to convert extension to .txt.
-    goto cleanup
-)
+ren "%FINALB64%" "%BASENAME%.txt"
 
 :cleanup
 if exist "%STAGE%" rmdir /s /q "%STAGE%"
 
-if exist "%FINALTXT%" (
-    echo.
-    echo ===========================================
-    echo   [SUCCESS] Pack complete! Packed %SUCCESSCOUNT% file(s).
-    echo ===========================================
-    echo   TXT  : scripts\changes\%BASENAME%.txt
-    echo   ZIP  : scripts\changes\%BASENAME%.zip
-    echo.
-    echo   To apply on the target machine:
-    echo     Copy scripts\changes\%BASENAME%.txt to the target repo
-    echo     Then run: scripts\deploy\Apply-Changes.bat
-    echo.
-    echo   See scripts\README.md for full instructions.
-) else (
+if not exist "%FINALTXT%" (
     echo [-] Failed to generate output text file.
+    goto end
 )
+
+for %%A in ("%FINALTXT%") do set "PKG_BYTES=%%~zA"
+set /a "PKG_KB=!PKG_BYTES! / 1024"
+set /a "PKG_MB=!PKG_BYTES! / 1048576"
+
+echo.
+echo ===========================================
+echo   [SUCCESS] Pack complete - Packed %SUCCESSCOUNT% files.
+echo ===========================================
+echo   TXT  : scripts\changes\%BASENAME%.txt
+echo   ZIP  : scripts\changes\%BASENAME%.zip
+echo   Size : !PKG_BYTES! bytes (~!PKG_KB! KB / ~!PKG_MB! MB)
+echo   Limit: 8.5 MB [8,912,896 bytes]
+echo.
+
+if !PKG_BYTES! GTR %MAX_BYTES% (
+    echo   [!] WARNING: Package size exceeds 8.5 MB limit!
+    echo       Size is !PKG_BYTES! bytes - Limit is %MAX_BYTES% bytes.
+) else (
+    echo   [OK] Within 8.5 MB size limit.
+)
+
+echo.
+echo   To apply on the target machine:
+echo     Copy scripts\changes\%BASENAME%.txt to the target repo
+echo     Then run: scripts\deploy\Apply-Changes.bat
+echo.
 
 :end
 echo.
 if "%NONINTERACTIVE%"=="0" pause
+exit /b 0

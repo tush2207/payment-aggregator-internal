@@ -1,58 +1,23 @@
-# Running the Project — `scripts/run/`
+# Run Scripts -- Quick Reference
 
-This folder contains the startup scripts for running the **Digital Ambassador Portal** locally.
-
-## Files
-
-| File | Purpose |
-|------|---------|
-| `Start-Dev.bat` | **Launch BOTH** backend + frontend (opens 2 CMD windows) |
-| `Start-Backend.bat` | Backend only — FastAPI / uvicorn |
-| `Start-Frontend.bat` | Frontend only — Vite / React |
-
----
+Scripts to launch the ATM Management application servers.
 
 ## Quick Start
 
-### Run both servers at once
+Double-click `Start-Dev.bat` to launch both Frontend & Backend together.
 
-```cmd
-scripts\run\Start-Dev.bat          REM DEV mode (default)
-scripts\run\Start-Dev.bat UAT      REM UAT mode
-```
+## Available Scripts
 
-Or from **VS Code**: press **`Ctrl+Shift+B`**
+| Script | Purpose | Default Port |
+|--------|---------|--------------|
+| `Start-Dev.bat` | Starts both Frontend and Backend in separate windows | - |
+| `Start-Frontend.bat` | Starts only the Vite/React frontend | **9003** |
+| `Start-Backend.bat` | Starts only the FastAPI backend | **8000** |
 
-### Run individually
-
-```cmd
-scripts\run\Start-Backend.bat DEV      REM Backend only
-scripts\run\Start-Frontend.bat         REM Frontend only
-```
-
----
-
-## Ports
+## URLs
 
 | Service | URL |
 |---------|-----|
-| Frontend (Vite) | http://localhost:5174 |
+| Frontend (Vite) | http://localhost:9003 |
 | Backend (FastAPI) | http://localhost:8000 |
 | API Docs (Swagger) | http://localhost:8000/docs |
-
----
-
-## Environments (`API_ENV`)
-
-| Argument | Env File Used | DB Used |
-|----------|--------------|---------|
-| `DEV` (default) | `backend/.env.dev` | `DEV_DB_URL` — local Oracle |
-| `UAT` | `backend/.env.dev` | `UAT_DB_URL` — UAT server |
-| `PROD` | `backend/.env.prod` | `PROD_DB_URL` — production |
-
-> **First run?** The script auto-copies `.env.dev.example` → `.env.dev` if missing.
-> Open `backend/.env.dev` and fill in your real credentials.
-
----
-
-See [`scripts/README.md`](../README.md) for the full project guide.

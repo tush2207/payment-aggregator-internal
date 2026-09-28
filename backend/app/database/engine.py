@@ -213,7 +213,7 @@ def init_db():
         print(f"[DATABASE] [ERROR] Error creating tables on {db_label}: {e}")
         logger.error(f"Database create_all error: {e}")
 
-    # 3. Ensure Extended Columns Exist (Safe on Oracle / SQLite / PostgreSQL)
+    # 3. Ensure Extended Columns Exist (Safe on Oracle / SQLite / MSSQL)
     try:
         with oracle_engine.begin() as conn:
             app_columns = [
@@ -225,12 +225,25 @@ def init_db():
                 ("rejectedBy", "VARCHAR2(255)"),
                 ("rejectedRole", "VARCHAR2(50)"),
                 ("rejectedDate", "TIMESTAMP WITH TIME ZONE"),
+                ("branchName", "VARCHAR2(1020)"),
+                ("regionName", "VARCHAR2(1020)"),
                 ("zoneName", "VARCHAR2(1020)"),
+                ("rccMailId", "VARCHAR2(1020)"),
+                ("rccMobileNo", "NUMBER(15)"),
+                ("rccContactPersonName", "VARCHAR2(1020)"),
+                ("authorisedPersonName", "VARCHAR2(1020)"),
+                ("authorisedPersonDesignation", "VARCHAR2(1020)"),
                 ("currentQuoteVersion", "NUMBER(5) DEFAULT 1"),
                 ("isNegotiationRequested", "NUMBER(1) DEFAULT 0"),
                 ("negotiationRemarks", "VARCHAR2(1020)"),
                 ("negotiationRequestedBy", "VARCHAR2(255)"),
                 ("negotiationRequestedDate", "TIMESTAMP WITH TIME ZONE"),
+                ("approvedByRODate", "TIMESTAMP WITH TIME ZONE"),
+                ("approvedByCODate", "TIMESTAMP WITH TIME ZONE"),
+                ("quoteAddedPADate", "TIMESTAMP WITH TIME ZONE"),
+                ("quoteReviewCODate", "TIMESTAMP WITH TIME ZONE"),
+                ("quoteAcceptRODate", "TIMESTAMP WITH TIME ZONE"),
+                ("finalApprovedDate", "TIMESTAMP WITH TIME ZONE"),
             ]
             for col_name, col_type in app_columns:
                 try:
@@ -238,6 +251,23 @@ def init_db():
                 except Exception:
                     try:
                         conn.execute(text(f"ALTER TABLE applications ADD COLUMN {col_name} {col_type}"))
+                    except Exception:
+                        pass
+
+            pa_columns = [
+                ("sumOfRate", "FLOAT DEFAULT 0.0"),
+                ("quoteStatus", "VARCHAR2(255)"),
+                ("email", "VARCHAR2(255)"),
+                ("avgTransactionYearly", "FLOAT"),
+                ("avgTransactionSize", "FLOAT"),
+                ("category", "VARCHAR2(255)"),
+            ]
+            for col_name, col_type in pa_columns:
+                try:
+                    conn.execute(text(f"ALTER TABLE payment_aggregators ADD ({col_name} {col_type})"))
+                except Exception:
+                    try:
+                        conn.execute(text(f"ALTER TABLE payment_aggregators ADD COLUMN {col_name} {col_type}"))
                     except Exception:
                         pass
 
@@ -278,6 +308,10 @@ def init_db():
             helpdesk_columns = [
                 ("attachmentUrl", "VARCHAR2(512)"),
                 ("attachmentName", "VARCHAR2(256)"),
+                ("attachments", "CLOB" if not is_sqlite else "TEXT"),
+                ("changedFields", "CLOB" if not is_sqlite else "TEXT"),
+                ("targetOffice", "VARCHAR2(50) DEFAULT 'BO'"),
+                ("queryType", "VARCHAR2(100) DEFAULT 'APPLICATION_QUERY'"),
             ]
             for col_name, col_type in helpdesk_columns:
                 try:

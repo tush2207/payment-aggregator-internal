@@ -161,6 +161,9 @@ class Applications(BaseModel):
     quoteAcceptRODate: Optional[Any] = None
     finalApprovedDate: Optional[Any] = None
 
+    class Config:
+        extra = "allow"
+
 class ApplicationsUpdate(BaseModel):
     userType: Optional[str] = None
     customerName: Optional[str] = None
@@ -240,6 +243,9 @@ class ApplicationsUpdate(BaseModel):
     quoteAcceptRODate: Optional[Any] = None
     finalApprovedDate: Optional[Any] = None
 
+    class Config:
+        extra = "allow"
+
 class ProjectionDetails(BaseModel):
     id: Optional[Any] = None
     transactionCount: Optional[Any] = None
@@ -307,6 +313,10 @@ class HelpDeskBase(BaseModel):
     remark: Optional[str] = None
     attachmentUrl: Optional[str] = None
     attachmentName: Optional[str] = None
+    attachments: Optional[str] = None
+    changedFields: Optional[str] = None
+    targetOffice: Optional[str] = "BO"
+    queryType: Optional[str] = "APPLICATION_QUERY"
 
 class HelpDeskUpdate(BaseModel):
     ticketName: Optional[str] = None
@@ -325,6 +335,10 @@ class HelpDeskUpdate(BaseModel):
     remark: Optional[str] = None
     attachmentUrl: Optional[str] = None
     attachmentName: Optional[str] = None
+    attachments: Optional[str] = None
+    changedFields: Optional[str] = None
+    targetOffice: Optional[str] = None
+    queryType: Optional[str] = None
 
 class HelpDeskCreate(HelpDeskBase):
     pass

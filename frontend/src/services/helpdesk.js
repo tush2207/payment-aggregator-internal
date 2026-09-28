@@ -50,6 +50,26 @@ const HelpdeskServices = {
       console.error(`Error in ${ApiUrls.DELETE_HELPDESK(ticketId)}:`, error);
       throw error;
     }
+  },
+
+  //  Get Application Queries Summary (counts & read-only status)
+  getApplicationQueriesSummary: async (applicationId, config) => {
+    try {
+      return await getMethod(ApiUrls.GET_APPLICATION_QUERIES_SUMMARY(applicationId), config);
+    } catch (error) {
+      console.error(`Error in ${ApiUrls.GET_APPLICATION_QUERIES_SUMMARY(applicationId)}:`, error);
+      throw error;
+    }
+  },
+
+  //  Add comment or revert to ticket
+  addTicketComment: async (ticketId, data, config) => {
+    try {
+      return await postMethod(ApiUrls.ADD_HELPDESK_COMMENT(ticketId), data, config);
+    } catch (error) {
+      console.error(`Error in ${ApiUrls.ADD_HELPDESK_COMMENT(ticketId)}:`, error);
+      throw error;
+    }
   }
 
 };
