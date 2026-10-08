@@ -114,10 +114,11 @@ const Sidebar = ({ open }) => {
         '& .MuiDrawer-paper': {
           width: isExpanded ? SIDEBAR_WIDTH : COLLAPSED_WIDTH,
           boxSizing: 'border-box',
-          background: '#ffffff',
-          borderRight: '1px solid rgba(0, 0, 0, 0.08)',
+          background: theme.palette.background.paper,
+          borderRight: '1px solid',
+          borderColor: 'divider',
           boxShadow: 'none',
-          color: '#212B36',
+          color: 'text.primary',
           overflowX: 'hidden',
           transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease',
           pt: { xs: '76px', md: '84px' }, // Push down below fixed Appbar
@@ -149,10 +150,10 @@ const Sidebar = ({ open }) => {
                   tooltip: {
                     sx: {
                       bgcolor: RED,
-                      color: '#fff',
+                      color: 'common.white',
                       fontWeight: 600,
                       fontSize: '0.75rem',
-                      boxShadow: '0 4px 12px rgba(206,15,62,0.35)',
+                      boxShadow: (t) => `0 4px 12px ${t.palette.secondary.main}55`,
                       borderRadius: '6px',
                       px: 1.5,
                       py: 0.8,
@@ -173,9 +174,9 @@ const Sidebar = ({ open }) => {
                     transition: 'all 0.2s ease',
                     position: 'relative',
                     overflow: 'hidden',
-                    backgroundColor: isActive ? 'rgba(206,15,62,0.08)' : 'transparent',
+                    backgroundColor: isActive ? 'action.selected' : 'transparent',
                     '&:hover': {
-                      backgroundColor: isActive ? 'rgba(206,15,62,0.14)' : 'rgba(0,0,0,0.04)',
+                      backgroundColor: isActive ? 'action.selected' : 'action.hover',
                       '& .MuiListItemIcon-root': {
                         color: isActive ? RED : BLUE,
                       },
@@ -200,7 +201,7 @@ const Sidebar = ({ open }) => {
                 >
                   <ListItemIcon
                     sx={{
-                      color: isActive ? RED : '#637381',
+                      color: isActive ? RED : 'text.secondary',
                       minWidth: isExpanded ? 38 : '100%',
                       justifyContent: 'center',
                       transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
@@ -223,7 +224,7 @@ const Sidebar = ({ open }) => {
                     primaryTypographyProps={{
                       fontSize: '0.86rem',
                       fontWeight: isActive ? 700 : 500,
-                      color: isActive ? RED : '#212B36',
+                      color: isActive ? RED : 'text.primary',
                       letterSpacing: '0.01em',
                     }}
                   />
@@ -236,7 +237,7 @@ const Sidebar = ({ open }) => {
 
       <Box sx={{ flexGrow: 1 }} />
 
-      {/* Organization branch / zone info when expanded (Digital Ambassador Portal Style) */}
+      {/* Organization branch / zone info when expanded */}
       {(zoneName || regionName || branchName) && (
         <Box
           sx={{
@@ -244,16 +245,17 @@ const Sidebar = ({ open }) => {
             mx: 1.5,
             mb: 2,
             borderRadius: '12px',
-            border: '1px solid rgba(23, 111, 193, 0.15)',
+            border: '1px solid',
+            borderColor: 'divider',
             opacity: isExpanded ? 1 : 0,
             transition: 'opacity 0.2s ease',
             display: isExpanded ? 'block' : 'none',
-            bgcolor: 'rgba(240, 247, 255, 0.8)',
+            bgcolor: 'action.hover',
           }}
         >
           <Typography
             sx={{
-              color: '#0E4F8D',
+              color: 'primary.main',
               fontSize: '0.68rem',
               fontWeight: 800,
               textTransform: 'uppercase',
@@ -268,17 +270,17 @@ const Sidebar = ({ open }) => {
           </Typography>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.4 }}>
             {zoneName && (
-              <Typography sx={{ color: '#334155', fontSize: '0.74rem', fontWeight: 600 }}>
+              <Typography sx={{ color: 'text.secondary', fontSize: '0.74rem', fontWeight: 600 }}>
                 <b>Zone:</b> {zoneName}
               </Typography>
             )}
             {regionName && (
-              <Typography sx={{ color: '#334155', fontSize: '0.74rem', fontWeight: 600 }}>
+              <Typography sx={{ color: 'text.secondary', fontSize: '0.74rem', fontWeight: 600 }}>
                 <b>Region:</b> {regionName}
               </Typography>
             )}
             {branchName && (
-              <Typography sx={{ color: '#334155', fontSize: '0.74rem', fontWeight: 600 }}>
+              <Typography sx={{ color: 'text.secondary', fontSize: '0.74rem', fontWeight: 600 }}>
                 <b>Branch:</b> {branchName}
               </Typography>
             )}

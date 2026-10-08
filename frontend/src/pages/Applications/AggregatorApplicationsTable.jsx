@@ -153,7 +153,7 @@ export default function AggregatorApplicationsTable({
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <Search sx={{ color: 'text.secondary', fontSize: 20 }} />
+                  <Search sx={{ color: 'text.secondary', fontSize: 19 }} />
                 </InputAdornment>
               ),
               endAdornment: searchQuery && (
@@ -165,16 +165,23 @@ export default function AggregatorApplicationsTable({
               ),
             }}
             sx={{
-              '& .MuiOutlinedInput-root': {
-                borderRadius: '10px',
-                bgcolor: '#f8fafc',
-                fontSize: '13px',
+              '& .MuiInputBase-root': {
+                height: 38,
+                borderRadius: '8px',
+                bgcolor: '#ffffff',
+                fontSize: '0.84rem',
+                '& fieldset': {
+                  borderColor: '#cbd5e1',
+                },
+                '&:hover fieldset': {
+                  borderColor: theme.palette.primary.main,
+                },
               },
             }}
           />
         </Box>
 
-        <Typography variant="subtitle2" fontWeight={700} color="text.primary" sx={{ fontSize: '13px' }}>
+        <Typography variant="subtitle2" fontWeight={700} color="text.secondary" sx={{ fontSize: '0.84rem' }}>
           Aggregators Overview ({filteredGroups.length} {filteredGroups.length === 1 ? 'record' : 'records'})
         </Typography>
       </Paper>
@@ -374,18 +381,28 @@ export default function AggregatorApplicationsTable({
                                             {cust.customerName}
                                           </Typography>
                                         </TableCell>
-                                        <TableCell sx={{ minWidth: 160, py: 1 }}>
+                                        <TableCell sx={{ minWidth: 220, py: 1 }}>
                                           <Typography variant="caption" fontWeight={700} color="#0E4F8D" sx={{ fontSize: '12px', display: 'block', mb: 0.2 }}>
-                                            {cust.branchName || 'N/A'}
+                                            {cust.branchName
+                                              ? `${cust.branchName}${cust.branchId && cust.branchId !== 0 ? ` (${cust.branchId})` : ''}`
+                                              : (cust.branchId || 'N/A')}
                                           </Typography>
                                           <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                                             <Typography variant="caption" sx={{ fontSize: '10.5px', color: 'text.secondary', display: 'inline-flex', alignItems: 'center', gap: 0.4, whiteSpace: 'nowrap' }}>
                                               <span style={{ fontWeight: 600, color: '#64748b' }}>Region:</span>
-                                              <span style={{ fontWeight: 600, color: '#1e293b' }}>{cust.regionName || 'N/A'}</span>
+                                              <span style={{ fontWeight: 600, color: '#1e293b' }}>
+                                                {cust.regionName
+                                                  ? `${cust.regionName}${cust.regionId && cust.regionId !== 0 ? ` (${cust.regionId})` : ''}`
+                                                  : (cust.regionId || 'N/A')}
+                                              </span>
                                             </Typography>
                                             <Typography variant="caption" sx={{ fontSize: '10.5px', color: 'text.secondary', display: 'inline-flex', alignItems: 'center', gap: 0.4, whiteSpace: 'nowrap' }}>
                                               <span style={{ fontWeight: 600, color: '#64748b' }}>Zone:</span>
-                                              <span style={{ fontWeight: 600, color: '#1e293b' }}>{cust.zoneName || (cust.zoneId && cust.zoneId !== '00000' && cust.zoneId !== 0 ? cust.zoneId : 'N/A')}</span>
+                                              <span style={{ fontWeight: 600, color: '#1e293b' }}>
+                                                {cust.zoneName
+                                                  ? `${cust.zoneName}${cust.zoneId && cust.zoneId !== '00000' && cust.zoneId !== 0 ? ` (${cust.zoneId})` : ''}`
+                                                  : (cust.zoneId && cust.zoneId !== '00000' && cust.zoneId !== 0 ? cust.zoneId : 'N/A')}
+                                              </span>
                                             </Typography>
                                           </Box>
                                         </TableCell>

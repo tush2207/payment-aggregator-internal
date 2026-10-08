@@ -1,15 +1,13 @@
 @echo off
 setlocal enabledelayedexpansion
-title Universal Apply-Share (Delta - Pure CMD)
+title Universal Apply-Share (Pure CMD)
 
 :: ==============================================================================
-:: Universal Apply-Share.bat (100% Pure CMD / Batch — Zero External Dependencies)
-:: Generic Delta Applier for ANY Project.
-:: - Decodes Base64 .txt packages created by Pack-Share.bat.
-:: - Creates a targeted backup of ONLY the specific files being overwritten.
-:: - Safely updates ONLY the packaged files.
-:: - All other files in the project remain completely untouched.
-:: Location: scripts/share/
+:: Universal Apply-Share.bat (100% Pure CMD / Batch — Zero PowerShell)
+:: Generic code update script for ANY project.
+:: - Decodes Base64 .txt packages, creates automatic backups, and replaces
+::   entire backend app and frontend src folders safely.
+:: - Location: scripts/share/
 :: ==============================================================================
 
 :: 1. Resolve Project Root Dynamically (parent of scripts/)
@@ -19,12 +17,53 @@ popd
 
 for %%I in ("%PROJECT_ROOT%") do set "PROJECT_NAME=%%~nxI"
 
-set "SHARE_DIR=%PROJECT_ROOT%\share-packages"
+:: Auto-detect targets in project
+set "DEFAULT_BE="
+set "DEFAULT_BE_LABEL="
+if exist "%PROJECT_ROOT%\backend\app" (
+    set "DEFAULT_BE=%PROJECT_ROOT%\backend\app"
+    set "DEFAULT_BE_LABEL=backend\app"
+) else if exist "%PROJECT_ROOT%\server\app" (
+    set "DEFAULT_BE=%PROJECT_ROOT%\server\app"
+    set "DEFAULT_BE_LABEL=server\app"
+) else if exist "%PROJECT_ROOT%\app" (
+    set "DEFAULT_BE=%PROJECT_ROOT%\app"
+    set "DEFAULT_BE_LABEL=app"
+) else if exist "%PROJECT_ROOT%\backend" (
+    set "DEFAULT_BE=%PROJECT_ROOT%\backend"
+    set "DEFAULT_BE_LABEL=backend"
+) else if exist "%PROJECT_ROOT%\server" (
+    set "DEFAULT_BE=%PROJECT_ROOT%\server"
+    set "DEFAULT_BE_LABEL=server"
+)
+
+set "DEFAULT_FE="
+set "DEFAULT_FE_LABEL="
+if exist "%PROJECT_ROOT%\frontend\src" (
+    set "DEFAULT_FE=%PROJECT_ROOT%\frontend\src"
+    set "DEFAULT_FE_LABEL=frontend\src"
+) else if exist "%PROJECT_ROOT%\client\src" (
+    set "DEFAULT_FE=%PROJECT_ROOT%\client\src"
+    set "DEFAULT_FE_LABEL=client\src"
+) else if exist "%PROJECT_ROOT%\src" (
+    set "DEFAULT_FE=%PROJECT_ROOT%\src"
+    set "DEFAULT_FE_LABEL=src"
+) else if exist "%PROJECT_ROOT%\frontend" (
+    set "DEFAULT_FE=%PROJECT_ROOT%\frontend"
+    set "DEFAULT_FE_LABEL=frontend"
+) else if exist "%PROJECT_ROOT%\client" (
+    set "DEFAULT_FE=%PROJECT_ROOT%\client"
+    set "DEFAULT_FE_LABEL=client"
+)
+
 set "BACKUP_DIR=%PROJECT_ROOT%\backups"
+set "SHARE_DIR=%PROJECT_ROOT%\share-packages"
 
-if not exist "%BACKUP_DIR%" mkdir "%BACKUP_DIR%" >nul 2>&1
+if not exist "%BACKUP_DIR%" (
+    mkdir "%BACKUP_DIR%" >nul 2>&1
+)
 
-:: Generate Timestamp
+:: Generate Timestamp in YYYYMMDD_HHMMSS format (Pure CMD)
 set "TIMESTAMP="
 set "DT="
 for /f "tokens=2 delims==" %%I in ('wmic os get localdatetime /value 2^>nul ^| find "="') do set "DT=%%I"
@@ -37,143 +76,155 @@ if "%TIMESTAMP%"=="" (
 )
 
 echo ============================================================
-echo    UNIVERSAL DELTA APPLY-SHARE (100%% PURE CMD)
+echo    UNIVERSAL APPLY-SHARE (100%% PURE CMD): DECODE ^& UPDATE
 echo ============================================================
-echo Project Name : %PROJECT_NAME%
 echo Project Root : %PROJECT_ROOT%
 echo Backup Dir   : %BACKUP_DIR%
 echo Timestamp    : %TIMESTAMP%
 echo ============================================================
 echo.
 
-:: 2. Identify Package File
-set "PKG_PATH=%~1"
+:: 2. Check Input Files
+set "INPUT_FILE=%~1"
+if not "%INPUT_FILE%"=="" goto ProcessArguments
 
-if "%PKG_PATH%"=="" (
-    echo [INFO] No file specified. Searching %SHARE_DIR% for latest .txt package...
-    if exist "%SHARE_DIR%" (
-        pushd "%SHARE_DIR%"
-        for /f "delims=" %%F in ('dir /b /a-d /o-d *.txt 2^>nul') do (
-            if "!PKG_PATH!"=="" set "PKG_PATH=%SHARE_DIR%\%%F"
-        )
-        popd
-    )
+:AutoDetectMode
+echo [INFO] No package file specified. Checking share-packages\ for latest packages...
+
+set "LATEST_BE="
+set "LATEST_FE="
+
+for /f "delims=" %%F in ('dir /b /a-d /o-d "%SHARE_DIR%\*BE*.txt" 2^>nul') do (
+    if "!LATEST_BE!"=="" set "LATEST_BE=%SHARE_DIR%\%%F"
+)
+for /f "delims=" %%F in ('dir /b /a-d /o-d "%SHARE_DIR%\*FE*.txt" 2^>nul') do (
+    if "!LATEST_FE!"=="" set "LATEST_FE=%SHARE_DIR%\%%F"
 )
 
-if "%PKG_PATH%"=="" (
-    echo [-] No package found automatically in share-packages\
-    set /p "PKG_PATH=Enter full path to .txt package file (or drag & drop here): "
-    set "PKG_PATH=!PKG_PATH:"=!"
-)
-
-if not exist "%PKG_PATH%" (
-    echo [ERROR] Package file not found: %PKG_PATH%
+if not defined LATEST_BE if not defined LATEST_FE (
+    echo [ERROR] No TXT package files found in %SHARE_DIR%.
+    echo Usage: Drag and drop a TXT package onto Apply-Share.bat
+    echo    or: Apply-Share.bat path\to\package.txt
     pause
     exit /b 1
 )
 
-for %%N in ("%PKG_PATH%") do set "PKG_NAME=%%~nxN"
-echo [+] Selected Package : %PKG_NAME%
-echo.
+if defined LATEST_BE call :ApplySinglePackage "!LATEST_BE!"
+if defined LATEST_FE call :ApplySinglePackage "!LATEST_FE!"
+goto Finish
 
-:: 3. Decode Base64 to ZIP
-set "TEMP_DIR=%TEMP%\ApplyShare_%RANDOM%_%RANDOM%"
-set "EXTRACT_DIR=%TEMP_DIR%\extracted"
-set "TEMP_B64=%TEMP_DIR%\package.b64"
-set "TEMP_ZIP=%TEMP_DIR%\decoded.zip"
-set "BACKUP_STAGE=%TEMP_DIR%\backup_stage"
+:ProcessArguments
+if "%~1"=="" goto Finish
+call :ApplySinglePackage "%~1"
+shift
+goto ProcessArguments
 
-mkdir "%TEMP_DIR%" >nul 2>&1
-mkdir "%EXTRACT_DIR%" >nul 2>&1
-mkdir "%BACKUP_STAGE%" >nul 2>&1
-
-echo [1/4] Preparing and decoding Base64 package (%PKG_NAME%)...
-copy /Y "%PKG_PATH%" "%TEMP_B64%" >nul 2>&1
-
-certutil.exe -decode "%TEMP_B64%" "%TEMP_ZIP%" >nul 2>&1
-if %ERRORLEVEL% NEQ 0 (
-    echo [ERROR] certutil failed to decode Base64 package. File may be corrupted.
-    goto cleanup
-)
-
-if not exist "%TEMP_ZIP%" (
-    echo [ERROR] Decoded zip archive was not generated.
-    goto cleanup
-)
-
-:: 4. Extract package to temp staging
-echo [2/4] Extracting package contents with tar.exe...
-tar.exe -xf "%TEMP_ZIP%" -C "%EXTRACT_DIR%" >nul 2>&1
-if %ERRORLEVEL% NEQ 0 (
-    echo [ERROR] Failed to extract archive with tar.exe.
-    goto cleanup
-)
-
-:: 5. Targeted Pre-Apply Backup (Backup ONLY the files being overwritten)
-echo [3/4] Scanning target project and creating targeted backup...
-set "OVERWRITE_COUNT=0"
-set "NEW_COUNT=0"
-set "TOTAL_TOUCHED=0"
-
-pushd "%EXTRACT_DIR%"
-for /f "delims=" %%I in ('dir /b /s /a-d 2^>nul') do (
-    set "FULL_EXTRACTED=%%I"
-    set "REL_PATH=!FULL_EXTRACTED:%EXTRACT_DIR%\=!"
-    set "EXISTING_FILE=%PROJECT_ROOT%\!REL_PATH!"
-    set /a TOTAL_TOUCHED+=1
-
-    if exist "!EXISTING_FILE!" (
-        set /a OVERWRITE_COUNT+=1
-        set "BACKUP_DEST=%BACKUP_STAGE%\!REL_PATH!"
-        for %%D in ("!BACKUP_DEST!") do (
-            set "TARGET_BDIR=%%~dpD"
-            if "!TARGET_BDIR:~-1!"=="\" set "TARGET_BDIR=!TARGET_BDIR:~0,-1!"
-            if not exist "!TARGET_BDIR!" mkdir "!TARGET_BDIR!" >nul 2>&1
-        )
-        copy /Y "!EXISTING_FILE!" "!BACKUP_DEST!" >nul 2>&1
-    ) else (
-        set /a NEW_COUNT+=1
-    )
-)
-popd
-
-set "BACKUP_ZIP=%BACKUP_DIR%\backup_pre_share_%TIMESTAMP%.zip"
-
-if %OVERWRITE_COUNT% GTR 0 (
-    if exist "%BACKUP_ZIP%" del /f /q "%BACKUP_ZIP%" >nul 2>&1
-    tar.exe -a -c -f "%BACKUP_ZIP%" -C "%BACKUP_STAGE%" . >nul 2>&1
-    if exist "%BACKUP_ZIP%" (
-        echo [OK] Targeted backup created: backups\backup_pre_share_%TIMESTAMP%.zip (%OVERWRITE_COUNT% existing files saved)
-    )
-) else (
-    echo [INFO] All incoming files are new; no existing files overwritten.
-)
-
-:: 6. Apply only the extracted files into project root
-echo [4/4] Applying delta files into project (%PROJECT_ROOT%)...
-robocopy "%EXTRACT_DIR%" "%PROJECT_ROOT%" /E /NFL /NDL /NJH /NJS /nc /ns /np /R:2 /W:1 >nul 2>&1
-
+:Finish
 echo.
 echo ============================================================
-echo    [SUCCESS] APPLY COMPLETE!
-echo ============================================================
-echo   Package Applied : %PKG_NAME%
-echo   Total Files     : %TOTAL_TOUCHED% file(s)
-echo   Updated Files   : %OVERWRITE_COUNT% file(s)
-echo   New Files Added : %NEW_COUNT% file(s)
-echo.
-echo   NOTE: All other existing files in your project remain 100%% untouched!
-if exist "%BACKUP_ZIP%" (
-    echo.
-    echo   To rollback these changes:
-    echo     tar.exe -xf "backups\backup_pre_share_%TIMESTAMP%.zip" -C "%PROJECT_ROOT%"
-)
+echo    APPLY-SHARE COMPLETED SUCCESSFULLY (PURE CMD)
 echo ============================================================
 echo.
-
-:cleanup
-if exist "%TEMP_DIR%" rmdir /s /q "%TEMP_DIR%" >nul 2>&1
-
-:end
 pause
 exit /b 0
+
+:: ==============================================================================
+:: Subroutine: ApplySinglePackage <FilePath>
+:: ==============================================================================
+:ApplySinglePackage
+set "PKG_PATH=%~1"
+if not exist "%PKG_PATH%" (
+    echo [ERROR] File not found: %PKG_PATH%
+    goto :eof
+)
+
+set "PKG_NAME=%~nx1"
+echo ------------------------------------------------------------
+echo Processing Package : %PKG_NAME%
+
+:: Determine Target (BE or FE)
+echo !PKG_NAME! | findstr /i "_BE_ -BE- _be_ -be-" >nul
+if !ERRORLEVEL! EQU 0 (
+    set "TARGET_DIR=%DEFAULT_BE%"
+    set "TARGET_LABEL=%DEFAULT_BE_LABEL%"
+    set "BACKUP_ZIP=%BACKUP_DIR%\backup_backend_%TIMESTAMP%.zip"
+) else (
+    echo !PKG_NAME! | findstr /i "_FE_ -FE- _fe_ -fe-" >nul
+    if !ERRORLEVEL! EQU 0 (
+        set "TARGET_DIR=%DEFAULT_FE%"
+        set "TARGET_LABEL=%DEFAULT_FE_LABEL%"
+        set "BACKUP_ZIP=%BACKUP_DIR%\backup_frontend_%TIMESTAMP%.zip"
+    ) else (
+        echo [?] Could not auto-determine target from filename: !PKG_NAME!
+        set /p "CHOICE=Apply to [1] Backend [!DEFAULT_BE_LABEL!] or [2] Frontend [!DEFAULT_FE_LABEL!]? "
+        if "!CHOICE!"=="1" (
+            set "TARGET_DIR=%DEFAULT_BE%"
+            set "TARGET_LABEL=%DEFAULT_BE_LABEL%"
+            set "BACKUP_ZIP=%BACKUP_DIR%\backup_backend_%TIMESTAMP%.zip"
+        ) else (
+            set "TARGET_DIR=%DEFAULT_FE%"
+            set "TARGET_LABEL=%DEFAULT_FE_LABEL%"
+            set "BACKUP_ZIP=%BACKUP_DIR%\backup_frontend_%TIMESTAMP%.zip"
+        )
+    )
+)
+
+if not defined TARGET_DIR (
+    echo [ERROR] Could not determine target directory in project.
+    goto :eof
+)
+
+echo Target Directory   : %TARGET_LABEL% - %TARGET_DIR%
+
+:: --- Step 1: Backup Existing Folder ---
+if exist "%TARGET_DIR%" (
+    echo [1/4] Backing up existing %TARGET_LABEL% to backups\ ...
+    tar.exe -a -c -f "%BACKUP_ZIP%" -C "%TARGET_DIR%" . >nul 2>&1
+    if %ERRORLEVEL% EQU 0 (
+        echo       Backup created: %BACKUP_ZIP%
+    ) else (
+        echo       [WARN] Could not create backup zip.
+    )
+) else (
+    echo [1/4] Target directory does not exist yet. Creating: %TARGET_DIR%
+    mkdir "%TARGET_DIR%" >nul 2>&1
+)
+
+:: --- Step 2: Prepare temp b64 and zip ---
+set "TEMP_DIR=%TEMP%\apply_share_%RANDOM%_%RANDOM%"
+mkdir "%TEMP_DIR%" >nul 2>&1
+
+set "TEMP_B64=%TEMP_DIR%\package.b64"
+set "TEMP_ZIP=%TEMP_DIR%\decoded.zip"
+set "EXTRACT_DIR=%TEMP_DIR%\extracted"
+mkdir "%EXTRACT_DIR%" >nul 2>&1
+
+copy /y "%PKG_PATH%" "%TEMP_B64%" >nul
+
+:: --- Step 3: certUtil -decode ---
+echo [2/4] Decoding Base64 with certutil.exe ...
+certutil.exe -decode "%TEMP_B64%" "%TEMP_ZIP%" >nul
+if %ERRORLEVEL% NEQ 0 (
+    echo [ERROR] certutil decoding failed on %PKG_NAME%.
+    rd /s /q "%TEMP_DIR%" >nul 2>&1
+    goto :eof
+)
+
+:: --- Step 4: Extract and safely copy to target ---
+echo [3/4] Extracting decoded archive with tar.exe ...
+tar.exe -xf "%TEMP_ZIP%" -C "%EXTRACT_DIR%"
+if %ERRORLEVEL% NEQ 0 (
+    echo [ERROR] Failed to extract decoded zip archive.
+    rd /s /q "%TEMP_DIR%" >nul 2>&1
+    goto :eof
+)
+
+echo [4/4] Safely copying files into %TARGET_LABEL% ...
+robocopy "%EXTRACT_DIR%" "%TARGET_DIR%" /E /NFL /NDL /NJH /NJS /nc /ns /np /R:2 /W:1 >nul 2>&1
+
+:: Clean up temp directory
+rd /s /q "%TEMP_DIR%" >nul 2>&1
+
+echo [SUCCESS] Updated %TARGET_LABEL% successfully!
+echo ------------------------------------------------------------
+goto :eof

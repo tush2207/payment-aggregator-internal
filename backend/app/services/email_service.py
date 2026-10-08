@@ -67,9 +67,9 @@ class EmailService:
             logger.info(f"[MOCK EMAIL] Email is disabled in config. Would send to {recipients} | Subject: '{subject}' | Attachments: {len(attachments or [])}")
             return True
 
-        # Check SMTP Host
-        smtp_host = config.SMTP_HOST
-        smtp_port = config.SMTP_PORT
+        # Check SMTP Host & Port Configuration
+        smtp_host = (config.SMTP_HOST or "").strip()
+        smtp_port = int(config.SMTP_PORT or 25)
         smtp_user = (config.SMTP_USER or "").strip()
         smtp_password = (config.SMTP_PASSWORD or "").replace(" ", "").strip()
         from_email = (config.SMTP_FROM_EMAIL or config.SMTP_USER or "no-reply.papg@cbi.co.in").strip()
@@ -92,9 +92,9 @@ class EmailService:
             except Exception as save_err:
                 logger.debug(f"Could not save debug preview: {save_err}")
 
-        # If SMTP credentials are not configured, treat as local dev mode and succeed gracefully
-        if not smtp_user or not smtp_password:
-            logger.info(f"[DEV MOCK MODE] No SMTP credentials in .env. Email simulated successfully to {recipients} with subject: '{subject}' (Attached: {len(attachments or [])} files)")
+        # In DEV_MODE without any SMTP credentials or host, simulate gracefully
+        if getattr(config, "DEV_MODE", False) and not smtp_password and not smtp_user:
+            logger.info(f"[DEV MOCK MODE] DEV_MODE=True and no SMTP credentials configured in .env. Email simulated successfully to {recipients} with subject: '{subject}' (Attached: {len(attachments or [])} files)")
             return True
 
         try:
@@ -134,29 +134,76 @@ class EmailService:
                 if html_content:
                     msg.attach(MIMEText(html_content, "html", "utf-8"))
 
-            logger.info(f"Connecting to SMTP server {smtp_host}:{smtp_port} (TLS={config.SMTP_USE_TLS}, SSL={config.SMTP_USE_SSL})...")
+            def _dispatch_via_host(target_host: str, target_port: int) -> bool:
+                has_auth = bool(smtp_password and smtp_user)
+                logger.info(f"Connecting to SMTP server {target_host}:{target_port} (Auth={'Enabled (Dev/Env Password)' if has_auth else 'Direct Relay (Prod/No Password)'})...")
+                with smtplib.SMTP(target_host, target_port, timeout=15) as server:
+                    try:
+                        server.ehlo_or_helo_if_needed()
+                    except Exception:
+                        pass
 
-            if config.SMTP_USE_SSL:
-                context = ssl.create_default_context()
-                with smtplib.SMTP_SSL(smtp_host, smtp_port, context=context, timeout=15) as server:
-                    server.login(smtp_user, smtp_password)
-                    server.sendmail(from_email, all_recipients, msg.as_string())
-            else:
-                with smtplib.SMTP(smtp_host, smtp_port, timeout=15) as server:
-                    if config.SMTP_USE_TLS:
-                        context = ssl.create_default_context()
-                        server.starttls(context=context)
-                    server.login(smtp_user, smtp_password)
-                    server.sendmail(from_email, all_recipients, msg.as_string())
+                    if server.has_extn("starttls"):
+                        try:
+                            server.starttls()
+                            server.ehlo_or_helo_if_needed()
+                        except Exception:
+                            pass
 
-            logger.info(f"[SUCCESS] Email successfully dispatched via SMTP to {recipients} with subject: '{subject}'")
-            return True
+                    if has_auth and server.has_extn("auth"):
+                        try:
+                            server.login(smtp_user, smtp_password)
+                        except smtplib.SMTPNotSupportedError:
+                            logger.info("[EMAIL SERVICE] SMTP server does not require/support AUTH extension. Dispatching directly via internal relay.")
+                    elif has_auth and not server.has_extn("auth"):
+                        logger.info("[EMAIL SERVICE] Bank internal SMTP server does not require AUTH. Dispatching email directly without login.")
+
+                    server.sendmail(from_email, all_recipients, msg.as_string())
+                return True
+
+            try:
+                _dispatch_via_host(smtp_host, smtp_port)
+                logger.info(f"[SUCCESS] Email successfully dispatched via SMTP ({smtp_host}) to {recipients} with subject: '{subject}'")
+                return True
+            except smtplib.SMTPRecipientsRefused as ref_err:
+                fallback_host = getattr(config, "SMTP_FALLBACK_HOST", "").strip()
+                if fallback_host and fallback_host != smtp_host:
+                    logger.warning(
+                        f"Primary SMTP host '{smtp_host}' refused recipient(s) (554 Relay Access Denied: {ref_err}). "
+                        f"Attempting automatic fallback dispatch via external bank relay gateway '{fallback_host}:{smtp_port}'..."
+                    )
+                    try:
+                        _dispatch_via_host(fallback_host, smtp_port)
+                        logger.info(f"[SUCCESS] Email successfully dispatched via fallback relay ({fallback_host}) to {recipients} with subject: '{subject}'")
+                        return True
+                    except Exception as fb_err:
+                        logger.error(f"Fallback SMTP dispatch via {fallback_host} also failed: {fb_err}")
+
+                logger.error(
+                    f"[EMAIL RELAY ERROR] 554 5.7.1 Relay Access Denied for recipient(s) {recipients}. "
+                    f"The Bank SMTP server '{smtp_host}' blocks external public domains (@gmail.com) by default. "
+                    f"To resolve: 1) Ensure SMTP_FROM_EMAIL='paws_notifiy@centralbankofindia.org.in' is configured in .env, "
+                    f"2) Test with internal bank email (@cbi.co.in), or 3) Configure SMTP_HOST='10.16.33.177' (Bank External Relay IP)."
+                )
+                return False
 
         except smtplib.SMTPAuthenticationError as auth_err:
-            logger.error(f"SMTP Authentication Error sending email to {recipients}: {auth_err}")
+            logger.error(f"SMTP Authentication Error sending email to {recipients}: {auth_err}. Please verify SMTP_USER and SMTP_PASSWORD in backend/.env.")
+            return False
+        except (smtplib.SMTPConnectError, TimeoutError, ConnectionRefusedError) as conn_err:
+            logger.error(f"SMTP Connection Error to {smtp_host}:{smtp_port} for {recipients}: {conn_err}. Please check network connectivity/firewall.")
             return False
         except Exception as e:
-            logger.error(f"Failed to send email via SMTP to {recipients}: {e}", exc_info=True)
+            err_str = str(e)
+            if "11002" in err_str or "getaddrinfo" in err_str:
+                logger.error(
+                    f"DNS Resolution Failed for SMTP Host '{smtp_host}' (getaddrinfo failed). "
+                    f"If running on Bank Internal Network / UAT / Prod, configure your internal bank SMTP relay IP/host "
+                    f"(e.g. SMTP_HOST='email.centralbankofindia.org.in' or '10.16.33.177' with SMTP_PORT=25) in backend/.env instead of external internet hosts like Gmail. "
+                    f"If testing with Gmail, ensure the server has active internet access and SMTP_PORT=587."
+                )
+            else:
+                logger.error(f"Failed to send email via SMTP to {recipients}: {e}", exc_info=True)
             return False
 
     @classmethod

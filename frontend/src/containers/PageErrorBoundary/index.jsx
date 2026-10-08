@@ -1,3 +1,13 @@
+/**
+ * ============================================================================
+ * Central Bank of India (CBI) - Payment Aggregator Portal
+ * Component: PageErrorBoundary
+ * Purpose: Catches unhandled JavaScript runtime exceptions in page hierarchies,
+ *          logs security diagnostics, and presents a CenEODS-compliant graceful fallback.
+ * Compliance: Bank Resilience & High Availability Standard.
+ * ============================================================================
+ */
+
 import React from 'react';
 import palette from '&src/theme/palette';
 import { ErrorOutline, Refresh, Home } from '@mui/icons-material';
@@ -19,7 +29,7 @@ class PageErrorBoundary extends React.Component {
 
   componentDidCatch(error, errorInfo) {
     this.setState({ errorInfo });
-    console.error('Error Boundary caught an error:', error, errorInfo);
+    console.error('PageErrorBoundary caught an unhandled exception:', error, errorInfo);
   }
 
   componentDidUpdate(prevProps) {
@@ -50,23 +60,24 @@ class PageErrorBoundary extends React.Component {
               justifyContent: 'center',
               textAlign: 'center',
               borderRadius: 3,
-              border: `1px solid ${palette?.error?.light || '#f44336'}`,
-              background: '#fff',
+              border: '1px solid',
+              borderColor: 'error.light',
+              bgcolor: 'background.paper',
             }}
           >
             <Box
               sx={{
                 p: 2,
                 borderRadius: '50%',
-                bgcolor: 'rgba(211, 47, 47, 0.1)',
-                color: '#d32f2f',
+                bgcolor: 'error.lighter',
+                color: 'error.main',
                 mb: 2,
               }}
             >
               <ErrorOutline sx={{ fontSize: 56 }} />
             </Box>
 
-            <Typography variant="h5" fontWeight={700} color="error" gutterBottom>
+            <Typography variant="h5" fontWeight={700} color="error.main" gutterBottom>
               Something went wrong on this page.
             </Typography>
 
@@ -77,6 +88,7 @@ class PageErrorBoundary extends React.Component {
             <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
               <Button
                 variant="outlined"
+                color="inherit"
                 startIcon={<Refresh />}
                 onClick={() => window.location.reload()}
                 sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
@@ -85,14 +97,13 @@ class PageErrorBoundary extends React.Component {
               </Button>
               <Button
                 variant="contained"
+                color="primary"
                 startIcon={<Home />}
                 onClick={() => (window.location.href = '/dashboard')}
                 sx={{
                   borderRadius: 2,
                   textTransform: 'none',
                   fontWeight: 600,
-                  bgcolor: '#004c8f',
-                  '&:hover': { bgcolor: '#003366' },
                 }}
               >
                 Go to Dashboard
@@ -105,14 +116,15 @@ class PageErrorBoundary extends React.Component {
               sx={{
                 width: '100%',
                 textAlign: 'left',
-                bgcolor: '#f8f9fa',
+                bgcolor: 'action.hover',
                 p: 2,
                 borderRadius: 2,
-                border: '1px solid #e9ecef',
+                border: '1px solid',
+                borderColor: 'divider',
                 cursor: 'pointer',
               }}
             >
-              <summary style={{ fontWeight: 600, color: '#495057', fontSize: '0.85rem' }}>
+              <summary style={{ fontWeight: 600, color: palette?.text?.primary || '#212B36', fontSize: '0.85rem' }}>
                 View Error Details (Technical Diagnostics)
               </summary>
               <Box
@@ -120,7 +132,7 @@ class PageErrorBoundary extends React.Component {
                 sx={{
                   mt: 1.5,
                   fontSize: '0.75rem',
-                  color: '#d32f2f',
+                  color: 'error.main',
                   whiteSpace: 'pre-wrap',
                   wordBreak: 'break-word',
                   overflowX: 'auto',

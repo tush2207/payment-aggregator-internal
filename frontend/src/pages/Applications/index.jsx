@@ -84,16 +84,20 @@ export default function Applications() {
   const fetchApplicationsData = useCallback(async () => {
     setLoading(true);
     try {
+      const branchVal = userDetails.branchId ?? userDetails.branchCode ?? userDetails.Locationid ?? userDetails.LocationId ?? userDetails.solId;
+      const regionVal = userDetails.regionId ?? userDetails.RegionId ?? userDetails.regionCode ?? userDetails.RegionCode;
+      const zoneVal = userDetails.zoneId ?? userDetails.ZoneId ?? userDetails.zoneCode ?? userDetails.ZoneCode;
+
       let filterby = '00000';
       let reqBranchId = undefined;
       let reqRegionId = undefined;
 
       if (userRole === 'BO') {
-        reqBranchId = userDetails.branchId;
+        reqBranchId = branchVal;
       } else if (userRole === 'RO') {
-        reqRegionId = userDetails.regionId;
+        reqRegionId = regionVal;
       } else if (userRole === 'ZO') {
-        filterby = (userDetails.zoneId && userDetails.zoneId !== '0' && userDetails.zoneId !== 0) ? userDetails.zoneId : '00000';
+        filterby = (zoneVal && zoneVal !== '0' && zoneVal !== 0) ? zoneVal : '00000';
       } else {
         filterby = '00000';
       }
@@ -139,9 +143,7 @@ export default function Applications() {
     filters.selectedMonth,
     filters.startDate,
     filters.endDate,
-    userDetails?.branchId,
-    userDetails?.regionId,
-    userDetails?.zoneId,
+    userDetails,
   ]);
 
   useEffect(() => {
@@ -272,6 +274,20 @@ export default function Applications() {
         buttonProps={{
           startIcon: <Add />,
         }}
+        actions={[
+          {
+            label: 'Export All',
+            startIcon: <FileDownloadRounded />,
+            variant: 'contained',
+            color: 'success',
+            onClick: handleExportExcel,
+            sx: {
+              bgcolor: '#2E7D32',
+              '&:hover': { bgcolor: '#1B5E20' },
+              boxShadow: '0 2px 8px rgba(46, 125, 50, 0.25)',
+            },
+          },
+        ]}
         onButtonClick={handleOpen}
       />
 

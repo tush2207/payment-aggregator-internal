@@ -150,9 +150,10 @@ export default function WorkflowTabs() {
             p: 1.5,
             px: 2,
             borderRadius: "8px",
-            background: "linear-gradient(90deg, #f0f7ff 0%, #ffffff 100%)",
-            border: "1px solid #bfdbfe",
-            borderLeft: "5px solid #0E4F8D",
+            background: (theme) => `linear-gradient(90deg, ${theme.palette.action.hover} 0%, ${theme.palette.background.paper} 100%)`,
+            border: "1px solid",
+            borderColor: "divider",
+            borderLeft: (theme) => `5px solid ${theme.palette.primary.main}`,
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
@@ -166,23 +167,23 @@ export default function WorkflowTabs() {
                 width: 32,
                 height: 32,
                 borderRadius: "6px",
-                background: "linear-gradient(135deg, #0E4F8D 0%, #176FC1 100%)",
-                color: "#ffffff",
+                background: (theme) => `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark || theme.palette.primary.main} 100%)`,
+                color: "primary.contrastText",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 fontWeight: 800,
                 fontSize: "14px",
-                boxShadow: "0 2px 6px rgba(14,79,141,0.25)",
+                boxShadow: (theme) => `0 2px 6px ${theme.palette.action.focus}`,
               }}
             >
               {stepHeader.num}
             </Box>
             <Box>
-              <Typography variant="subtitle1" fontWeight={800} sx={{ color: "#0f172a", fontSize: "14px", lineHeight: 1.2 }}>
+              <Typography variant="subtitle1" fontWeight={800} sx={{ color: "text.primary", fontSize: "14px", lineHeight: 1.2 }}>
                 Step {stepHeader.num}: {stepHeader.title}
               </Typography>
-              <Typography variant="caption" sx={{ color: "#64748b", fontSize: "11.5px", mt: 0.2, display: "block" }}>
+              <Typography variant="caption" sx={{ color: "text.secondary", fontSize: "11.5px", mt: 0.2, display: "block" }}>
                 {stepHeader.description}
               </Typography>
             </Box>
@@ -192,25 +193,23 @@ export default function WorkflowTabs() {
             <Chip
               size="small"
               label={`Role: ${stepHeader.role}`}
+              color="primary"
+              variant="outlined"
               sx={{
-                bgcolor: "#e0f2fe",
-                color: "#0369a1",
                 fontWeight: 700,
                 fontSize: "11px",
                 height: "24px",
-                border: "1px solid #bae6fd",
               }}
             />
             <Chip
               size="small"
               label={currentStep >= 5 ? "Completed" : `Step ${stepHeader.num} of 5 Active`}
+              color={currentStep >= 5 ? "success" : "warning"}
+              variant="filled"
               sx={{
-                bgcolor: currentStep >= 5 ? "#dcfce7" : "#fef3c7",
-                color: currentStep >= 5 ? "#15803d" : "#92400e",
                 fontWeight: 800,
                 fontSize: "11px",
                 height: "24px",
-                border: currentStep >= 5 ? "1px solid #bbf7d0" : "1px solid #fde68a",
               }}
             />
           </Stack>
@@ -358,15 +357,16 @@ export default function WorkflowTabs() {
                 p: 2.5,
                 borderRadius: "10px",
                 mb: 2.5,
-                border: "1.5px solid #86efac",
-                background: "linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%)",
-                boxShadow: "0 2px 8px rgba(22, 163, 74, 0.08)",
+                border: "1.5px solid",
+                borderColor: "success.light",
+                bgcolor: "background.paper",
+                boxShadow: (theme) => `0 2px 8px ${theme.palette.action.hover}`,
               }}
             >
               <Box display="flex" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1.5} mb={1.5}>
                 <Box display="flex" alignItems="center" gap={1}>
-                  <CheckCircle sx={{ color: "#16a34a", fontSize: 24 }} />
-                  <Typography variant="h6" sx={{ color: "#15803d", fontWeight: 800, fontSize: "16px" }}>
+                  <CheckCircle color="success" sx={{ fontSize: 24 }} />
+                  <Typography variant="h6" color="success.main" sx={{ fontWeight: 800, fontSize: "16px" }}>
                     Purchase Order Finalized & Completed
                   </Typography>
                 </Box>
@@ -385,10 +385,6 @@ export default function WorkflowTabs() {
                       fontSize: "12.5px",
                       px: 2,
                       py: 0.8,
-                      borderColor: "#0E4F8D",
-                      color: "#0E4F8D",
-                      bgcolor: "#ffffff",
-                      "&:hover": { bgcolor: "#f0f7ff", borderColor: "#0B3D6D" },
                     }}
                   >
                     {downloadingSanction ? "Downloading..." : "Sanction Letter"}
@@ -413,9 +409,6 @@ export default function WorkflowTabs() {
                       fontSize: "12.5px",
                       px: 2.5,
                       py: 0.8,
-                      bgcolor: "#16a34a",
-                      "&:hover": { bgcolor: "#15803d" },
-                      boxShadow: "0 2px 6px rgba(22, 163, 74, 0.3)",
                     }}
                   >
                     Download PO
@@ -423,38 +416,38 @@ export default function WorkflowTabs() {
                 </Stack>
               </Box>
 
-              <Divider sx={{ my: 1.5, borderColor: "#dcfce7" }} />
+              <Divider sx={{ my: 1.5 }} />
 
               <Grid container spacing={2} alignItems="center">
                 <Grid item xs={6} sm={3}>
-                  <Typography variant="caption" sx={{ color: "#64748b", fontWeight: 600, display: "block", mb: 0.2 }}>
+                  <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 600, display: "block", mb: 0.2 }}>
                     PO Number
                   </Typography>
-                  <Typography variant="body2" sx={{ color: "#0f172a", fontWeight: 700, fontSize: "13px" }}>
+                  <Typography variant="body2" sx={{ color: "text.primary", fontWeight: 700, fontSize: "13px" }}>
                     {selectedApplication.purchaseOrderId || `PO-${selectedApplication.applicationId}`}
                   </Typography>
                 </Grid>
                 <Grid item xs={6} sm={3}>
-                  <Typography variant="caption" sx={{ color: "#64748b", fontWeight: 600, display: "block", mb: 0.2 }}>
+                  <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 600, display: "block", mb: 0.2 }}>
                     PO Date
                   </Typography>
-                  <Typography variant="body2" sx={{ color: "#0f172a", fontWeight: 700, fontSize: "13px" }}>
+                  <Typography variant="body2" sx={{ color: "text.primary", fontWeight: 700, fontSize: "13px" }}>
                     {new Date(selectedApplication.updatedAt || selectedApplication.createdAt).toLocaleDateString()}
                   </Typography>
                 </Grid>
                 <Grid item xs={6} sm={3}>
-                  <Typography variant="caption" sx={{ color: "#64748b", fontWeight: 600, display: "block", mb: 0.2 }}>
+                  <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 600, display: "block", mb: 0.2 }}>
                     Finalized Vendor
                   </Typography>
-                  <Typography variant="body2" sx={{ color: "#15803d", fontWeight: 800, fontSize: "13.5px" }}>
+                  <Typography variant="body2" color="success.main" sx={{ fontWeight: 800, fontSize: "13.5px" }}>
                     {selectedApplication.finalizedAggregatorName || "N/A"}
                   </Typography>
                 </Grid>
                 <Grid item xs={6} sm={3}>
-                  <Typography variant="caption" sx={{ color: "#64748b", fontWeight: 600, display: "block", mb: 0.2 }}>
+                  <Typography variant="caption" sx={{ color: "text.secondary", fontWeight: 600, display: "block", mb: 0.2 }}>
                     PO Volume Amount
                   </Typography>
-                  <Typography variant="body2" sx={{ color: "#0f172a", fontWeight: 800, fontSize: "13.5px" }}>
+                  <Typography variant="body2" sx={{ color: "text.primary", fontWeight: 800, fontSize: "13.5px" }}>
                     ₹ {selectedApplication.totalAnnualTransaction?.toLocaleString() || 0}
                   </Typography>
                 </Grid>

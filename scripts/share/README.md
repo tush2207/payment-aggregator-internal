@@ -1,41 +1,37 @@
-# Share Scripts: 100% Pure CMD / Batch (No PowerShell)
+# Universal Full Module Share Utility (100% Pure CMD)
 
-Zero-hardcoded, standalone Windows Command Prompt (`.bat`) batch scripts using native Windows tools (`tar.exe`, `certutil.exe`, `robocopy.exe`).
-
----
-
-## 1. Scripts Overview
-
-* **`scripts\share\Pack-Share.bat`**:
-  - Compresses `backend\app` and `frontend\src` into zip archives using native `tar.exe`.
-  - Base64-encodes them using `certutil.exe -encode`.
-  - Renames `.b64` to `.txt` format.
-  - Automatically verifies that each file is **within the 9.0 MB limit**.
-  - Outputs to `share-packages\`.
-
-* **`scripts\share\Apply-Share.bat`**:
-  - Automatically creates timestamped backups in `old-version\` before touching any file.
-  - Decodes `.txt` via `certutil.exe -decode`.
-  - Extracts and safely updates `backend\app` and `frontend\src`.
-  - Cleans up all temporary decode artifacts.
+Generic and portable code sharing scripts designed to transfer the entire `backend\app` and `frontend\src` modules between machines.
 
 ---
 
-## 2. How to Use
+## 📦 Package Naming & Structure
 
-### **To Create Packages:**
-Double-click `Pack-Share.bat` or run in CMD:
-```cmd
-.\scripts\share\Pack-Share.bat
-```
-Output packages will appear in `share-packages\`:
-* `bank-unified-portal_BE_<TIMESTAMP>.txt` (~0.4 MB - Well under 9MB)
-* `bank-unified-portal_FE_<TIMESTAMP>.txt` (~1.2 MB - Well under 9MB)
+Packages are generated in `share-packages\` using the project name and timestamp:
+- **Backend Package:** `{PROJECT_NAME}_BE_{TIMESTAMP}.txt` (e.g. `PAPG-INTERNAL_BE_20260928_114555.txt`)
+- **Frontend Package:** `{PROJECT_NAME}_FE_{TIMESTAMP}.txt` (e.g. `PAPG-INTERNAL_FE_20260928_114555.txt`)
 
-### **To Apply Packages:**
-1. **Option A (Auto)**: Place `.txt` files into `share-packages\` and double-click `Apply-Share.bat`.
-2. **Option B (Drag & Drop)**: Drag and drop any `.txt` package file directly onto `Apply-Share.bat`.
-3. **Option C (Command Line)**:
+Both packages are compressed with `tar.exe` and Base64 encoded with `certutil.exe`.  
+Each package is strictly validated to stay under **`< 8.5 MB` (8,912,896 bytes)**.
+
+---
+
+## 🚀 How to Use
+
+### **1. Pack Entire Modules (Source Machine):**
 ```cmd
-.\scripts\share\Apply-Share.bat path\to\bank-unified-portal_BE_<TIMESTAMP>.txt
+scripts\share\Pack-Share.bat
 ```
+- Compresses and encodes the entire `backend\app` folder into `{PROJECT_NAME}_BE_{TIMESTAMP}.txt`.
+- Compresses and encodes the entire `frontend\src` folder into `{PROJECT_NAME}_FE_{TIMESTAMP}.txt`.
+- Saves both files into `share-packages\`.
+
+### **2. Apply Packages (Target Machine):**
+```cmd
+scripts\share\Apply-Share.bat
+```
+*(Or drag and drop any `.txt` package file directly onto `Apply-Share.bat`)*
+
+- Auto-detects `_BE_` and `_FE_` packages.
+- **Automatic Backup:** Backs up the existing `backend\app` or `frontend\src` into `backups\backup_backend_<TIMESTAMP>.zip` and `backups\backup_frontend_<TIMESTAMP>.zip`.
+- Safely extracts and replaces `backend\app` and `frontend\src`.
+- **All other files outside `app` and `src` (environment, configurations, docker, git, etc.) remain untouched.**

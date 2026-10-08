@@ -16,113 +16,43 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       open: false,
       historyApiFallback: true,
-      proxy: {
-        '/api': {
-          target: 'http://localhost:8000',
+      proxy: (() => {
+        const createProxy = (target = 'http://localhost:8000') => ({
+          target,
           changeOrigin: true,
           secure: false,
-        },
-        '/applications': {
-          target: 'http://localhost:8000',
-          changeOrigin: true,
-          secure: false,
-        },
-        '/get-all-applications': {
-          target: 'http://localhost:8000',
-          changeOrigin: true,
-          secure: false,
-        },
-        '/get-single-applications': {
-          target: 'http://localhost:8000',
-          changeOrigin: true,
-          secure: false,
-        },
-        '/all-manage-aggregator': {
-          target: 'http://localhost:8000',
-          changeOrigin: true,
-          secure: false,
-        },
-        '/single-manage-aggregator': {
-          target: 'http://localhost:8000',
-          changeOrigin: true,
-          secure: false,
-        },
-        '/manage-aggregator': {
-          target: 'http://localhost:8000',
-          changeOrigin: true,
-          secure: false,
-        },
-        '/all-payment-aggregator': {
-          target: 'http://localhost:8000',
-          changeOrigin: true,
-          secure: false,
-        },
-        '/single-payment-aggregator': {
-          target: 'http://localhost:8000',
-          changeOrigin: true,
-          secure: false,
-        },
-        '/payment-aggregator': {
-          target: 'http://localhost:8000',
-          changeOrigin: true,
-          secure: false,
-        },
-        '/locations': {
-          target: 'http://localhost:8000',
-          changeOrigin: true,
-          secure: false,
-        },
-        '/zones': {
-          target: 'http://localhost:8000',
-          changeOrigin: true,
-          secure: false,
-        },
-        '/regions': {
-          target: 'http://localhost:8000',
-          changeOrigin: true,
-          secure: false,
-        },
-        '/branches': {
-          target: 'http://localhost:8000',
-          changeOrigin: true,
-          secure: false,
-        },
-        '/files': {
-          target: 'http://localhost:8000',
-          changeOrigin: true,
-          secure: false,
-        },
-        '/helpdesk': {
-          target: 'http://localhost:8000',
-          changeOrigin: true,
-          secure: false,
-        },
-        '/auth': {
-          target: 'http://localhost:8000',
-          changeOrigin: true,
-          secure: false,
-        },
-        '/token': {
-          target: 'http://localhost:8000',
-          changeOrigin: true,
-          secure: false,
-        },
-        '/health': {
-          target: 'http://localhost:8000',
-          changeOrigin: true,
-          secure: false,
-        },
-        '/application-notifications': {
-          target: 'http://localhost:8000',
-          changeOrigin: true,
-          secure: false,
-        },
-        '/generate-purchase-order': {
-          target: 'http://localhost:8000',
-          changeOrigin: true,
-          secure: false,
-        },
-      },
+          bypass: (req) => {
+            // When user refreshes page in browser, headers accept text/html -> serve index.html for SPA router
+            if (req.headers.accept && req.headers.accept.includes('text/html')) {
+              return '/index.html';
+            }
+          },
+        });
+
+        return {
+          '/api': createProxy(),
+          '/applications': createProxy(),
+          '/get-all-applications': createProxy(),
+          '/get-single-applications': createProxy(),
+          '/all-manage-aggregator': createProxy(),
+          '/single-manage-aggregator': createProxy(),
+          '/manage-aggregator': createProxy(),
+          '/all-payment-aggregator': createProxy(),
+          '/single-payment-aggregator': createProxy(),
+          '/payment-aggregator': createProxy(),
+          '/locations': createProxy(),
+          '/zones': createProxy(),
+          '/regions': createProxy(),
+          '/branches': createProxy(),
+          '/files': createProxy(),
+          '/helpdesk': createProxy(),
+          '/auth': createProxy(),
+          '/token': createProxy(),
+          '/health': createProxy(),
+          '/application-notifications': createProxy(),
+          '/generate-purchase-order': createProxy(),
+        };
+      })(),
     },
 
     plugins: [
@@ -238,7 +168,7 @@ export default defineConfig(({ mode }) => {
       outDir: 'dist',
       assetsDir: 'assets',
       sourcemap: !isProd,
-      chunkSizeWarningLimit: 1000,
+      chunkSizeWarningLimit: 1500,
       rollupOptions: {
         output: {
           manualChunks: {
@@ -249,6 +179,7 @@ export default defineConfig(({ mode }) => {
               '@emotion/react',
               '@emotion/styled',
             ],
+            'vendor-redux': ['@reduxjs/toolkit', 'react-redux'],
             'vendor-utils': ['axios', 'dayjs', 'xlsx', 'file-saver'],
           },
         },

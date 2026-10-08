@@ -1,3 +1,11 @@
+/**
+ * ============================================================================
+ * Central Bank of India (CBI) - Payment Aggregator Portal
+ * Page: ServiceDown (503)
+ * Purpose: Theme-compliant health check monitor and auto-recovery reconnect view.
+ * ============================================================================
+ */
+
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -9,6 +17,7 @@ import {
   CircularProgress,
   Chip,
   Divider,
+  useTheme,
 } from '@mui/material';
 import {
   CloudOff,
@@ -21,10 +30,11 @@ import {
 import axios from 'axios';
 
 const ServiceDown = () => {
+  const theme = useTheme();
   const [isChecking, setIsChecking] = useState(false);
   const [countdown, setCountdown] = useState(30);
   const [serverStatus, setServerStatus] = useState(null); // 'online' | 'offline' | null
-  const [autoRetry, setAutoRetry] = useState(true);
+  const [autoRetry] = useState(true);
 
   const apiBaseUrl = import.meta.env.VITE_BASE_API_URL || 'http://localhost:8000/api';
   const healthUrl = apiBaseUrl.replace(/\/api\/?$/, '') + '/health';
@@ -51,10 +61,8 @@ const ServiceDown = () => {
   };
 
   useEffect(() => {
-    // Initial health ping
     checkHealth();
 
-    // Auto-retry timer
     const interval = setInterval(() => {
       if (autoRetry) {
         setCountdown((prev) => {
@@ -77,7 +85,7 @@ const ServiceDown = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #0b1f3a 0%, #1a365d 50%, #0d2847 100%)',
+        background: `linear-gradient(135deg, ${theme.palette.primary.dark || theme.palette.primary.main} 0%, ${theme.palette.primary.main} 50%, ${theme.palette.secondary.main} 100%)`,
         p: 2,
       }}
     >
@@ -85,12 +93,13 @@ const ServiceDown = () => {
         <Paper
           elevation={12}
           sx={{
-            p: { xs: 3, sm: 5 },
+            p: { xs: 4, sm: 6 },
             borderRadius: 4,
             textAlign: 'center',
-            background: 'rgba(255, 255, 255, 0.98)',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
+            bgcolor: 'background.paper',
+            boxShadow: 8,
+            border: '1px solid',
+            borderColor: 'divider',
           }}
         >
           {/* Animated Icon */}
@@ -99,10 +108,10 @@ const ServiceDown = () => {
               display: 'inline-flex',
               p: 2.5,
               borderRadius: '50%',
-              bgcolor: serverStatus === 'online' ? 'success.light' : 'error.lighter',
-              color: serverStatus === 'online' ? 'success.main' : '#d32f2f',
+              bgcolor: serverStatus === 'online' ? 'success.lighter' : 'error.lighter',
+              color: serverStatus === 'online' ? 'success.main' : 'error.main',
               mb: 3,
-              boxShadow: '0 8px 16px rgba(211, 47, 47, 0.15)',
+              boxShadow: (t) => `0 8px 16px ${t.palette.action.hover}`,
               animation: isChecking ? 'pulse 1.5s infinite' : 'none',
               '@keyframes pulse': {
                 '0%': { transform: 'scale(1)' },
@@ -112,7 +121,7 @@ const ServiceDown = () => {
             }}
           >
             {serverStatus === 'online' ? (
-              <CheckCircleOutline sx={{ fontSize: 64, color: '#2e7d32' }} />
+              <CheckCircleOutline sx={{ fontSize: 64, color: 'success.main' }} />
             ) : (
               <CloudOff sx={{ fontSize: 64 }} />
             )}
@@ -122,7 +131,8 @@ const ServiceDown = () => {
             variant="h4"
             fontWeight={800}
             gutterBottom
-            sx={{ color: '#0b1f3a', letterSpacing: '-0.5px' }}
+            color="text.primary"
+            sx={{ letterSpacing: '-0.5px' }}
           >
             {serverStatus === 'online'
               ? 'Service Restored!'
@@ -166,14 +176,13 @@ const ServiceDown = () => {
             <Button
               variant="contained"
               size="large"
+              color="primary"
               onClick={checkHealth}
               disabled={isChecking}
               startIcon={
                 isChecking ? <CircularProgress size={20} color="inherit" /> : <Refresh />
               }
               sx={{
-                bgcolor: '#004c8f',
-                '&:hover': { bgcolor: '#003366' },
                 borderRadius: 2,
                 px: 3,
                 py: 1.2,
@@ -187,6 +196,7 @@ const ServiceDown = () => {
             <Button
               variant="outlined"
               size="large"
+              color="inherit"
               href="/"
               startIcon={<Home />}
               sx={{
@@ -194,8 +204,6 @@ const ServiceDown = () => {
                 px: 3,
                 py: 1.2,
                 fontWeight: 600,
-                borderColor: '#004c8f',
-                color: '#004c8f',
                 textTransform: 'none',
               }}
             >

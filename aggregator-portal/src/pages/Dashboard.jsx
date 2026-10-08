@@ -144,6 +144,8 @@ export default function Dashboard({ profile }) {
               <option value="ALL">All Statuses</option>
               <option value="PENDING">Pending Quote</option>
               <option value="SUBMITTED">Submitted</option>
+              <option value="ACCEPTED">Accepted / Awarded</option>
+              <option value="REJECTED">Not Selected</option>
               <option value="REVISION">Revision Requested</option>
             </select>
           </div>
@@ -200,7 +202,17 @@ export default function Dashboard({ profile }) {
                       </div>
                     </td>
                     <td className="py-3.5 px-4">
-                      {rfq.isNegotiationRequested ? (
+                      {rfq.quoteStatus === 'accepted' ? (
+                        <span className="inline-flex items-center space-x-1 bg-emerald-100 text-emerald-900 border border-emerald-300 px-2.5 py-1 rounded-full text-[11px] font-bold">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Quote Accepted (PO Issued)</span>
+                        </span>
+                      ) : rfq.quoteStatus === 'rejected' ? (
+                        <span className="inline-flex items-center space-x-1 bg-rose-50 text-rose-800 border border-rose-200 px-2.5 py-1 rounded-full text-[11px] font-bold">
+                          <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
+                          <span>Not Selected</span>
+                        </span>
+                      ) : rfq.isNegotiationRequested ? (
                         <span className="inline-flex items-center space-x-1 bg-amber-50 text-amber-800 border border-amber-200 px-2.5 py-1 rounded-full text-[11px] font-bold">
                           <AlertCircle className="w-3 h-3" />
                           <span>Revision Req (v{rfq.quoteVersion})</span>
@@ -220,9 +232,19 @@ export default function Dashboard({ profile }) {
                     <td className="py-3.5 px-4 text-right">
                       <Link
                         to={`/rfqs/${rfq.applicationId}`}
-                        className="inline-flex items-center space-x-1 bg-[#004990] hover:bg-[#003d7a] text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm"
+                        className={`inline-flex items-center space-x-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm ${
+                          rfq.quoteStatus === 'accepted'
+                            ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                            : 'bg-[#004990] hover:bg-[#003d7a] text-white'
+                        }`}
                       >
-                        <span>{rfq.quoteStatus === 'submitted' ? 'View / Revise' : 'Submit Quote'}</span>
+                        <span>
+                          {rfq.quoteStatus === 'accepted'
+                            ? 'View PO Details'
+                            : rfq.quoteStatus === 'submitted' || rfq.quoteStatus === 'rejected'
+                            ? 'View Quote'
+                            : 'Submit Quote'}
+                        </span>
                         <ArrowUpRight className="w-3.5 h-3.5" />
                       </Link>
                     </td>

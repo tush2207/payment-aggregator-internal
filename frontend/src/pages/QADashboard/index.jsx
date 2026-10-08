@@ -388,7 +388,7 @@ export default function QADashboard() {
   };
 
   return (
-    <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: 1400, mx: 'auto' }}>
+    <Box>
       {/*  Header Ribbon */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
         <Box>
@@ -595,7 +595,7 @@ export default function QADashboard() {
                           <TableCell>
                             {isFailed ? (
                               <Typography variant="caption" sx={{ color: '#b91c1c', fontWeight: 700, display: 'block' }}>
-                                 {res.summary}
+                                {res.summary}
                               </Typography>
                             ) : (
                               <Typography variant="caption" sx={{ color: '#1e293b', fontWeight: 600, display: 'block' }}>
@@ -652,7 +652,7 @@ export default function QADashboard() {
 
               {consoleLogs.length === 0 ? (
                 <Alert severity="success" sx={{ borderRadius: '8px' }}>
-                   Clean Session: Zero runtime errors or warnings detected in the active browser session!
+                  Clean Session: Zero runtime errors or warnings detected in the active browser session!
                 </Alert>
               ) : (
                 <TableContainer component={Paper} sx={{ border: '1px solid #e2e8f0', borderRadius: '10px', maxHeight: 450 }}>

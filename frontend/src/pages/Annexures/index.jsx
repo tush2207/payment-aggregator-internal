@@ -132,7 +132,7 @@ export default function AnnexuresPage() {
   };
 
   return (
-    <Box sx={{ width: '100%', minWidth: 0, p: { xs: 1.5, md: 2.5 } }}>
+    <Box>
       {/* Hidden File Input for CO Upload */}
       <input
         type="file"
@@ -147,14 +147,6 @@ export default function AnnexuresPage() {
         title="Official Agreement Annexures & Regulatory Formats"
         description="Standard contractual schedules, technical specifications, and RBI compliance annexures (Annexures 2 to 7) for Payment Aggregator onboarding."
         icon={<DescriptionRounded />}
-        actions={[
-          {
-            label: 'Refresh Documents',
-            startIcon: <RefreshRounded />,
-            variant: 'outlined',
-            onClick: fetchAnnexures,
-          },
-        ]}
       />
 
       {/* ── Info Notice ── */}
@@ -216,46 +208,6 @@ export default function AnnexuresPage() {
                   }}
                 >
                   <Box>
-                    <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-                      <Box display="flex" alignItems="center" gap={1}>
-                        <Box
-                          sx={{
-                            width: 28,
-                            height: 28,
-                            borderRadius: '6px',
-                            bgcolor: '#eff6ff',
-                            color: '#1d4ed8',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontWeight: 800,
-                            fontSize: 13,
-                          }}
-                        >
-                          {index + 2}
-                        </Box>
-                        <Chip
-                          label={item.filename?.endsWith('.pdf') ? 'PDF' : '.DOCX Format'}
-                          size="small"
-                          sx={{
-                            fontWeight: 700,
-                            fontSize: '10.5px',
-                            height: 20,
-                            bgcolor: '#f1f5f9',
-                            color: '#475569',
-                          }}
-                        />
-                      </Box>
-                      <Chip
-                        icon={<CheckCircleOutlineRounded sx={{ fontSize: '13px !important' }} />}
-                        label={item.sizeBytes ? `${(item.sizeBytes / 1024).toFixed(0)} KB` : 'Master'}
-                        size="small"
-                        color="success"
-                        variant="outlined"
-                        sx={{ fontWeight: 600, fontSize: '10.5px', height: 20 }}
-                      />
-                    </Box>
-
                     <Typography
                       variant="subtitle2"
                       fontWeight={700}

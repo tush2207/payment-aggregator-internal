@@ -21,11 +21,11 @@ const ApiUrls = {
   GET_ALL_APPLICATIONS: (zoneId, page, search, status, category, createdAt, financialYear, month, startDate, endDate, pageSize, branchId, regionId, exportType, userRole) => {
     const safeZoneId = (zoneId === '0' || zoneId === 0 || !zoneId || zoneId === 'undefined' || zoneId === 'null') ? '00000' : zoneId;
     const params = new URLSearchParams();
-    if (status) params.append('status', status);
-    if (search) params.append('search', search);
+    if (status && status !== 'all' && status !== 'ALL') params.append('status', status);
+    if (search && search.trim()) params.append('search', search.trim());
     if (createdAt) params.append('createdAt', createdAt);
-    if (financialYear) params.append('financialYear', financialYear);
-    if (month) params.append('month', month);
+    if (financialYear && financialYear !== 'all' && financialYear !== 'ALL') params.append('financialYear', financialYear);
+    if (month && month !== 'all' && month !== 'ALL') params.append('month', month);
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
     if (page) params.append('page', page);
@@ -34,7 +34,8 @@ const ApiUrls = {
     if (regionId) params.append('regionId', regionId);
     if (userRole) params.append('userRole', userRole);
     if (exportType) params.append('export', exportType);
-    return `/get-all-applications/${safeZoneId}?${params.toString()}`;
+    const q = params.toString();
+    return q ? `/get-all-applications/${safeZoneId}?${q}` : `/get-all-applications/${safeZoneId}`;
   },
 
   GET_APPLICATION_BY_ID: (applicationId) => `/get-single-applications/${applicationId}`,

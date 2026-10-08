@@ -9,9 +9,9 @@ Uses 100% native Windows tools (`tar.exe`, `certutil.exe`, `robocopy.exe`, `nets
 
 ```text
 scripts/
-├── share/                     <- Delta File Sharing (< 8.5 MB packages)
-│   ├── Pack-Share.bat         <- Packs ONLY modified/added files into Base64 .txt (< 8.5 MB)
-│   ├── Apply-Share.bat        <- Creates targeted backup & safely updates ONLY the packed files
+├── share/                     <- Full Module Sharing (< 8.5 MB packages)
+│   ├── Pack-Share.bat         <- Packs entire backend app & frontend src into Base64 .txt (< 8.5 MB)
+│   ├── Apply-Share.bat        <- Auto-backups & safely replaces backend app & frontend src
 │   └── README.md
 │
 ├── run/                       <- Universal Multi-Service Runner
@@ -21,42 +21,40 @@ scripts/
 │   └── README.md
 │
 ├── deploy/                    <- Patch & Deploy Utility
-│   ├── Pack-Changes.bat       <- Packs Git changes/explicit files with < 8.5 MB limit
+│   ├── Pack-Changes.bat       <- Packs Git changes / explicit files with < 8.5 MB limit
 │   ├── Apply-Changes.bat      <- Non-destructive patch applier with targeted rollback
 │   ├── Test-Deploy.bat        <- Automated test suite verifying pack -> apply -> rollback
 │   └── README.md
 │
 ├── kill-ports.bat             <- Frees active dev ports (9003, 3001, 5173, 8000, 3000, etc.)
 ├── changes/                   <- Output directory for deployment change archives
-├── share-packages/            <- Output directory for delta .txt packages (< 8.5 MB)
-├── backups/                   <- Lightweight targeted pre-apply backups (only overwritten files)
+├── share-packages/            <- Output directory for share .txt packages (< 8.5 MB)
+├── backups/                   <- Lightweight pre-apply backups
 └── README.md                  <- This guide
 ```
 
 ---
 
-## ⚡ 1. Share Delta Files (`scripts\share\`)
+## ⚡ 1. Share Entire Modules (`scripts\share\`)
 
-Designed for sharing file updates across machines via chat/email/tickets where files must stay under **8.5 MB (8,912,896 bytes)**.
+Designed for sharing full code modules between machines via chat, email, or tickets where files must stay under **8.5 MB (8,912,896 bytes)**.
 
-### **Pack ONLY Changed Files:**
+### **Pack Full Backend & Frontend Modules:**
 ```cmd
 scripts\share\Pack-Share.bat
 ```
-- Automatically detects changed / uncommitted files via `git status` (or prompts for files).
-- Preserves relative project paths.
-- Compresses with `tar.exe` and encodes to Base64 `.txt`.
-- Enforces strict size validation (< 8.5 MB).
-- Saves to `share-packages\<ProjectName>_share_<TIMESTAMP>.txt`.
+- Compresses the entire `backend\app` folder into `share-packages\<ProjectName>_BE_<TIMESTAMP>.txt`.
+- Compresses the entire `frontend\src` folder into `share-packages\<ProjectName>_FE_<TIMESTAMP>.txt`.
+- Validates that each package is under the **8.5 MB** limit.
 
-### **Apply Delta Package:**
+### **Apply Packages:**
 ```cmd
 scripts\share\Apply-Share.bat
 ```
 *(Or drag and drop any `.txt` package directly onto `Apply-Share.bat`)*
-- Backs up **ONLY** the specific existing files that are being replaced (saved to `backups\`).
-- Overwrites / adds only the packaged files.
-- **100% Non-destructive:** All other project files remain completely untouched.
+- Backs up the existing target module to `backups\`.
+- Decodes Base64 and replaces `backend\app` and/or `frontend\src`.
+- **All other files outside `app` and `src` remain completely untouched.**
 
 ---
 
@@ -73,14 +71,14 @@ scripts\run\Start-Dev.bat
 
 ---
 
-## 📦 3. Patch & Deploy (`scripts\deploy\`)
+## 📦 3. Patch & Deploy Changed Files (`scripts\deploy\`)
 
 ```cmd
 scripts\deploy\Pack-Changes.bat
 scripts\deploy\Apply-Changes.bat
 scripts\deploy\Test-Deploy.bat
 ```
-- Package Git changes or specific files into `scripts\changes\change_<TIMESTAMP>.txt`.
+- Package only Git modified / untracked files into `scripts\changes\change_<TIMESTAMP>.txt`.
 - Apply patches on target environments with automatic targeted rollback zip generation.
 
 ---

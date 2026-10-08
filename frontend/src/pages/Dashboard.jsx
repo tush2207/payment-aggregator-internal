@@ -27,6 +27,7 @@ import {
   TouchAppRounded,
   CancelRounded,
   HelpOutlineRounded,
+  FileDownloadRounded,
 } from '@mui/icons-material';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -70,8 +71,8 @@ export default function Dashboard() {
   const [selectedStageIndex, setSelectedStageIndex] = useState(null);
 
   const [filters, setFilters] = useState({
-    financialYear: getCurrentFinancialYear(),
-    selectedMonth: String(new Date().getMonth()),
+    financialYear: 'all',
+    selectedMonth: 'all',
     startDate: '',
     endDate: '',
     search: '',
@@ -98,16 +99,20 @@ export default function Dashboard() {
   const fetchApplicationsData = useCallback(async () => {
     setLoading(true);
     try {
+      const branchVal = userDetails.branchId ?? userDetails.branchCode ?? userDetails.Locationid ?? userDetails.LocationId ?? userDetails.solId;
+      const regionVal = userDetails.regionId ?? userDetails.RegionId ?? userDetails.regionCode ?? userDetails.RegionCode;
+      const zoneVal = userDetails.zoneId ?? userDetails.ZoneId ?? userDetails.zoneCode ?? userDetails.ZoneCode;
+
       let filterby = '00000';
       let reqBranchId = undefined;
       let reqRegionId = undefined;
 
       if (userRole === 'BO') {
-        reqBranchId = userDetails.branchId;
+        reqBranchId = branchVal;
       } else if (userRole === 'RO') {
-        reqRegionId = userDetails.regionId;
+        reqRegionId = regionVal;
       } else if (userRole === 'ZO') {
-        filterby = (userDetails.zoneId && userDetails.zoneId !== '0' && userDetails.zoneId !== 0) ? userDetails.zoneId : '00000';
+        filterby = (zoneVal && zoneVal !== '0' && zoneVal !== 0) ? zoneVal : '00000';
       } else {
         filterby = '00000';
       }
@@ -152,9 +157,7 @@ export default function Dashboard() {
     filters.selectedMonth,
     filters.startDate,
     filters.endDate,
-    userDetails?.branchId,
-    userDetails?.regionId,
-    userDetails?.zoneId,
+    userDetails,
   ]);
 
   useEffect(() => {
@@ -178,17 +181,17 @@ export default function Dashboard() {
     await fetchApplicationsData();
   }, [fetchApplicationsData]);
 
-// Helper to determine the EXACT active workflow stage index (0-6) of an application
-const getApplicationActiveStage = (app) => {
-  if (!app) return 0;
-  if (app.isFinalApproved) return 6; // Step 7: Final Approval
-  if (app.isQuoteAcceptRO) return 5; // Step 6: Customer Acceptance
-  if (app.isQuoteReviewCO || app.isMarkUpAddedCO) return 4; // Step 5: Quote Analysis
-  if (app.isQuoteAddedPA || app.isAggregatorAdded) return 3; // Step 4: Quote Submission
-  if (app.isReviewByCO) return 2; // Step 3: CO Review
-  if (app.isReviewByRO || app.isReviewByZO) return 1; // Step 2: RO / ZO Review
-  return 0; // Step 1: Application Submission
-};
+  // Helper to determine the EXACT active workflow stage index (0-6) of an application
+  const getApplicationActiveStage = (app) => {
+    if (!app) return 0;
+    if (app.isFinalApproved) return 6; // Step 7: Final Approval
+    if (app.isQuoteAcceptRO) return 5; // Step 6: Customer Acceptance
+    if (app.isQuoteReviewCO || app.isMarkUpAddedCO) return 4; // Step 5: Quote Analysis
+    if (app.isQuoteAddedPA || app.isAggregatorAdded) return 3; // Step 4: Quote Submission
+    if (app.isReviewByCO) return 2; // Step 3: CO Review
+    if (app.isReviewByRO || app.isReviewByZO) return 1; // Step 2: RO / ZO Review
+    return 0; // Step 1: Application Submission
+  };
 
   // Compute live stage counts for the 7 steps in the workflow based on active stage
   const stageCounts = useMemo(() => {
@@ -243,9 +246,40 @@ const getApplicationActiveStage = (app) => {
     };
   }, [applications, totalRecords]);
 
-  // Filter applications if a KPI card or Stage Stepper is selected
+  // Filter applications if a KPI card, Stage Stepper, or search query is selected
   const displayedApplications = useMemo(() => {
     let list = applications;
+
+    // 0. Search Filter (instant multi-identifier search)
+    if (filters.search && filters.search.trim()) {
+      const s = filters.search.trim().toLowerCase();
+      list = list.filter((app) => {
+        const appId = String(app.applicationId || '').toLowerCase();
+        const custName = String(app.customerName || '').toLowerCase();
+        const accNo = String(app.accountNo || '').toLowerCase();
+        const email = String(app.email || '').toLowerCase();
+        const branchName = String(app.branchName || '').toLowerCase();
+        const branchId = String(app.branchId || '').toLowerCase();
+        const regionName = String(app.regionName || '').toLowerCase();
+        const regionId = String(app.regionId || '').toLowerCase();
+        const zoneName = String(app.zoneName || '').toLowerCase();
+        const zoneId = String(app.zoneId || '').toLowerCase();
+        const status = String(app.status || '').toLowerCase();
+        return (
+          appId.includes(s) ||
+          custName.includes(s) ||
+          accNo.includes(s) ||
+          email.includes(s) ||
+          branchName.includes(s) ||
+          branchId.includes(s) ||
+          regionName.includes(s) ||
+          regionId.includes(s) ||
+          zoneName.includes(s) ||
+          zoneId.includes(s) ||
+          status.includes(s)
+        );
+      });
+    }
 
     // 1. Stage Stepper Filter (if user clicked a step in the pipeline)
     if (selectedStageIndex !== null) {
@@ -286,7 +320,7 @@ const getApplicationActiveStage = (app) => {
       if (dateB !== dateA) return dateB - dateA;
       return (Number(b.applicationId) || 0) - (Number(a.applicationId) || 0);
     });
-  }, [applications, selectedStageIndex, selectedKpiFilter]);
+  }, [applications, selectedStageIndex, selectedKpiFilter, filters.search]);
 
   const recentThreeApplications = useMemo(() => {
     return displayedApplications.slice(0, 3);
@@ -438,8 +472,8 @@ const getApplicationActiveStage = (app) => {
       title: 'Total Applications',
       value: kpiStats.total,
       icon: <AssignmentRounded sx={{ fontSize: 26 }} />,
-      color: theme.palette.primary.main || '#176FC1',
-      bgGradient: 'linear-gradient(135deg, rgba(23,111,193,0.12) 0%, rgba(23,111,193,0.02) 100%)',
+      color: theme.palette.primary.main,
+      bgGradient: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.12)} 0%, ${alpha(theme.palette.primary.main, 0.02)} 100%)`,
       badge: 'All Records',
     },
     {
@@ -447,8 +481,8 @@ const getApplicationActiveStage = (app) => {
       title: 'Pending Reviews',
       value: kpiStats.pending,
       icon: <HourglassTopRounded sx={{ fontSize: 26 }} />,
-      color: '#ed6c02',
-      bgGradient: 'linear-gradient(135deg, rgba(237,108,2,0.12) 0%, rgba(237,108,2,0.02) 100%)',
+      color: theme.palette.warning.main,
+      bgGradient: `linear-gradient(135deg, ${alpha(theme.palette.warning.main, 0.12)} 0%, ${alpha(theme.palette.warning.main, 0.02)} 100%)`,
       badge: 'Initial Action',
     },
     {
@@ -456,8 +490,8 @@ const getApplicationActiveStage = (app) => {
       title: 'In Progress',
       value: kpiStats.inProgress,
       icon: <ReceiptLongRounded sx={{ fontSize: 26 }} />,
-      color: '#0284c7',
-      bgGradient: 'linear-gradient(135deg, rgba(2,132,199,0.12) 0%, rgba(2,132,199,0.02) 100%)',
+      color: theme.palette.info.main,
+      bgGradient: `linear-gradient(135deg, ${alpha(theme.palette.info.main, 0.12)} 0%, ${alpha(theme.palette.info.main, 0.02)} 100%)`,
       badge: 'Quotes & Markup',
     },
     {
@@ -465,8 +499,8 @@ const getApplicationActiveStage = (app) => {
       title: 'Approved & Active',
       value: kpiStats.approved,
       icon: <CheckCircleRounded sx={{ fontSize: 26 }} />,
-      color: '#2e7d32',
-      bgGradient: 'linear-gradient(135deg, rgba(46,125,50,0.12) 0%, rgba(46,125,50,0.02) 100%)',
+      color: theme.palette.success.main,
+      bgGradient: `linear-gradient(135deg, ${alpha(theme.palette.success.main, 0.12)} 0%, ${alpha(theme.palette.success.main, 0.02)} 100%)`,
       badge: 'PO Issued',
     },
     {
@@ -474,8 +508,8 @@ const getApplicationActiveStage = (app) => {
       title: 'Rejected',
       value: kpiStats.rejected,
       icon: <CancelRounded sx={{ fontSize: 26 }} />,
-      color: '#d32f2f',
-      bgGradient: 'linear-gradient(135deg, rgba(211,47,47,0.12) 0%, rgba(211,47,47,0.02) 100%)',
+      color: theme.palette.error.main,
+      bgGradient: `linear-gradient(135deg, ${alpha(theme.palette.error.main, 0.12)} 0%, ${alpha(theme.palette.error.main, 0.02)} 100%)`,
       badge: 'Locked Out',
     },
   ];
@@ -496,14 +530,22 @@ const getApplicationActiveStage = (app) => {
         }}
         actions={[
           {
-            label: stepperOpen ? 'Hide Workflow Pipeline' : 'Show Workflow Pipeline (7 Steps)',
+            label: stepperOpen ? 'Hide Workflow' : 'Show Workflow',
             startIcon: <TimelineRounded />,
             variant: stepperOpen ? 'contained' : 'outlined',
             color: 'primary',
             onClick: () => setStepperOpen(!stepperOpen),
+          },
+          {
+            label: 'Export All',
+            startIcon: <FileDownloadRounded />,
+            variant: 'contained',
+            color: 'success',
+            onClick: handleExportExcel,
             sx: {
-              bgcolor: stepperOpen ? '#176FC1' : 'transparent',
-              borderColor: '#176FC1',
+              bgcolor: '#2E7D32',
+              '&:hover': { bgcolor: '#1B5E20' },
+              boxShadow: '0 2px 8px rgba(46, 125, 50, 0.25)',
             },
           },
         ]}
@@ -526,7 +568,7 @@ const getApplicationActiveStage = (app) => {
                   borderRadius: '14px',
                   border: '2px solid',
                   borderColor: isSelected ? card.color : 'grey.200',
-                  background: isSelected ? card.bgGradient : '#ffffff',
+                  background: isSelected ? card.bgGradient : theme.palette.background.paper,
                   boxShadow: isSelected
                     ? `0 6px 18px ${alpha(card.color, 0.25)}`
                     : '0 2px 8px rgba(0,0,0,0.03)',
@@ -562,7 +604,7 @@ const getApplicationActiveStage = (app) => {
                       size="small"
                       sx={{
                         bgcolor: isSelected ? card.color : alpha(card.color, 0.08),
-                        color: isSelected ? '#ffffff' : card.color,
+                        color: isSelected ? theme.palette.common.white : card.color,
                         fontWeight: 700,
                         fontSize: '0.68rem',
                         borderRadius: '6px',
@@ -593,8 +635,8 @@ const getApplicationActiveStage = (app) => {
 
       {/* ── Active KPI Filter Indicator & Reset ── */}
       {selectedKpiFilter !== 'ALL' && selectedStageIndex === null && (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, p: 1.2, px: 2, bgcolor: '#f0f7ff', borderRadius: '8px', border: '1px dashed #176FC1' }}>
-          <Typography variant="body2" sx={{ fontSize: '0.82rem', fontWeight: 600, color: '#0E4F8D' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, p: 1.2, px: 2, bgcolor: alpha(theme.palette.primary.main, 0.06), borderRadius: '8px', border: `1px dashed ${theme.palette.primary.main}` }}>
+          <Typography variant="body2" sx={{ fontSize: '0.82rem', fontWeight: 600, color: 'primary.dark' }}>
             Active KPI Filter: <b>{kpiCards.find((c) => c.id === selectedKpiFilter)?.title}</b> ({displayedApplications.length} records)
           </Typography>
           <Button
@@ -638,22 +680,22 @@ const getApplicationActiveStage = (app) => {
             mb: 2.5,
             p: 1.5,
             px: 2.2,
-            bgcolor: '#f0fdf4',
+            bgcolor: alpha(theme.palette.success.main, 0.08),
             borderRadius: '10px',
-            border: '1.5px dashed #2E7D32',
-            boxShadow: '0 2px 8px rgba(46, 125, 50, 0.08)',
+            border: `1.5px dashed ${theme.palette.success.main}`,
+            boxShadow: `0 2px 8px ${alpha(theme.palette.success.main, 0.08)}`,
           }}
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="body2" sx={{ fontSize: '0.85rem', fontWeight: 700, color: '#2E7D32' }}>
+            <Typography variant="body2" sx={{ fontSize: '0.85rem', fontWeight: 700, color: 'success.dark' }}>
               Active Stage Filter: <b>Step {selectedStageIndex + 1} ({workflowStepNames[selectedStageIndex]})</b>
             </Typography>
             <Chip
               label={`${displayedApplications.length} ${displayedApplications.length === 1 ? 'record' : 'records'} found`}
               size="small"
               sx={{
-                bgcolor: 'rgba(46, 125, 50, 0.12)',
-                color: '#2E7D32',
+                bgcolor: alpha(theme.palette.success.main, 0.12),
+                color: 'success.dark',
                 fontWeight: 700,
                 fontSize: '0.72rem',
                 height: 22,
@@ -675,14 +717,6 @@ const getApplicationActiveStage = (app) => {
               px: 1.8,
               ml: 'auto',
               borderRadius: '6px',
-              borderColor: '#2e7d32',
-              color: '#2e7d32',
-              bgcolor: '#ffffff',
-              boxShadow: '0 1px 4px rgba(46, 125, 50, 0.15)',
-              '&:hover': {
-                borderColor: '#1b5e20',
-                bgcolor: 'rgba(46, 125, 50, 0.08)',
-              },
             }}
           >
             Reset Stage Filter
@@ -694,6 +728,7 @@ const getApplicationActiveStage = (app) => {
       <ApplicationFlowTable
         applicationDetails={displayedApplications}
         totalRecords={totalRecords}
+        filters={filters}
         onRefresh={fetchApplicationsData}
         onView={handleView}
         onVerify={handleVerify}

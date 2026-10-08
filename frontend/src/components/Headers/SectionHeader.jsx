@@ -86,7 +86,7 @@ const SectionHeader = ({
               variant="h5"
               sx={{
                 fontWeight: 800,
-                color: '#0E4F8D',
+                color: 'primary.main',
                 fontSize: { xs: '1.25rem', sm: '1.35rem' },
                 lineHeight: 1.2,
                 letterSpacing: '-0.3px',
@@ -101,7 +101,7 @@ const SectionHeader = ({
               <Typography
                 variant="body2"
                 sx={{
-                  color: '#637381',
+                  color: 'text.secondary',
                   mt: 0.3,
                   fontWeight: 500,
                   fontSize: { xs: '0.80rem', sm: '0.85rem' },
@@ -116,12 +116,6 @@ const SectionHeader = ({
 
         {/* ── RIGHT: ACTION BUTTONS / ALERTS ── */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          {!showButton && (isRO || isZO) && (
-            <Alert severity="info" sx={{ py: 0.2, px: 1.5, fontSize: '12px', borderRadius: '8px' }}>
-              Note: Click <b>Verify</b> button to review and <b>Approve or Reject</b> application.
-            </Alert>
-          )}
-
           {combinedActions.map((action, index) => (
             <Button
               key={index}
@@ -138,7 +132,7 @@ const SectionHeader = ({
                 borderRadius: '8px',
                 px: 2,
                 py: 0.8,
-                boxShadow: action?.variant === 'contained' ? '0 2px 8px rgba(23,111,193,0.25)' : 'none',
+                boxShadow: action?.variant === 'contained' ? 2 : 'none',
                 ...action?.sx,
               }}
             >
@@ -155,7 +149,7 @@ const SectionHeader = ({
         sx={{
           height: '3px',
           width: '100%',
-          background: `linear-gradient(90deg, ${theme.palette.primary.dark || '#0E4F8D'} 0%, ${theme.palette.primary.main || '#176FC1'} 40%, ${theme.palette.secondary.main || '#CE0F3E'} 100%)`,
+          background: `linear-gradient(90deg, ${theme.palette.primary.dark || theme.palette.primary.main} 0%, ${theme.palette.primary.main} 40%, ${theme.palette.secondary.main} 100%)`,
           borderRadius: '2px',
           mt: 1.5,
         }}

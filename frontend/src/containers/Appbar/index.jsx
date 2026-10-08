@@ -276,7 +276,7 @@ const Navbar = ({ onDrawerToggle }) => {
             {role === 'CO' || role === 'ADMIN' ? (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8, px: 0.6 }}>
                 <CorporateFare sx={{ color: GOLD, fontSize: 18 }} />
-                <Typography sx={{ color: '#fff', fontSize: '0.80rem', fontWeight: 700, letterSpacing: '0.2px' }}>
+                <Typography sx={{ color: 'primary.contrastText', fontSize: '0.80rem', fontWeight: 700, letterSpacing: '0.2px' }}>
                   Central Office • All India Scope
                 </Typography>
               </Box>
@@ -285,7 +285,7 @@ const Navbar = ({ onDrawerToggle }) => {
                 {zoneName && (
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, px: 0.6 }}>
                     <CorporateFare sx={{ color: GOLD, fontSize: 16 }} />
-                    <Typography sx={{ color: '#ffffff', fontSize: '0.74rem', fontWeight: 600 }}>
+                    <Typography sx={{ color: 'primary.contrastText', fontSize: '0.74rem', fontWeight: 600 }}>
                       Zone: <strong style={{ color: GOLD }}>{zoneName}</strong>{zoneId ? ` (${zoneId})` : ''}
                     </Typography>
                   </Box>
@@ -295,9 +295,9 @@ const Navbar = ({ onDrawerToggle }) => {
                   <>
                     <ChevronRight sx={{ color: 'rgba(255,255,255,0.4)', fontSize: 16 }} />
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, px: 0.6 }}>
-                      <LocationCity sx={{ color: '#81ecec', fontSize: 16 }} />
-                      <Typography sx={{ color: '#ffffff', fontSize: '0.74rem', fontWeight: 600 }}>
-                        Region: <strong style={{ color: '#81ecec' }}>{regionName}</strong>{regionId ? ` (${regionId})` : ''}
+                      <LocationCity sx={{ color: theme.palette.info?.light || 'info.light', fontSize: 16 }} />
+                      <Typography sx={{ color: 'primary.contrastText', fontSize: '0.74rem', fontWeight: 600 }}>
+                        Region: <strong>{regionName}</strong>{regionId ? ` (${regionId})` : ''}
                       </Typography>
                     </Box>
                   </>
@@ -314,13 +314,14 @@ const Navbar = ({ onDrawerToggle }) => {
                         px: 1,
                         py: 0.25,
                         borderRadius: '16px',
-                        bgcolor: 'rgba(206,15,62,0.45)',
-                        border: '1px solid rgba(246,211,101,0.4)',
+                        bgcolor: 'secondary.main',
+                        border: '1px solid',
+                        borderColor: 'accent.main',
                       }}
                     >
-                      <AccountBalance sx={{ color: '#ffbe76', fontSize: 15 }} />
-                      <Typography sx={{ color: '#ffffff', fontSize: '0.74rem', fontWeight: 700 }}>
-                        Branch: <span style={{ color: '#fff' }}>{branchName}</span>{branchId ? ` (${branchId})` : ''}
+                      <AccountBalance sx={{ color: GOLD, fontSize: 15 }} />
+                      <Typography sx={{ color: 'secondary.contrastText', fontSize: '0.74rem', fontWeight: 700 }}>
+                        Branch: <span>{branchName}</span>{branchId ? ` (${branchId})` : ''}
                       </Typography>
                     </Box>
                   </>
@@ -357,7 +358,7 @@ const Navbar = ({ onDrawerToggle }) => {
                   width: 28,
                   height: 28,
                   borderRadius: '50%',
-                  background: `linear-gradient(135deg, ${RED}, #9B0A2E)`,
+                  background: `linear-gradient(135deg, ${RED}, ${theme.palette.secondary.dark || RED})`,
                   border: `1.5px solid ${GOLD}`,
                   display: 'flex',
                   alignItems: 'center',
@@ -366,13 +367,13 @@ const Navbar = ({ onDrawerToggle }) => {
                   boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
                 }}
               >
-                <AccountCircle sx={{ color: '#fff', fontSize: 20 }} />
+                <AccountCircle sx={{ color: 'common.white', fontSize: 20 }} />
               </Box>
 
               <Box sx={{ display: { xs: 'none', sm: 'block' }, textAlign: 'left' }}>
                 <Typography
                   sx={{
-                    color: '#fff',
+                    color: 'common.white',
                     fontSize: '0.80rem',
                     fontWeight: 700,
                     lineHeight: 1.15,
@@ -402,7 +403,7 @@ const Navbar = ({ onDrawerToggle }) => {
         </Toolbar>
       </AppBar>
 
-      {/* ── USER DROPDOWN MENU (Digital Ambassador Portal Style) ── */}
+      {/* ── USER DROPDOWN MENU ── */}
       <Menu
         anchorEl={anchorElUser}
         open={Boolean(anchorElUser)}
@@ -413,8 +414,9 @@ const Navbar = ({ onDrawerToggle }) => {
             mt: 1.4,
             minWidth: 280,
             borderRadius: '12px',
-            border: '1px solid rgba(0,0,0,0.08)',
-            boxShadow: '0 12px 40px rgba(0,0,0,0.22)',
+            border: '1px solid',
+            borderColor: 'divider',
+            boxShadow: '0 12px 40px rgba(0,0,0,0.18)',
             overflow: 'hidden',
           },
         }}
@@ -424,12 +426,12 @@ const Navbar = ({ onDrawerToggle }) => {
           sx={{
             px: 2.2,
             py: 2,
-            background: 'linear-gradient(135deg, #0E4F8D 0%, #176FC1 100%)',
+            background: `linear-gradient(135deg, ${theme.palette.primary.dark || theme.palette.primary.main} 0%, ${theme.palette.primary.main} 100%)`,
           }}
         >
           <Typography
             sx={{
-              color: '#fff',
+              color: 'primary.contrastText',
               fontWeight: 700,
               fontSize: '0.92rem',
             }}
@@ -445,7 +447,7 @@ const Navbar = ({ onDrawerToggle }) => {
                 fontSize: '0.68rem',
                 fontWeight: 700,
                 bgcolor: 'rgba(255,255,255,0.22)',
-                color: '#fff',
+                color: 'primary.contrastText',
               }}
             />
             <Typography
@@ -462,23 +464,23 @@ const Navbar = ({ onDrawerToggle }) => {
           <Box sx={{ mt: 1.2, pt: 1, borderTop: '1px solid rgba(255,255,255,0.18)', display: 'flex', flexDirection: 'column', gap: 0.5 }}>
             {role === 'CO' || role === 'ADMIN' ? (
               <Typography sx={{ color: GOLD, fontSize: '0.74rem', fontWeight: 600 }}>
-                 Central Office (All India Scope)
+                Central Office (All India Scope)
               </Typography>
             ) : (
               <>
                 {zoneName && (
                   <Typography sx={{ color: 'rgba(255,255,255,0.92)', fontSize: '0.72rem' }}>
-                     <strong>Zone:</strong> {zoneName} {zoneId ? `(${zoneId})` : ''}
+                    <strong>Zone:</strong> {zoneName} {zoneId ? `(${zoneId})` : ''}
                   </Typography>
                 )}
                 {regionName && (
                   <Typography sx={{ color: 'rgba(255,255,255,0.92)', fontSize: '0.72rem' }}>
-                     <strong>Region:</strong> {regionName} {regionId ? `(${regionId})` : ''}
+                    <strong>Region:</strong> {regionName} {regionId ? `(${regionId})` : ''}
                   </Typography>
                 )}
                 {branchName && (
                   <Typography sx={{ color: GOLD, fontSize: '0.74rem', fontWeight: 600 }}>
-                     <strong>Branch:</strong> {branchName} {branchId ? `(${branchId})` : ''}
+                    <strong>Branch:</strong> {branchName} {branchId ? `(${branchId})` : ''}
                   </Typography>
                 )}
               </>
@@ -486,30 +488,26 @@ const Navbar = ({ onDrawerToggle }) => {
           </Box>
         </Box>
 
-        {isSuperUser && (
-          <>
-            <MenuItem
-              onClick={() => {
-                handleCloseUserMenu();
-                setRoleSwitcherOpen(true);
-              }}
-              sx={{
-                py: 1.4,
-                px: 2.2,
-                gap: 1.2,
-                fontSize: '0.86rem',
-                fontWeight: 600,
-                color: '#1565c0',
-                transition: 'all 0.15s ease',
-                '&:hover': { background: 'rgba(21,101,192,0.08)' },
-              }}
-            >
-              <AdminPanelSettings sx={{ fontSize: 20, color: '#1565c0' }} />
-              Change Role & Location (Admin View)
-            </MenuItem>
-            <Divider />
-          </>
-        )}
+        <MenuItem
+          onClick={() => {
+            handleCloseUserMenu();
+            setRoleSwitcherOpen(true);
+          }}
+          sx={{
+            py: 1.4,
+            px: 2.2,
+            gap: 1.2,
+            fontSize: '0.86rem',
+            fontWeight: 600,
+            color: 'primary.main',
+            transition: 'all 0.15s ease',
+            '&:hover': { background: 'action.hover' },
+          }}
+        >
+          <AdminPanelSettings sx={{ fontSize: 20, color: 'primary.main' }} />
+          Change Role & Location (Dev / Admin View)
+        </MenuItem>
+        <Divider />
 
         <MenuItem
           onClick={handleLogout}
@@ -519,12 +517,12 @@ const Navbar = ({ onDrawerToggle }) => {
             gap: 1.2,
             fontSize: '0.86rem',
             fontWeight: 600,
-            color: RED,
+            color: 'secondary.main',
             transition: 'all 0.15s ease',
-            '&:hover': { background: 'rgba(192,57,43,0.08)' },
+            '&:hover': { background: 'action.hover' },
           }}
         >
-          <Logout sx={{ fontSize: 19, color: RED }} />
+          <Logout sx={{ fontSize: 19, color: 'secondary.main' }} />
           Logout
         </MenuItem>
       </Menu>
@@ -541,22 +539,22 @@ const Navbar = ({ onDrawerToggle }) => {
             width: 360,
             maxHeight: 450,
             borderRadius: '12px',
-            boxShadow: '0 12px 40px rgba(0,0,0,0.2)',
+            boxShadow: '0 12px 40px rgba(0,0,0,0.18)',
             overflow: 'hidden',
           },
         }}
       >
-        <Box sx={{ p: 1.8, bgcolor: '#0E4F8D', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Box sx={{ p: 1.8, bgcolor: 'primary.main', color: 'primary.contrastText', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography sx={{ fontWeight: 700, fontSize: '0.9rem' }}>Workflow Notifications</Typography>
           {unreadCount > 0 && (
-            <IconButton size="small" onClick={handleMarkAllRead} sx={{ color: '#fff', fontSize: '0.75rem', gap: 0.5 }}>
+            <IconButton size="small" onClick={handleMarkAllRead} sx={{ color: 'primary.contrastText', fontSize: '0.75rem', gap: 0.5 }}>
               <DoneAllRounded sx={{ fontSize: 16 }} /> Mark Read
             </IconButton>
           )}
         </Box>
         <Box sx={{ maxHeight: 350, overflowY: 'auto' }}>
           {notifications.length === 0 ? (
-            <Box sx={{ py: 4, textAlign: 'center', color: '#64748b' }}>
+            <Box sx={{ py: 4, textAlign: 'center', color: 'text.secondary' }}>
               <InfoOutlined sx={{ fontSize: 32, mb: 0.5, opacity: 0.5 }} />
               <Typography variant="body2">No notifications found.</Typography>
             </Box>
@@ -570,8 +568,9 @@ const Navbar = ({ onDrawerToggle }) => {
                   sx={{
                     py: 1.2,
                     px: 2,
-                    borderBottom: '1px solid #f1f5f9',
-                    bgcolor: isUnread ? 'rgba(23, 111, 193, 0.06)' : 'transparent',
+                    borderBottom: '1px solid',
+                    borderColor: 'divider',
+                    bgcolor: isUnread ? 'action.hover' : 'transparent',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'flex-start',
@@ -579,17 +578,17 @@ const Navbar = ({ onDrawerToggle }) => {
                   }}
                 >
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                    <Typography sx={{ fontWeight: isUnread ? 700 : 500, fontSize: '0.82rem', color: isUnread ? '#0E4F8D' : '#334155' }}>
+                    <Typography sx={{ fontWeight: isUnread ? 700 : 500, fontSize: '0.82rem', color: isUnread ? 'primary.main' : 'text.primary' }}>
                       {item.title || item.message}
                     </Typography>
-                    {isUnread && <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: RED }} />}
+                    {isUnread && <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'secondary.main' }} />}
                   </Box>
                   {item.description && (
-                    <Typography sx={{ fontSize: '0.74rem', color: '#64748b', whiteSpace: 'normal', lineHeight: 1.3 }}>
+                    <Typography sx={{ fontSize: '0.74rem', color: 'text.secondary', whiteSpace: 'normal', lineHeight: 1.3 }}>
                       {item.description}
                     </Typography>
                   )}
-                  <Typography sx={{ fontSize: '0.68rem', color: '#94a3b8' }}>{item.time || item.createdAt || 'Just now'}</Typography>
+                  <Typography sx={{ fontSize: '0.68rem', color: 'text.disabled' }}>{item.time || item.createdAt || 'Just now'}</Typography>
                 </MenuItem>
               );
             })

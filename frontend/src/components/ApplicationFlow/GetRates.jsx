@@ -553,6 +553,10 @@ const GetRates = ({
                 value={selectedChannel}
                 label="Select Mode / Channel"
                 onChange={(e) => setSelectedChannel(e.target.value)}
+                MenuProps={{
+                  sx: { zIndex: 2000 },
+                  PaperProps: { sx: { zIndex: 2000 } }
+                }}
               >
                 {PRESET_CHANNELS.map((ch) => (
                   <MenuItem key={ch} value={ch}>
@@ -580,6 +584,10 @@ const GetRates = ({
                 value={newChannelUnit}
                 label="Rate Unit"
                 onChange={(e) => setNewChannelUnit(e.target.value)}
+                MenuProps={{
+                  sx: { zIndex: 2000 },
+                  PaperProps: { sx: { zIndex: 2000 } }
+                }}
               >
                 <MenuItem value={PERCENTAGE}>Percentage (%)</MenuItem>
                 <MenuItem value={RS}>Rupees (₹)</MenuItem>

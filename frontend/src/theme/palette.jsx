@@ -162,6 +162,32 @@ const palette = {
     ],
 
     gradients: GRADIENTS,
+    cbi: {
+        colors: {
+            royalBlue: '#176FC1',
+            darkBlue: '#0E4F8D',
+            deepNavy: '#062545',
+            lightBlueBg: '#f0f7ff',
+            softBlueBorder: '#bae6fd',
+            crimsonRed: '#CE0F3E',
+            darkRed: '#9B0A2E',
+            lightRedBg: '#fee2e2',
+            gold: '#f6d365',
+            goldHover: '#fda085',
+            successGreen: '#15803d',
+            lightGreenBg: '#dcfce7',
+            warningAmber: '#b45309',
+            lightAmberBg: '#fff8e1',
+            slateText: '#1e293b',
+            mutedText: '#64748b',
+            subtleText: '#94a3b8',
+            borderLight: '#cbd5e1',
+            borderSubtle: '#e2e8f0',
+            surfaceLight: '#f8fafc',
+            white: '#ffffff',
+        },
+        gradients: GRADIENTS,
+    },
 };
 
 export default palette;

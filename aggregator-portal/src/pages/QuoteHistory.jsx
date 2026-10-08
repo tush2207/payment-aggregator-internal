@@ -87,7 +87,17 @@ export default function QuoteHistory() {
                       </div>
                     </td>
                     <td className="py-3.5 px-4">
-                      {rfq.isNegotiationRequested ? (
+                      {rfq.quoteStatus === 'accepted' ? (
+                        <span className="inline-flex items-center space-x-1 bg-emerald-100 text-emerald-900 border border-emerald-300 px-2.5 py-1 rounded-full text-[11px] font-bold">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Quote Accepted / Awarded</span>
+                        </span>
+                      ) : rfq.quoteStatus === 'rejected' ? (
+                        <span className="inline-flex items-center space-x-1 bg-rose-50 text-rose-800 border border-rose-200 px-2.5 py-1 rounded-full text-[11px] font-bold">
+                          <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
+                          <span>Not Selected</span>
+                        </span>
+                      ) : rfq.isNegotiationRequested ? (
                         <span className="inline-flex items-center space-x-1 bg-amber-50 text-amber-800 border border-amber-200 px-2.5 py-1 rounded-full text-[11px] font-bold">
                           <AlertCircle className="w-3 h-3" />
                           <span>Negotiation Requested</span>

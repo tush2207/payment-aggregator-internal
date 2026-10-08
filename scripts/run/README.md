@@ -1,23 +1,27 @@
-# Run Scripts -- Quick Reference
+# Universal Run Scripts — Quick Reference
 
-Scripts to launch the ATM Management application servers.
+Generic scripts to launch local development and multi-service environments for **ANY project**.  
+100% Native Windows Command Prompt (`.bat`) — zero PowerShell required.
 
-## Quick Start
+---
 
-Double-click `Start-Dev.bat` to launch both Frontend & Backend together.
+## 🚀 Quick Start
 
-## Available Scripts
+Double-click `Start-Dev.bat` to automatically launch both Backend and Frontend in separate labeled windows.
 
-| Script | Purpose | Default Port |
-|--------|---------|--------------|
-| `Start-Dev.bat` | Starts both Frontend and Backend in separate windows | - |
-| `Start-Frontend.bat` | Starts only the Vite/React frontend | **9003** |
-| `Start-Backend.bat` | Starts only the FastAPI backend | **8000** |
+---
 
-## URLs
+## 📁 Available Scripts
 
-| Service | URL |
-|---------|-----|
-| Frontend (Vite) | http://localhost:9003 |
-| Backend (FastAPI) | http://localhost:8000 |
-| API Docs (Swagger) | http://localhost:8000/docs |
+| Script | Purpose | Detection / Behavior |
+| :--- | :--- | :--- |
+| **`Start-Dev.bat`** | Master dev launcher | Launches both Backend & Frontend in separate CMD windows |
+| **`Start-Backend.bat`** | Backend service runner | Auto-detects FastAPI, Flask, Django, Node/Express, Go, Spring Boot & virtualenvs |
+| **`Start-Frontend.bat`** | Frontend dev server | Auto-detects Vite, Next.js, React, Vue, Angular & installs `node_modules` if missing |
+
+---
+
+## 🌐 Dynamic URL & Port Detection
+
+- Ports and environment settings are automatically detected from `.env`, `.env.dev`, or `.env.prod`.
+- If missing, `.env.example` is automatically copied to `.env`.

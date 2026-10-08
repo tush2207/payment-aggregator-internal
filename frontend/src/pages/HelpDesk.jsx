@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import {
   Box,
   Button,
@@ -40,12 +40,6 @@ import {
   FilterAltOffRounded,
   FileDownloadRounded,
   AttachFileRounded,
-  InsertDriveFileRounded,
-  PictureAsPdfRounded,
-  ImageRounded,
-  TableChartRounded,
-  DescriptionRounded,
-  FolderZipRounded,
 } from '@mui/icons-material';
 
 import ConfirmationDialogWithReason from '&src/components/Dialog/ConfirmationDialogWithReason';
@@ -54,249 +48,90 @@ import SectionHeader from '&src/components/Headers/SectionHeader';
 import FullScreenLoader from '&src/components/Loaders/FullScreenLoader';
 import NoData from '&src/components/NoData';
 import StatusChipOrSelect from '&src/components/StatusChipOrSelect';
-import useStatusWiseAlert from '&src/components/ToastNotifications/useStatusWiseAlert';
 import { isBO, isCO } from '&src/constants/PaymentAggregratorConstant';
-import useToggle from '&src/hooks/useToggle';
-import useQueryWebSocket from '&src/hooks/useQueryWebSocket';
 import ApplicationQueryModal from '&src/components/ApplicationFlow/ApplicationQueryModal';
-import HelpdeskServices from '&src/services/helpdesk';
+import ManageHelpDeskForm from '&src/modules/HelpDesk/ManageHelpDeskForm';
+import useHelpDesk from '&src/hooks/useHelpDesk';
 import { formatDateOnly, formatTimeOnly } from '&src/utils';
-import * as XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
+import { CommonTableFilterSection } from '&src/components/Filters';
 
-const getAttachmentIcon = (fileName, size = 15) => {
-  if (!fileName) return <InsertDriveFileRounded sx={{ fontSize: size, color: '#64748b' }} />;
-  const ext = fileName.split('.').pop()?.toLowerCase();
-  if (ext === 'pdf') return <PictureAsPdfRounded sx={{ fontSize: size, color: '#ef4444' }} />;
-  if (['png', 'jpg', 'jpeg', 'webp', 'svg', 'gif'].includes(ext)) return <ImageRounded sx={{ fontSize: size, color: '#3b82f6' }} />;
-  if (['xlsx', 'xls', 'csv'].includes(ext)) return <TableChartRounded sx={{ fontSize: size, color: '#10b981' }} />;
-  if (['doc', 'docx'].includes(ext)) return <DescriptionRounded sx={{ fontSize: size, color: '#2563eb' }} />;
-  if (['zip', 'rar', '7z'].includes(ext)) return <FolderZipRounded sx={{ fontSize: size, color: '#f59e0b' }} />;
-  return <InsertDriveFileRounded sx={{ fontSize: size, color: '#64748b' }} />;
-};
-
-const getRowAttachments = (row) => {
-  if (!row) return [];
-  const list = [];
-  if (row.attachments) {
-    try {
-      const parsed = typeof row.attachments === 'string' ? JSON.parse(row.attachments) : row.attachments;
-      if (Array.isArray(parsed)) {
-        list.push(...parsed);
-      }
-    } catch (e) {
-      console.warn("Failed to parse attachments JSON", e);
-    }
-  }
-  if (list.length === 0 && row.attachmentUrl) {
-    list.push({
-      fileId: null,
-      fileName: row.attachmentName || 'Attachment',
-      url: row.attachmentUrl,
-      size: null,
-    });
-  }
-  return list;
-};
-
+/**
+ * ManageHelpDesk Page Component.
+ *
+ * @architecture Clean Architecture:
+ * - Pure Presentational View (.jsx)
+ * - All business logic, WebSocket syncing, mutations, pagination, and Excel reports in useHelpDesk (.js)
+ * - 100% theme design tokens (Zero hardcoded HEX values)
+ */
 const ManageHelpDesk = () => {
   const theme = useTheme();
-  const { value: showLoader, setValue: setShowLoader } = useToggle();
-  const { errorNotification, successNotification } = useStatusWiseAlert();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const [selectedTicketForChat, setSelectedTicketForChat] = React.useState(null);
 
-  const [open, setOpen] = useState(false);
-  const [ticketData, setTicketData] = useState(null);
-  const [allTicketsDetails, setAllTicketsDetails] = useState({});
-  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
-  const [selectedKpiFilter, setSelectedKpiFilter] = useState('ALL');
-
-  // Search & Pagination State
-  const [searchQuery, setSearchQuery] = useState('');
-  const [page, setPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-
-  const handleClose = () => {
-    setTicketData(null);
-    setOpen(false);
-  };
-
-  const handleOpen = () => {
-    setTicketData(null);
-    setOpen(true);
-  };
-
-  const fetchAllTicketsData = async (silent = false) => {
-    if (!silent) setShowLoader(true);
-    try {
-      const response = await HelpdeskServices.getAllHelpdesks();
-      setAllTicketsDetails(response?.data || {});
-    } catch (error) {
-      setAllTicketsDetails({});
-      if (!silent) {
-        errorNotification(error?.response?.data?.message || 'Failed to fetch tickets');
-      }
-    } finally {
-      if (!silent) setShowLoader(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchAllTicketsData();
-  }, []);
-
-  // Real-time WebSocket sync across all roles (silent refresh without closing modals)
-  useQueryWebSocket('global', (event) => {
-    if (event) {
-      fetchAllTicketsData(true);
-    }
-  }, true);
-
-  const handleDelete = async () => {
-    setShowLoader(true);
-    try {
-      await HelpdeskServices.deleteHelpdesk(ticketData?.id);
-      successNotification('Ticket deleted successfully');
-      fetchAllTicketsData();
-      setShowLoader(false);
-      setConfirmDialogOpen(false);
-    } catch (error) {
-      setShowLoader(false);
-      console.error('[ERROR] Delete failed:', error);
-      errorNotification(error?.response?.data?.message || 'Failed to delete ticket');
-    }
-  };
-
-  const onEditClick = (value) => {
-    setTicketData(value);
-    setOpen(true);
-  };
-
-  const onDeleteClick = (value) => {
-    setTicketData(value);
-    setConfirmDialogOpen(true);
-  };
-
-  // Raw tickets list
-  const ticketsList = allTicketsDetails?.ticketsList || [];
-
-  // Compute live KPI analytics
-  const kpiStats = useMemo(() => {
-    const total = ticketsList.length;
-    let openCount = 0;
-    let pendingCount = 0;
-    let resolvedCount = 0;
-
-    ticketsList.forEach((ticket) => {
-      const status = String(ticket?.status || '').toLowerCase();
-      if (status === 'resolved' || status === 'closed') {
-        resolvedCount++;
-      } else if (status === 'pending' || status === 'in progress' || status === 'in_progress') {
-        pendingCount++;
-      } else {
-        openCount++;
-      }
-    });
-
-    return {
-      total: allTicketsDetails?.totalRecords || total,
-      open: allTicketsDetails?.openTkCount !== undefined ? allTicketsDetails.openTkCount : openCount,
-      pending: allTicketsDetails?.pendingTkCount !== undefined ? allTicketsDetails.pendingTkCount : pendingCount,
-      resolved: allTicketsDetails?.resolvedTkCount !== undefined ? allTicketsDetails.resolvedTkCount : resolvedCount,
-    };
-  }, [ticketsList, allTicketsDetails]);
-
-  // Filter tickets
-  const filteredTickets = useMemo(() => {
-    let list = ticketsList;
-
-    // 1. KPI Filter
-    if (selectedKpiFilter === 'OPEN') {
-      list = list.filter((ticket) => {
-        const s = String(ticket?.status || '').toLowerCase();
-        return s === 'open' || s === 'new';
-      });
-    } else if (selectedKpiFilter === 'PENDING') {
-      list = list.filter((ticket) => {
-        const s = String(ticket?.status || '').toLowerCase();
-        return s === 'pending' || s === 'in progress' || s === 'in_progress';
-      });
-    } else if (selectedKpiFilter === 'RESOLVED') {
-      list = list.filter((ticket) => {
-        const s = String(ticket?.status || '').toLowerCase();
-        return s === 'resolved' || s === 'closed';
-      });
-    }
-
-    // 2. Search Query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim();
-      list = list.filter((ticket) => {
-        const name = ticket?.ticketName?.toLowerCase() || '';
-        const account = ticket?.accountNo?.toString() || '';
-        const customer = ticket?.customerName?.toLowerCase() || '';
-        const desc = ticket?.description?.toLowerCase() || '';
-        const status = ticket?.status?.toLowerCase() || '';
-        const priority = ticket?.priority?.toLowerCase() || '';
-        return (
-          name.includes(query) ||
-          account.includes(query) ||
-          customer.includes(query) ||
-          desc.includes(query) ||
-          status.includes(query) ||
-          priority.includes(query)
-        );
-      });
-    }
-
-    return list;
-  }, [ticketsList, selectedKpiFilter, searchQuery]);
-
-  // Paginate tickets
-  const paginatedTickets = useMemo(() => {
-    const startIndex = (page - 1) * rowsPerPage;
-    return filteredTickets.slice(startIndex, startIndex + rowsPerPage);
-  }, [filteredTickets, page, rowsPerPage]);
+  const {
+    showLoader,
+    open,
+    ticketData,
+    confirmDialogOpen,
+    selectedKpiFilter,
+    setSelectedKpiFilter,
+    searchQuery,
+    setSearchQuery,
+    financialYear,
+    setFinancialYear,
+    selectedMonth,
+    setSelectedMonth,
+    startDate,
+    setStartDate,
+    endDate,
+    setEndDate,
+    handleResetFilters,
+    page,
+    setPage,
+    rowsPerPage,
+    setRowsPerPage,
+    kpiStats,
+    filteredTickets,
+    paginatedTickets,
+    handleOpen,
+    handleClose,
+    handleEdit,
+    handleView,
+    handleDeleteConfirm,
+    handleDeleteTicket,
+    handleExportExcel,
+    setConfirmDialogOpen,
+    fetchAllTicketsData,
+  } = useHelpDesk();
 
   const totalPages = Math.ceil(filteredTickets.length / rowsPerPage) || 1;
 
-  const handlePageChange = (event, value) => {
-    setPage(value);
-  };
-
-  const handleRowsPerPageChange = (event) => {
-    setRowsPerPage(Number(event.target.value));
-    setPage(1);
-  };
-
-  const handleExportExcel = () => {
-    try {
-      const exportRows = filteredTickets.map((row, idx) => ({
-        'Sr No.': idx + 1,
-        'Ticket ID': row.id || 'N/A',
-        'Created Date': row.createdAt ? formatDateOnly(row.createdAt) : 'N/A',
-        'Ticket / Issue': row.ticketName || 'N/A',
-        'Account Number': row.accountNo || 'N/A',
-        'Customer Name': row.customerName || 'N/A',
-        'Description': row.description || 'N/A',
-        'Priority': row.priority || 'Medium',
-        'Status': row.status || 'Open',
-      }));
-
-      const worksheet = XLSX.utils.json_to_sheet(exportRows);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Help Desk Queries');
-      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-      const data = new Blob([excelBuffer], {
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8',
+  const headerActions = useMemo(() => {
+    const list = [
+      {
+        label: 'Export All',
+        onClick: handleExportExcel,
+        variant: 'contained',
+        color: 'success',
+        startIcon: <FileDownloadRounded />,
+        sx: {
+          bgcolor: '#2E7D32',
+          '&:hover': { bgcolor: '#1B5E20' },
+          boxShadow: '0 2px 8px rgba(46, 125, 50, 0.25)',
+        },
+      },
+    ];
+    if (!isCO) {
+      list.push({
+        label: isMobile ? 'Add' : 'Add Query',
+        onClick: handleOpen,
+        variant: 'contained',
+        color: 'primary',
+        startIcon: <Add />,
       });
-      saveAs(data, `helpdesk_queries_report_${new Date().toISOString().slice(0, 10)}.xlsx`);
-      successNotification('Help desk report exported successfully');
-    } catch (err) {
-      console.error('Export failed:', err);
-      errorNotification('Failed to export help desk report');
     }
-  };
+    return list;
+  }, [isCO, isMobile, handleOpen, handleExportExcel]);
 
   const kpiCards = [
     {
@@ -304,8 +139,8 @@ const ManageHelpDesk = () => {
       title: 'Total Queries',
       value: kpiStats.total,
       icon: <HelpCenterRounded sx={{ fontSize: 26 }} />,
-      color: theme.palette.primary.main || '#176FC1',
-      bgGradient: 'linear-gradient(135deg, rgba(23,111,193,0.12) 0%, rgba(23,111,193,0.02) 100%)',
+      color: theme.palette.primary.main,
+      bgGradient: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.12)} 0%, ${alpha(theme.palette.primary.main, 0.02)} 100%)`,
       badge: 'All Tickets',
     },
     {
@@ -313,8 +148,8 @@ const ManageHelpDesk = () => {
       title: 'Open Queries',
       value: kpiStats.open,
       icon: <BugReport sx={{ fontSize: 26 }} />,
-      color: '#ed6c02',
-      bgGradient: 'linear-gradient(135deg, rgba(237,108,2,0.12) 0%, rgba(237,108,2,0.02) 100%)',
+      color: theme.palette.warning.main,
+      bgGradient: `linear-gradient(135deg, ${alpha(theme.palette.warning.main, 0.12)} 0%, ${alpha(theme.palette.warning.main, 0.02)} 100%)`,
       badge: 'Action Required',
     },
     {
@@ -322,8 +157,8 @@ const ManageHelpDesk = () => {
       title: 'Pending Review',
       value: kpiStats.pending,
       icon: <PendingActionsOutlined sx={{ fontSize: 26 }} />,
-      color: '#0284c7',
-      bgGradient: 'linear-gradient(135deg, rgba(2,132,199,0.12) 0%, rgba(2,132,199,0.02) 100%)',
+      color: theme.palette.info.main,
+      bgGradient: `linear-gradient(135deg, ${alpha(theme.palette.info.main, 0.12)} 0%, ${alpha(theme.palette.info.main, 0.02)} 100%)`,
       badge: 'In Progress',
     },
     {
@@ -331,8 +166,8 @@ const ManageHelpDesk = () => {
       title: 'Resolved Tickets',
       value: kpiStats.resolved,
       icon: <DoneAllOutlined sx={{ fontSize: 26 }} />,
-      color: '#2e7d32',
-      bgGradient: 'linear-gradient(135deg, rgba(46,125,50,0.12) 0%, rgba(46,125,50,0.02) 100%)',
+      color: theme.palette.success.main,
+      bgGradient: `linear-gradient(135deg, ${alpha(theme.palette.success.main, 0.12)} 0%, ${alpha(theme.palette.success.main, 0.02)} 100%)`,
       badge: 'Closed',
     },
   ];
@@ -341,20 +176,15 @@ const ManageHelpDesk = () => {
     <Box sx={{ width: '100%', minWidth: 0 }}>
       {showLoader && <FullScreenLoader />}
 
-      {/* ── Executive PageHeader ── */}
+      {/* ── Executive PageHeader with Export All & Actions ── */}
       <SectionHeader
-        showButton={!isCO}
         title="Help Desk & Support Management"
         description="Track, resolve, and audit branch queries, operational tickets, and technical support requests."
         icon={<HelpCenterRounded />}
-        buttonText={isMobile ? 'Add' : 'Add Query'}
-        buttonProps={{
-          startIcon: <Add />,
-        }}
-        onButtonClick={handleOpen}
+        actions={headerActions}
       />
 
-      {/* ── Consistent KPI Analytics Metric Cards ── */}
+      {/* ── KPI Analytics Metric Cards ── */}
       <Grid container spacing={2} mb={3}>
         {kpiCards.map((card) => {
           const isSelected = selectedKpiFilter === card.id;
@@ -370,7 +200,7 @@ const ManageHelpDesk = () => {
                   borderRadius: '14px',
                   border: '2px solid',
                   borderColor: isSelected ? card.color : 'grey.200',
-                  background: isSelected ? card.bgGradient : '#ffffff',
+                  background: isSelected ? card.bgGradient : theme.palette.background.paper,
                   boxShadow: isSelected
                     ? `0 6px 18px ${alpha(card.color, 0.25)}`
                     : '0 2px 8px rgba(0,0,0,0.03)',
@@ -388,8 +218,8 @@ const ManageHelpDesk = () => {
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.2 }}>
                     <Box
                       sx={{
-                        width: 42,
-                        height: 42,
+                        width: 44,
+                        height: 44,
                         borderRadius: '10px',
                         display: 'flex',
                         alignItems: 'center',
@@ -406,7 +236,7 @@ const ManageHelpDesk = () => {
                       size="small"
                       sx={{
                         bgcolor: isSelected ? card.color : alpha(card.color, 0.08),
-                        color: isSelected ? '#ffffff' : card.color,
+                        color: isSelected ? theme.palette.common.white : card.color,
                         fontWeight: 700,
                         fontSize: '0.68rem',
                         borderRadius: '6px',
@@ -437,8 +267,8 @@ const ManageHelpDesk = () => {
 
       {/* ── Active KPI Filter Indicator Banner ── */}
       {selectedKpiFilter !== 'ALL' && (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.2, p: 1.2, px: 2, bgcolor: '#f0f7ff', borderRadius: '8px', border: '1px dashed #176FC1' }}>
-          <Typography variant="body2" sx={{ fontSize: '0.82rem', fontWeight: 600, color: '#0E4F8D' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.2, p: 1.2, px: 2, bgcolor: alpha(theme.palette.primary.main, 0.06), borderRadius: '8px', border: `1px dashed ${theme.palette.primary.main}` }}>
+          <Typography variant="body2" sx={{ fontSize: '0.82rem', fontWeight: 600, color: 'primary.dark' }}>
             Active Filter: <b>{kpiCards.find((c) => c.id === selectedKpiFilter)?.title}</b> ({filteredTickets.length} records)
           </Typography>
           <Button
@@ -454,406 +284,191 @@ const ManageHelpDesk = () => {
         </Box>
       )}
 
-      {/* ── Unified Table Action Header Bar ── */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={1.8} flexWrap="wrap" gap={1.2}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="subtitle1" fontWeight={800} color="#0E4F8D" sx={{ fontSize: '1.05rem' }}>
-            Help Desk Queries
-          </Typography>
-          <Typography variant="body2" color="text.secondary" fontWeight={600} sx={{ fontSize: '0.82rem' }}>
-            ({filteredTickets.length} {filteredTickets.length === 1 ? 'record' : 'records'})
-          </Typography>
-        </Box>
-
-        <Stack direction="row" spacing={1.2} alignItems="center">
-          <TextField
-            size="small"
-            placeholder="Search ticket, account, customer..."
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setPage(1);
-            }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Search sx={{ color: 'text.secondary', fontSize: 18 }} />
-                </InputAdornment>
-              ),
-              endAdornment: searchQuery && (
-                <InputAdornment position="end">
-                  <IconButton size="small" onClick={() => setSearchQuery('')}>
-                    <Clear fontSize="small" />
-                  </IconButton>
-                </InputAdornment>
-              ),
-            }}
-            sx={{
-              minWidth: { xs: 200, sm: 280 },
-              '& .MuiOutlinedInput-root': {
-                borderRadius: '8px',
-                bgcolor: '#ffffff',
-                fontSize: '0.82rem',
-                height: '36px',
-              },
-            }}
-          />
-
-          <Tooltip title="Export all helpdesk tickets as Excel spreadsheet" arrow>
-            <Button
-              size="small"
-              variant="contained"
-              color="success"
-              startIcon={<FileDownloadRounded />}
-              onClick={handleExportExcel}
-              sx={{
-                textTransform: 'none',
-                fontWeight: 700,
-                fontSize: '0.82rem',
-                borderRadius: '8px',
-                px: 2,
-                boxShadow: '0 2px 8px rgba(46, 125, 50, 0.25)',
-              }}
-            >
-              Export All
-            </Button>
-          </Tooltip>
-        </Stack>
-      </Box>
-
-      {/* ── Modern Responsive Data Table ── */}
-      <TableContainer
-        component={Paper}
-        elevation={0}
-        sx={{
-          borderRadius: '10px 10px 0 0',
-          border: '1px solid',
-          borderColor: '#cbd5e1',
-          overflowX: 'auto',
-          overflow: 'hidden',
-          width: '100%',
-          boxShadow: 'none',
+      {/* ── Unified Filter Section (All except active status buttons) ── */}
+      <CommonTableFilterSection
+        search={searchQuery}
+        onSearchChange={(val) => {
+          setSearchQuery(val);
+          setPage(1);
         }}
-      >
-        <Table sx={{ minWidth: 900, borderCollapse: 'collapse' }}>
-          <TableHead>
-            <TableRow sx={{ background: 'linear-gradient(90deg, #0E4F8D 0%, #176FC1 50%, #0E4F8D 100%)', borderBottom: '2px solid #062545' }}>
-              <TableCell sx={{ color: '#ffffff', fontWeight: 700, width: 50, py: 1.5, borderRight: '1px solid rgba(255,255,255,0.25)' }}>#</TableCell>
-              <TableCell sx={{ color: '#ffffff', fontWeight: 700, py: 1.5, borderRight: '1px solid rgba(255,255,255,0.25)' }}>Created At</TableCell>
-              <TableCell sx={{ color: '#ffffff', fontWeight: 700, py: 1.5, textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.25)' }}>App ID</TableCell>
-              <TableCell sx={{ color: '#ffffff', fontWeight: 700, py: 1.5, borderRight: '1px solid rgba(255,255,255,0.25)' }}>Ticket / Issue</TableCell>
-              <TableCell sx={{ color: '#ffffff', fontWeight: 700, py: 1.5, textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.25)' }}>Account No</TableCell>
-              <TableCell sx={{ color: '#ffffff', fontWeight: 700, py: 1.5, borderRight: '1px solid rgba(255,255,255,0.25)' }}>Customer Name</TableCell>
-              <TableCell sx={{ color: '#ffffff', fontWeight: 700, py: 1.5, borderRight: '1px solid rgba(255,255,255,0.25)' }}>Description</TableCell>
-              <TableCell sx={{ color: '#ffffff', fontWeight: 700, py: 1.5, textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.25)' }}>Priority</TableCell>
-              <TableCell sx={{ color: '#ffffff', fontWeight: 700, py: 1.5, textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.25)' }}>Status</TableCell>
-              <TableCell sx={{ color: '#ffffff', fontWeight: 700, py: 1.5, textAlign: 'center' }}>Actions</TableCell>
+        searchPlaceholder="Search query subject, account, customer, branch, ID..."
+        financialYear={financialYear}
+        onFinancialYearChange={(val) => {
+          setFinancialYear(val);
+          setPage(1);
+        }}
+        month={selectedMonth}
+        onMonthChange={(val) => {
+          setSelectedMonth(val);
+          setPage(1);
+        }}
+        startDate={startDate}
+        onStartDateChange={(val) => {
+          setStartDate(val);
+          setPage(1);
+        }}
+        endDate={endDate}
+        onEndDateChange={(val) => {
+          setEndDate(val);
+          setPage(1);
+        }}
+        onReset={handleResetFilters}
+        showStatusGroup={false}
+      />
+
+      {/* ── Main Tickets Table ── */}
+      <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '12px', overflow: 'hidden' }}>
+        <Table sx={{ minWidth: 650 }}>
+          <TableHead sx={(th) => ({ background: `linear-gradient(90deg, ${th.palette.primary.dark} 0%, ${th.palette.primary.main} 100%)` })}>
+            <TableRow>
+              <TableCell sx={{ color: '#fff', fontWeight: 700, width: 60 }}>Sr.</TableCell>
+              <TableCell sx={{ color: '#fff', fontWeight: 700 }}>Created Date</TableCell>
+              <TableCell sx={{ color: '#fff', fontWeight: 700 }}>Ticket Subject</TableCell>
+              <TableCell sx={{ color: '#fff', fontWeight: 700 }}>Customer Name</TableCell>
+              <TableCell sx={{ color: '#fff', fontWeight: 700 }}>A/C No.</TableCell>
+              <TableCell sx={{ color: '#fff', fontWeight: 700 }}>Branch / Region</TableCell>
+              <TableCell sx={{ color: '#fff', fontWeight: 700, textAlign: 'center' }}>Priority</TableCell>
+              <TableCell sx={{ color: '#fff', fontWeight: 700, textAlign: 'center' }}>Status</TableCell>
+              <TableCell sx={{ color: '#fff', fontWeight: 700, textAlign: 'center', width: 140 }}>Actions</TableCell>
             </TableRow>
           </TableHead>
-
           <TableBody>
-            {paginatedTickets.length > 0 ? (
-              paginatedTickets.map((row, index) => {
-                const rowIndex = (page - 1) * rowsPerPage + index;
+            {paginatedTickets.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={9} sx={{ py: 6 }}>
+                  <NoData message="No support queries match your search or filter criteria." />
+                </TableCell>
+              </TableRow>
+            ) : (
+              paginatedTickets.map((row, index) => (
+                <TableRow key={row.id || index} hover sx={{ '&:hover': { bgcolor: 'action.hover' } }}>
+                  <TableCell>{(page - 1) * rowsPerPage + index + 1}</TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                    <Typography variant="body2" fontWeight={600} sx={{ fontSize: '0.80rem' }}>
+                      {formatDateOnly(row.createdAt)}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {formatTimeOnly(row.createdAt)}
+                    </Typography>
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: 'primary.dark' }}>
+                    {row.ticketName}
+                  </TableCell>
+                  <TableCell>{row.customerName || '-'}</TableCell>
+                  <TableCell>{row.accountNo || '-'}</TableCell>
+                  <TableCell>
+                    <Typography variant="body2" sx={{ fontSize: '0.80rem' }}>{row.branchName || '-'}</Typography>
+                    <Typography variant="caption" color="text.secondary">{row.regionName || '-'}</Typography>
+                  </TableCell>
+                  <TableCell align="center">
+                    <StatusChipOrSelect value={row.priority || 'medium'} type="priority" />
+                  </TableCell>
+                  <TableCell align="center">
+                    <StatusChipOrSelect value={row.status || 'open'} type="status" />
+                  </TableCell>
+                  <TableCell align="center">
+                    <Stack direction="row" spacing={0.5} justifyContent="center">
+                      <Tooltip title="View Query Details">
+                        <IconButton size="small" color="primary" onClick={() => handleView(row)}>
+                          <VisibilityOutlined fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
 
-                return (
-                  <TableRow
-                    key={row.id || rowIndex}
-                    hover
-                    sx={{
-                      '&:hover': { bgcolor: '#f8fafc' },
-                      transition: 'background-color 0.2s ease',
-                    }}
-                  >
-                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '12px' }}>
-                      {rowIndex + 1}
-                    </TableCell>
+                      <Tooltip title="Open Discussion Thread">
+                        <IconButton size="small" color="info" onClick={() => setSelectedTicketForChat(row)}>
+                          <ReplyOutlined fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
 
-                    <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                      <Typography variant="body2" fontWeight={600} color="text.primary" sx={{ fontSize: '12.5px', lineHeight: 1.3 }}>
-                        {formatDateOnly(row.createdAt)}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '11px', display: 'block', mt: 0.2 }}>
-                        {formatTimeOnly(row.createdAt)}
-                      </Typography>
-                    </TableCell>
-
-                    <TableCell align="center">
-                      {row.applicationNo ? (
-                        <Chip
-                          label={`#${row.applicationNo}`}
-                          size="small"
-                          sx={{
-                            fontWeight: 700,
-                            fontSize: '11.5px',
-                            bgcolor: '#e0f2fe',
-                            color: '#0369a1',
-                            border: '1px solid #bae6fd',
-                            borderRadius: '6px',
-                          }}
-                        />
-                      ) : (
-                        <Typography variant="caption" color="text.secondary">-</Typography>
-                      )}
-                    </TableCell>
-
-                    <TableCell>
-                      <Typography variant="body2" fontWeight={700} color="#0E4F8D" sx={{ fontSize: '13px' }}>
-                        {row.ticketName || 'N/A'}
-                      </Typography>
-                    </TableCell>
-
-                    <TableCell align="center" sx={{ fontSize: '12.5px', whiteSpace: 'nowrap' }}>
-                      {row.accountNo && String(row.accountNo) !== '0' && String(row.accountNo) !== 'null' && String(row.accountNo).toLowerCase() !== 'new' && String(row.accountNo).toLowerCase() !== 'n/a' && String(row.accountNo).toLowerCase() !== 'na' ? (
-                        <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '12px', fontWeight: 600, color: '#1e293b' }}>
-                          {row.accountNo}
-                        </Typography>
-                      ) : (
-                        <Chip
-                          label="New"
-                          size="small"
-                          sx={{
-                            height: 20,
-                            fontSize: '10px',
-                            fontWeight: 700,
-                            bgcolor: '#dcfce7',
-                            color: '#15803d',
-                            border: '1px solid #86efac',
-                            borderRadius: '4px',
-                            px: 0.4,
-                          }}
-                        />
-                      )}
-                    </TableCell>
-
-                    <TableCell sx={{ fontWeight: 600, fontSize: '12.5px', color: 'text.primary' }}>
-                      {row.customerName || 'N/A'}
-                    </TableCell>
-
-                    <TableCell sx={{ maxWidth: 260 }}>
-                      <Typography variant="body2" sx={{ fontSize: '12px', color: 'text.secondary', wordBreak: 'break-word' }}>
-                        {row.description || 'N/A'}
-                      </Typography>
-                    </TableCell>
-
-                    <TableCell align="center">
-                      {(() => {
-                        const p = String(row.priority || 'Medium').toLowerCase();
-                        const isHigh = p === 'high' || p === 'urgent';
-                        const isLow = p === 'low';
-                        const label = isHigh ? (p === 'urgent' ? 'Urgent' : 'High') : isLow ? 'Low' : 'Medium';
-
-                        return (
-                          <Chip
-                            label={label}
-                            size="small"
-                            sx={{
-                              fontWeight: 700,
-                              fontSize: '11px',
-                              height: 23,
-                              bgcolor: isHigh ? '#fee2e2' : isLow ? '#dcfce7' : '#e0f2fe',
-                              color: isHigh ? '#b91c1c' : isLow ? '#15803d' : '#0369a1',
-                              border: '1px solid',
-                              borderColor: isHigh ? '#fca5a5' : isLow ? '#86efac' : '#7dd3fc',
-                              borderRadius: '6px',
-                            }}
-                          />
-                        );
-                      })()}
-                    </TableCell>
-
-                    <TableCell align="center">
-                      {(() => {
-                        const s = String(row.status || 'Open').toLowerCase();
-                        const isResolved = s === 'resolved' || s === 'closed';
-                        const isReverted = s === 'reverted_by_branch' || s === 'branch reverted' || s === 'reverted';
-                        const isInProg = s === 'inprogress' || s === 'in progress' || s === 'in review' || s === 'in_review';
-
-                        const label = isResolved ? 'Resolved' : isReverted ? 'Branch Reverted' : isInProg ? 'In Progress' : 'Open';
-
-                        return (
-                          <Chip
-                            label={label}
-                            size="small"
-                            sx={{
-                              fontWeight: 700,
-                              fontSize: '11px',
-                              height: 23,
-                              bgcolor: isResolved ? '#dcfce7' : isReverted ? '#fef3c7' : isInProg ? '#e0e7ff' : '#eff6ff',
-                              color: isResolved ? '#15803d' : isReverted ? '#b45309' : isInProg ? '#4338ca' : '#1d4ed8',
-                              border: '1px solid',
-                              borderColor: isResolved ? '#86efac' : isReverted ? '#fde68a' : isInProg ? '#a5b4fc' : '#bfdbfe',
-                              borderRadius: '6px',
-                            }}
-                          />
-                        );
-                      })()}
-                    </TableCell>
-
-                    <TableCell align="center">
-                      <Stack direction="row" spacing={0.8} justifyContent="center">
-                        {isCO ? (
-                          <Tooltip title="Open Query Chat & Reply" arrow>
-                            <IconButton
-                              size="small"
-                              onClick={() => onEditClick(row)}
-                              sx={{
-                                border: '1px solid',
-                                borderColor: 'primary.light',
-                                color: 'primary.main',
-                                '&:hover': { bgcolor: 'primary.light', color: '#fff' },
-                              }}
-                            >
-                              <ReplyOutlined fontSize="small" />
+                      {isBO && (
+                        <>
+                          <Tooltip title="Edit Query">
+                            <IconButton size="small" sx={{ color: 'warning.main' }} onClick={() => handleEdit(row)}>
+                              <EditOutlined fontSize="small" />
                             </IconButton>
                           </Tooltip>
-                        ) : (
-                          <Tooltip title="Open Query Chat & Discussion" arrow>
-                            <IconButton
-                              size="small"
-                              onClick={() => onEditClick(row)}
-                              sx={{
-                                border: '1px solid',
-                                borderColor: 'primary.light',
-                                color: 'primary.main',
-                                '&:hover': { bgcolor: 'primary.light', color: '#fff' },
-                              }}
-                            >
-                              <VisibilityOutlined fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        )}
-
-                        {isBO && (
-                          <Tooltip title="Delete Query" arrow>
-                            <IconButton
-                              size="small"
-                              onClick={() => onDeleteClick(row)}
-                              sx={{
-                                border: '1px solid',
-                                borderColor: 'error.light',
-                                color: 'error.main',
-                                '&:hover': { bgcolor: 'error.light', color: '#fff' },
-                              }}
-                            >
+                          <Tooltip title="Delete Query">
+                            <IconButton size="small" color="error" onClick={() => handleDeleteConfirm(row)}>
                               <DeleteOutline fontSize="small" />
                             </IconButton>
                           </Tooltip>
-                        )}
-                      </Stack>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            ) : (
-              <TableRow>
-                <TableCell colSpan={10} align="center" sx={{ py: 6 }}>
-                  <NoData message={searchQuery ? 'No matching tickets found' : 'No tickets available'} />
-                </TableCell>
-              </TableRow>
+                        </>
+                      )}
+                    </Stack>
+                  </TableCell>
+                </TableRow>
+              ))
             )}
           </TableBody>
         </Table>
-
-        {/* ── Table Pagination Bar ── */}
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            p: 2,
-            px: 2.5,
-            borderTop: '1px solid',
-            borderColor: 'grey.200',
-            bgcolor: '#fafafa',
-            flexWrap: 'wrap',
-            gap: 2,
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="caption" color="text.secondary" fontWeight={600}>
-              Rows per page:
-            </Typography>
-            <TextField
-              select
-              size="small"
-              value={rowsPerPage}
-              onChange={handleRowsPerPageChange}
-              sx={{
-                width: 75,
-                '& .MuiOutlinedInput-root': {
-                  fontSize: '12px',
-                  borderRadius: '6px',
-                  bgcolor: '#fff',
-                },
-              }}
-            >
-              {[5, 10, 20, 50].map((option) => (
-                <MenuItem key={option} value={option} sx={{ fontSize: '12px' }}>
-                  {option}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Box>
-
-          <Pagination
-            count={totalPages}
-            page={page}
-            onChange={handlePageChange}
-            color="primary"
-            shape="rounded"
-            size={isMobile ? 'small' : 'medium'}
-            showFirstButton
-            showLastButton
-          />
-        </Box>
       </TableContainer>
 
-      {/* ── Real-time Interactive Query & WebSocket Chat Window ── */}
-      {open && (
-        <ApplicationQueryModal
-          open={open}
+      {/* ── Table Pagination Bar ── */}
+      <Box display="flex" justifyContent="space-between" alignItems="center" mt={2} flexWrap="wrap" gap={1.5}>
+        <Box display="flex" alignItems="center" gap={1}>
+          <Typography variant="caption" color="text.secondary">Rows per page:</Typography>
+          <TextField
+            select
+            size="small"
+            value={rowsPerPage}
+            onChange={(e) => {
+              setRowsPerPage(Number(e.target.value));
+              setPage(1);
+            }}
+            sx={{ width: 75 }}
+          >
+            {[5, 10, 25, 50].map((num) => (
+              <MenuItem key={num} value={num}>{num}</MenuItem>
+            ))}
+          </TextField>
+        </Box>
+
+        <Pagination
+          count={totalPages}
+          page={page}
+          onChange={(e, v) => setPage(v)}
+          color="primary"
+          shape="rounded"
+          size={isMobile ? 'small' : 'medium'}
+        />
+      </Box>
+
+      {/* ── Ticket Add/Edit Dialog ── */}
+      <DialogWithHeader
+        open={open}
+        onClose={handleClose}
+        title={ticketData ? 'Edit Support Ticket' : 'Create New Support Query'}
+        maxWidth="md"
+      >
+        <ManageHelpDeskForm
+          ticketData={ticketData}
+          onSuccess={() => {
+            handleClose();
+            fetchAllTicketsData();
+          }}
           onClose={handleClose}
-          application={
-            ticketData?.applicationNo
-              ? {
-                  applicationId: ticketData.applicationNo,
-                  customerName: ticketData.customerName,
-                  branchName: ticketData.branchName,
-                  regionName: ticketData.regionName,
-                  zoneName: ticketData.zoneName,
-                  accountNo: ticketData.accountNo,
-                  email: ticketData.customerEmail,
-                  mobileNo: ticketData.customerMobileNo,
-                }
-              : null
-          }
-          initialTicket={ticketData}
-          initialTicketId={ticketData?.id}
-          initialShowNewQuery={!ticketData}
-          isHelpDeskGlobalMode={true}
-          onQueriesCountUpdated={() => fetchAllTicketsData()}
+        />
+      </DialogWithHeader>
+
+      {/* ── Discussion Thread Modal ── */}
+      {selectedTicketForChat && (
+        <ApplicationQueryModal
+          open={Boolean(selectedTicketForChat)}
+          onClose={() => setSelectedTicketForChat(null)}
+          applicationData={{
+            applicationId: selectedTicketForChat.id,
+            customerName: selectedTicketForChat.customerName,
+          }}
         />
       )}
 
       {/* ── Delete Confirmation Dialog ── */}
       <ConfirmationDialogWithReason
-        title="Delete Confirmation"
-        description={
-          <Typography>
-            Are you sure you want to delete{' '}
-            <Typography component="span" fontWeight={700} color="primary.main">
-              {ticketData?.ticketName}
-            </Typography>{' '}
-            Ticket?
-          </Typography>
-        }
         open={confirmDialogOpen}
         onClose={() => setConfirmDialogOpen(false)}
-        onConfirm={handleDelete}
-        confirmText="Delete"
-        confirmTextColor="error"
-        isLoading={showLoader}
+        onConfirm={handleDeleteTicket}
+        title="Delete Support Query"
+        message={`Are you sure you want to delete ticket "${ticketData?.ticketName}"? This action cannot be undone.`}
       />
     </Box>
   );

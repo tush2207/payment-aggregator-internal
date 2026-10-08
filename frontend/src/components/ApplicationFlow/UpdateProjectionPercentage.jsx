@@ -2,41 +2,22 @@ import React, { useEffect, useState, useMemo } from 'react';
 import {
   Box,
   Button,
-  Container,
   Table,
   TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  TextField,
   Typography,
-  IconButton,
-  Tooltip,
   Paper,
-  TableContainer,
   Chip,
   Stack,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Alert,
 } from '@mui/material';
 import {
   Add,
-  DeleteOutline,
   AutoFixHighRounded,
   RestartAltRounded,
-  InfoOutlined,
   CheckCircleRounded,
   WarningAmberRounded,
   TrendingUpRounded,
-  Close,
 } from '@mui/icons-material';
+import { CommonAppTable, CommonTableHeader, CommonTableTotalRow, CommonTableEmptyState } from '&src/components/Tables/common';
 import { PROJECTION_CAL_DETAILS } from '&src/constants/PaymentAggregratorConstant';
 import aggregatorProjections from '&src/services/aggregatorProjections';
 import useStatusWiseAlert from '&src/components/ToastNotifications/useStatusWiseAlert';
@@ -45,23 +26,18 @@ import { generateProjectionArray, calculateProjectionDetails, getProjectionsForC
 import { formatNumber } from '&src/utils';
 import { useDispatch } from 'react-redux';
 import { updateApplicationWorkflow } from '&src/store/applicationFlowSlice';
+import ProjectionTableRow from './ProjectionTableRow';
+import AddChannelModal from './AddChannelModal';
 
-const PRESET_CHANNELS = [
-  'Internet banking',
-  'UPI',
-  'Debit card - Rupay',
-  'Debit card - Master/Visa (Above 2000)',
-  'Debit card - Master/Visa (Upto 2000)',
-  'Credit cards',
-  'Corporate Net Banking',
-  'Wallets & Prepaid Cards',
-  'Bharat QR / Dynamic QR',
-  'International Cards & Forex',
-  'BNPL & EMI Payments',
-  'Custom Channel',
+const PROJECTION_COLUMNS = [
+  { label: '#', width: 45 },
+  { label: 'Transaction Type / Payment Channel', minWidth: 200 },
+  { label: 'Share Txn Count (%)', align: 'center', width: 160 },
+  { label: 'Share Txn Value (%)', align: 'center', width: 160 },
+  { label: 'Actions', align: 'center', width: 80 },
 ];
 
-const UpdateProjectionPercentage = ({ customerDetails }) => {
+export const UpdateProjectionPercentage = ({ customerDetails }) => {
   const dispatch = useDispatch();
   const { errorNotification, successNotification } = useStatusWiseAlert();
 
@@ -79,41 +55,28 @@ const UpdateProjectionPercentage = ({ customerDetails }) => {
   const [loading, setLoading] = useState(false);
   const [allCharges, setAllCharges] = useState([]);
   const [addModalOpen, setAddModalOpen] = useState(false);
-  const [newChannelType, setNewChannelType] = useState('UPI');
-  const [customChannelName, setCustomChannelName] = useState('');
-  const [newCountPercent, setNewCountPercent] = useState(0);
-  const [newValuePercent, setNewValuePercent] = useState(0);
 
-  // ---------------------- Initialize Baseline Projections ----------------------
   const initializeBaseline = async () => {
     if (!applicationId) return;
     try {
       const res = await aggregatorProjections.getAllProjections(applicationId, 0);
       const rawData = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
       if (rawData.length > 0) {
-        const loadedList = rawData.map((p, idx) => {
-          const countNum = parseInt(p.transactionCount, 10) || 0;
-          const valNum = parseInt(p.transactionValue, 10) || 0;
-          return {
+        setAllCharges(
+          rawData.map((p, idx) => ({
             ...p,
             id: p.id || idx + 1,
-            transactionCount: countNum,
-            transactionValue: valNum,
-          };
-        });
-        setAllCharges(loadedList);
+            transactionCount: parseInt(p.transactionCount, 10) || 0,
+            transactionValue: parseInt(p.transactionValue, 10) || 0,
+          }))
+        );
         return;
       }
     } catch (err) {
-      console.warn("Could not fetch existing projections, falling back to default baseline:", err);
+      console.warn('Projections fallback:', err);
     }
 
-    const list = getProjectionsForCustomer(
-      PROJECTION_CAL_DETAILS,
-      customerDetails?.projection,
-      avgTransactionSize,
-      applicationId
-    );
+    const list = getProjectionsForCustomer(PROJECTION_CAL_DETAILS, customerDetails?.projection, avgTransactionSize, applicationId);
     setAllCharges(list);
   };
 
@@ -121,665 +84,247 @@ const UpdateProjectionPercentage = ({ customerDetails }) => {
     initializeBaseline();
   }, [customerDetails?.applicationId, customerDetails?.projection, customerDetails?.avgTransactionSize]);
 
-  // Handle numeric percentage change
   const handleNumericChange = (id, field, value) => {
-    if (value === '' || /^\d+$/.test(value)) {
-      const numVal = value === '' ? 0 : Math.min(100, Math.max(0, parseInt(value, 10)));
-      setAllCharges((prev) =>
-        prev.map((row) => (row.id === id ? { ...row, [field]: numVal } : row))
-      );
+    if (value === '') {
+      setAllCharges((prev) => prev.map((row) => (row.id === id ? { ...row, [field]: '' } : row)));
+      return;
+    }
+    if (/^\d+$/.test(value)) {
+      const numVal = Math.min(100, Math.max(0, parseInt(value, 10)));
+      setAllCharges((prev) => prev.map((row) => (row.id === id ? { ...row, [field]: numVal } : row)));
     }
   };
 
-  // Add new projection row
-  const handleConfirmAddChannel = () => {
-    const channelName =
-      newChannelType === 'Custom Channel'
-        ? customChannelName.trim() || 'Custom Payment Method'
-        : newChannelType;
-
-    if (!channelName) {
-      errorNotification('Please specify a valid channel name.');
-      return;
-    }
-
-    // Check if channel already exists
-    const exists = allCharges.some(
-      (c) => c.transactionType.toLowerCase() === channelName.toLowerCase()
+  const handleBlurField = (id, field) => {
+    setAllCharges((prev) =>
+      prev.map((row) => (row.id === id && (row[field] === '' || row[field] == null) ? { ...row, [field]: 0 } : row))
     );
-    if (exists) {
-      errorNotification(`Channel "${channelName}" already exists in the projection list.`);
+  };
+
+  const handleAddChannelSubmit = ({ channelName, countPercent, valuePercent }) => {
+    if (allCharges.some((c) => c.transactionType.toLowerCase() === channelName.toLowerCase())) {
+      errorNotification(`Channel "${channelName}" already exists.`);
       return;
     }
-
     const nextId = allCharges.length > 0 ? Math.max(...allCharges.map((c) => c.id)) + 1 : 1;
-    const countVal = Math.min(100, Math.max(0, parseInt(newCountPercent, 10) || 0));
-    const valVal = Math.min(100, Math.max(0, parseInt(newValuePercent, 10) || 0));
+    const countVal = Math.min(100, Math.max(0, parseInt(countPercent, 10) || 0));
+    const valVal = Math.min(100, Math.max(0, parseInt(valuePercent, 10) || 0));
 
-    const newRow = {
-      id: nextId,
-      order: nextId,
-      applicationId: applicationId || null,
-      aggregatorId: null,
-      transactionType: channelName,
-      transactionCount: countVal,
-      transactionValue: valVal,
-      transactionTypePercent: `${valVal}%`,
-      isIB: false,
-      allow: true,
-      rate: 0,
-      unit: '%',
-      bankUnit: '%',
-      chargesProposed: 0,
-      grossAmount: 0,
-      vendorShare: 0,
-      expectedRevenue: 0,
-      estimatedTransactions: 0,
-      aggregateAmount: 0,
-      isDeleted: false,
-      quoteVersion: 1,
-      revisionRemarks: null,
-      isCustom: true,
-    };
-
-    setAllCharges((prev) => [...prev, newRow]);
+    setAllCharges((prev) => [
+      ...prev,
+      {
+        id: nextId,
+        order: nextId,
+        applicationId: applicationId || null,
+        transactionType: channelName,
+        transactionCount: countVal,
+        transactionValue: valVal,
+        isIB: false,
+        isCustom: true,
+      },
+    ]);
     setAddModalOpen(false);
-    setCustomChannelName('');
-    setNewCountPercent(0);
-    setNewValuePercent(0);
-    successNotification(`Added "${channelName}" to projection channels.`);
+    successNotification(`Added "${channelName}".`);
   };
 
   const handleDeleteRow = (id) => {
     setAllCharges((prev) => prev.filter((row) => row.id !== id));
-    successNotification('Channel removed from projections.');
+    successNotification('Channel removed.');
   };
 
-  // ---------------------- Auto-Balance & Normalize Percentages ----------------------
   const handleAutoBalance = () => {
     const parentRows = allCharges.filter((r) => !r.isIB);
     if (!parentRows.length) return;
-
-    const curTotalCount = parentRows.reduce((sum, r) => sum + (r.transactionCount || 0), 0);
-
+    const curTotalCount = parentRows.reduce((sum, r) => sum + (Number(r.transactionCount) || 0), 0);
     let updated = [...allCharges];
 
-    // 1. Balance Count Percentages
     if (curTotalCount > 0 && curTotalCount !== 100) {
-      let allocatedCount = 0;
+      let allocated = 0;
       updated = updated.map((row, idx) => {
         if (row.isIB) return row;
-        if (idx === parentRows.length - 1) {
-          // Put remainder on last row to guarantee exact 100 sum
-          const lastCount = Math.max(0, 100 - allocatedCount);
-          return { ...row, transactionCount: lastCount };
-        }
-        const proportion = (row.transactionCount / curTotalCount) * 100;
-        const rounded = Math.round(proportion);
-        allocatedCount += rounded;
-        return { ...row, transactionCount: rounded };
-      });
-    } else if (curTotalCount === 0) {
-      // Distribute evenly
-      const countShare = Math.floor(100 / parentRows.length);
-      const rem = 100 % parentRows.length;
-      let pIdx = 0;
-      updated = updated.map((row) => {
-        if (row.isIB) return row;
-        const val = countShare + (pIdx === 0 ? rem : 0);
-        pIdx++;
+        if (idx === parentRows.length - 1) return { ...row, transactionCount: Math.max(0, 100 - allocated) };
+        const val = Math.round(((Number(row.transactionCount) || 0) / curTotalCount) * 100);
+        allocated += val;
         return { ...row, transactionCount: val };
       });
     }
 
-    // 2. Balance Value Percentages
-    const nonIbRows = updated.filter((r) => !r.isIB);
-    const postTotalVal = nonIbRows.reduce((sum, r) => sum + (r.transactionValue || 0), 0);
-
+    const nonIb = updated.filter((r) => !r.isIB);
+    const postTotalVal = nonIb.reduce((sum, r) => sum + (Number(r.transactionValue) || 0), 0);
     if (postTotalVal > 0 && postTotalVal !== 100) {
       let allocatedVal = 0;
       updated = updated.map((row, idx) => {
         if (row.isIB) return row;
-        if (idx === nonIbRows.length - 1) {
-          const lastVal = Math.max(0, 100 - allocatedVal);
-          return { ...row, transactionValue: lastVal };
-        }
-        const proportion = (row.transactionValue / postTotalVal) * 100;
-        const rounded = Math.round(proportion);
-        allocatedVal += rounded;
-        return { ...row, transactionValue: rounded };
-      });
-    } else if (postTotalVal === 0) {
-      const valShare = Math.floor(100 / nonIbRows.length);
-      const rem = 100 % nonIbRows.length;
-      let pIdx = 0;
-      updated = updated.map((row) => {
-        if (row.isIB) return row;
-        const val = valShare + (pIdx === 0 ? rem : 0);
-        pIdx++;
+        if (idx === nonIb.length - 1) return { ...row, transactionValue: Math.max(0, 100 - allocatedVal) };
+        const val = Math.round(((Number(row.transactionValue) || 0) / postTotalVal) * 100);
+        allocatedVal += val;
         return { ...row, transactionValue: val };
       });
     }
-
     setAllCharges(updated);
     successNotification('Percentages normalized to exactly 100%.');
   };
 
-  // ---------------------- Totals & Live Metrics ----------------------
   const visibleCharges = useMemo(() => allCharges.filter((r) => !r.isIB), [allCharges]);
-  const totalCount = useMemo(() => visibleCharges.reduce((sum, r) => sum + (r.transactionCount || 0), 0), [visibleCharges]);
-  const totalValue = useMemo(() => visibleCharges.reduce((sum, r) => sum + (r.transactionValue || 0), 0), [visibleCharges]);
+  const totalCount = useMemo(() => visibleCharges.reduce((s, r) => s + (Number(r.transactionCount) || 0), 0), [visibleCharges]);
+  const totalValue = useMemo(() => visibleCharges.reduce((s, r) => s + (Number(r.transactionValue) || 0), 0), [visibleCharges]);
+  const isFormValid = totalCount === 100 && totalValue === 100;
 
-  const isCountValid = totalCount === 100;
-  const isValueValid = totalValue === 100;
-  const isFormValid = isCountValid && isValueValid;
-
-  // ---------------------- Save & Process Step ----------------------
   const saveAllCharges = async () => {
     if (!isFormValid) {
-      errorNotification(
-        `Total Count must equal 100% (currently ${totalCount}%) and Total Value must equal 100% (currently ${totalValue}%). Click "Auto-Balance Percentages" to fix automatically.`
-      );
+      errorNotification(`Total Count (${totalCount}%) and Total Value (${totalValue}%) must equal 100%.`);
       return;
     }
-
     setLoading(true);
     try {
-      // Format charges with % suffix for DB compatibility
-      const formattedCharges = allCharges.map((item) => ({
+      const formatted = allCharges.map((item) => ({
         ...item,
-        transactionCount: item.isIB ? '' : `${item.transactionCount}%`,
-        transactionValue: item.isIB ? '' : `${item.transactionValue}%`,
+        transactionCount: item.isIB ? '' : `${Number(item.transactionCount) || 0}%`,
+        transactionValue: item.isIB ? '' : `${Number(item.transactionValue) || 0}%`,
       }));
-
-      // Generate projection details payload
-      const updatedPayload = calculateProjectionDetails({
-        projectionDetails: formattedCharges,
+      const payload = calculateProjectionDetails({
+        projectionDetails: formatted,
         avgTransactionYearly: totalTxns,
         aggregateDepositAmt: totalVolume,
         applicationId,
       });
-
       try {
-        await aggregatorProjections.updateProjectionByApplication(applicationId, updatedPayload);
-      } catch (dbErr) {
-        console.warn('Projection DB update warning:', dbErr);
+        await aggregatorProjections.updateProjectionByApplication(applicationId, payload);
+      } catch (e) {
+        console.warn('DB update:', e);
       }
-
-      // Advance workflow to Step 2 ("Add Aggregator")
-      await dispatch(
-        updateApplicationWorkflow({
-          applicationId,
-          payload: { isProjectionAdded: true },
-        })
-      );
-
-      successNotification('Projections saved successfully! Advancing to Step 2: Add Payment Aggregators.');
+      await dispatch(updateApplicationWorkflow({ applicationId, payload: { isProjectionAdded: true } }));
+      successNotification('Projections saved successfully! Advancing to Step 2.');
     } catch (err) {
-      console.error('Error saving projections:', err);
-      errorNotification(err?.response?.data?.message || err?.message || 'Failed to save projections.');
+      errorNotification(err?.message || 'Failed to save projections.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Skip Step with standard defaults
   const handleSkip = async () => {
     setLoading(true);
     try {
-      const projectionList = generateProjectionArray(PROJECTION_CAL_DETAILS, avgTransactionSize);
-      const defaultPayload = calculateProjectionDetails({
-        projectionDetails: projectionList,
+      const defaultList = generateProjectionArray(PROJECTION_CAL_DETAILS, avgTransactionSize);
+      const payload = calculateProjectionDetails({
+        projectionDetails: defaultList,
         avgTransactionYearly: totalTxns,
         aggregateDepositAmt: totalVolume,
         applicationId,
       });
-
       try {
-        await aggregatorProjections.updateProjectionByApplication(applicationId, defaultPayload);
-      } catch (dbErr) {
-        console.warn('Projection skip DB warning:', dbErr);
+        await aggregatorProjections.updateProjectionByApplication(applicationId, payload);
+      } catch (e) {
+        console.warn('Skip DB:', e);
       }
-
-      await dispatch(
-        updateApplicationWorkflow({
-          applicationId,
-          payload: { isProjectionAdded: true },
-        })
-      );
-
-      successNotification('Default projections applied. Advancing to next step.');
+      await dispatch(updateApplicationWorkflow({ applicationId, payload: { isProjectionAdded: true } }));
+      successNotification('Default projections applied.');
     } catch (err) {
-      console.error('Error in handleSkip:', err);
-      errorNotification('Failed to apply default projections.');
+      errorNotification('Failed to apply defaults.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Box sx={{ width: '100%', minWidth: 0, p: 1 }}>
+    <Box sx={{ width: '100%', p: 1 }}>
       {loading && <FullScreenLoader />}
 
-      {/* ── Guidance Banner ── */}
+      {/* ── Banner ── */}
       <Paper
         elevation={0}
-        sx={{
+        sx={(theme) => ({
           p: 2,
           mb: 2.5,
           borderRadius: 2,
-          bgcolor: '#f0f7ff',
-          border: '1px solid #bae6fd',
+          bgcolor: theme.palette.cbi?.colors?.lightBlueBg || '#f0f7ff',
+          border: `1px solid ${theme.palette.cbi?.colors?.softBlueBorder || '#bae6fd'}`,
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           flexWrap: 'wrap',
           gap: 1.5,
-        }}
+        })}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Box
-            sx={{
-              width: 36,
-              height: 36,
-              borderRadius: '8px',
-              bgcolor: '#176FC1',
-              color: '#ffffff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
+          <Box sx={(theme) => ({ width: 36, height: 36, borderRadius: '8px', bgcolor: theme.palette.primary.main, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' })}>
             <TrendingUpRounded sx={{ fontSize: 20 }} />
           </Box>
           <Box>
-            <Typography variant="subtitle2" fontWeight={800} color="#0E4F8D">
-              Step 1: Configure Channel Projections & Transaction Volume Distribution
+            <Typography variant="subtitle2" fontWeight={800} color="primary.dark">
+              Step 1: Configure Channel Projections & Volume Distribution
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              Merchant Annual Volume: <b>₹ {formatNumber(totalVolume)}</b> &bull; Expected Txns: <b>{totalTxns.toLocaleString()}</b>
+              Annual Volume: <b>₹ {formatNumber(totalVolume)}</b> &bull; Txns: <b>{totalTxns.toLocaleString()}</b>
             </Typography>
           </Box>
         </Box>
-
-        {/* Live Allocation Indicator Badges */}
-        <Stack direction="row" spacing={1} alignItems="center">
-          <Chip
-            icon={isCountValid ? <CheckCircleRounded /> : <WarningAmberRounded />}
-            label={`Total Count: ${totalCount}%`}
-            size="small"
-            color={isCountValid ? 'success' : 'warning'}
-            sx={{ fontWeight: 700, fontSize: '0.75rem' }}
-          />
-          <Chip
-            icon={isValueValid ? <CheckCircleRounded /> : <WarningAmberRounded />}
-            label={`Total Value: ${totalValue}%`}
-            size="small"
-            color={isValueValid ? 'success' : 'warning'}
-            sx={{ fontWeight: 700, fontSize: '0.75rem' }}
-          />
+        <Stack direction="row" spacing={1}>
+          <Chip icon={totalCount === 100 ? <CheckCircleRounded /> : <WarningAmberRounded />} label={`Count: ${totalCount}%`} size="small" color={totalCount === 100 ? 'success' : 'warning'} sx={{ fontWeight: 700 }} />
+          <Chip icon={totalValue === 100 ? <CheckCircleRounded /> : <WarningAmberRounded />} label={`Value: ${totalValue}%`} size="small" color={totalValue === 100 ? 'success' : 'warning'} sx={{ fontWeight: 700 }} />
         </Stack>
       </Paper>
 
-      {/* ── Table Action Control Bar ── */}
+      {/* ── Action Toolbar ── */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={1.8} flexWrap="wrap" gap={1.2}>
-        <Stack direction="row" spacing={1} alignItems="center">
-          <Button
-            size="small"
-            variant="contained"
-            color="primary"
-            startIcon={<Add />}
-            onClick={() => setAddModalOpen(true)}
-            sx={{
-              textTransform: 'none',
-              fontWeight: 700,
-              fontSize: '0.82rem',
-              bgcolor: '#176FC1',
-              borderRadius: '6px',
-            }}
-          >
-            Add Project / Channel
+        <Stack direction="row" spacing={1}>
+          <Button size="small" variant="contained" color="primary" startIcon={<Add />} onClick={() => setAddModalOpen(true)} sx={{ textTransform: 'none', fontWeight: 700, borderRadius: '6px' }}>
+            Add Channel
           </Button>
-
-          <Button
-            size="small"
-            variant="outlined"
-            color="secondary"
-            startIcon={<AutoFixHighRounded />}
-            onClick={handleAutoBalance}
-            sx={{
-              textTransform: 'none',
-              fontWeight: 700,
-              fontSize: '0.82rem',
-              borderRadius: '6px',
-            }}
-          >
+          <Button size="small" variant="outlined" color="secondary" startIcon={<AutoFixHighRounded />} onClick={handleAutoBalance} sx={{ textTransform: 'none', fontWeight: 700, borderRadius: '6px' }}>
             Auto-Balance to 100%
           </Button>
-
-          <Button
-            size="small"
-            variant="text"
-            color="inherit"
-            startIcon={<RestartAltRounded />}
-            onClick={initializeBaseline}
-            sx={{ textTransform: 'none', fontSize: '0.80rem', color: 'text.secondary' }}
-          >
+          <Button size="small" variant="text" color="inherit" startIcon={<RestartAltRounded />} onClick={initializeBaseline} sx={{ textTransform: 'none', color: 'text.secondary' }}>
             Reset Defaults
           </Button>
         </Stack>
-
-        <Stack direction="row" spacing={1} alignItems="center">
-          <Button
-            size="small"
-            variant="outlined"
-            color="warning"
-            onClick={handleSkip}
-            sx={{ textTransform: 'none', fontWeight: 600, fontSize: '0.82rem', borderRadius: '6px' }}
-          >
+        <Stack direction="row" spacing={1}>
+          <Button size="small" variant="outlined" color="warning" onClick={handleSkip} sx={{ textTransform: 'none', fontWeight: 600, borderRadius: '6px' }}>
             Skip with Defaults
           </Button>
-
-          <Button
-            size="small"
-            variant="contained"
-            color="success"
-            disabled={!isFormValid}
-            onClick={saveAllCharges}
-            sx={{
-              textTransform: 'none',
-              fontWeight: 700,
-              fontSize: '0.82rem',
-              borderRadius: '6px',
-              px: 2.5,
-              boxShadow: '0 2px 8px rgba(46, 125, 50, 0.25)',
-            }}
-          >
-            Save & Proceed to Step 2
+          <Button size="small" variant="contained" color="success" disabled={!isFormValid} onClick={saveAllCharges} sx={{ textTransform: 'none', fontWeight: 700, borderRadius: '6px', px: 2.5 }}>
+            Save & Proceed
           </Button>
         </Stack>
       </Box>
 
-      {/* ── Clean Column-Structured Projection Table ── */}
-      <TableContainer
-        component={Paper}
-        elevation={0}
-        sx={{
-          borderRadius: '10px',
-          overflow: 'hidden',
-          border: '1px solid #cbd5e1',
-          width: '100%',
-          boxShadow: 'none',
-          mb: 4,
-        }}
-      >
+      {/* ── Table ── */}
+      <CommonAppTable sx={{ mb: 4 }}>
         <Table size="small" sx={{ width: '100%', borderCollapse: 'collapse' }}>
-          <TableHead>
-            <TableRow sx={{ background: 'linear-gradient(90deg, #0E4F8D 0%, #176FC1 100%)', borderBottom: '2px solid #062545' }}>
-              <TableCell sx={{ color: '#ffffff', fontWeight: 700, width: 45, py: 1.2, px: 1.2, fontSize: '11px', borderRight: '1px solid rgba(255,255,255,0.25)' }}>
-                #
-              </TableCell>
-              <TableCell sx={{ color: '#ffffff', fontWeight: 700, py: 1.2, px: 1.5, fontSize: '11.5px', borderRight: '1px solid rgba(255,255,255,0.25)' }}>
-                Transaction Type / Payment Channel
-              </TableCell>
-              <TableCell sx={{ color: '#ffffff', fontWeight: 700, py: 1.2, px: 1.5, fontSize: '11.5px', textAlign: 'center', width: 160, borderRight: '1px solid rgba(255,255,255,0.25)' }}>
-                Share Txn Count (%)
-              </TableCell>
-              <TableCell sx={{ color: '#ffffff', fontWeight: 700, py: 1.2, px: 1.5, fontSize: '11.5px', textAlign: 'center', width: 160, borderRight: '1px solid rgba(255,255,255,0.25)' }}>
-                Share Txn Value (%)
-              </TableCell>
-              <TableCell sx={{ color: '#ffffff', fontWeight: 700, py: 1.2, px: 1, fontSize: '11px', textAlign: 'center', width: 80 }}>
-                Actions
-              </TableCell>
-            </TableRow>
-          </TableHead>
-
+          <CommonTableHeader columns={PROJECTION_COLUMNS} />
           <TableBody>
             {visibleCharges.length > 0 ? (
-              visibleCharges.map((row, idx) => {
-                return (
-                  <TableRow
-                    key={row.id}
-                    hover
-                    sx={{
-                      '&:hover': { bgcolor: '#f8fafc' },
-                      transition: 'background-color 0.15s ease',
-                    }}
-                  >
-                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '11.5px', borderRight: '1px solid #cbd5e1', borderBottom: '1px solid #cbd5e1' }}>
-                      {idx + 1}
-                    </TableCell>
-
-                    <TableCell sx={{ borderRight: '1px solid #cbd5e1', borderBottom: '1px solid #cbd5e1', py: 0.8 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.8 }}>
-                        <Typography variant="body2" fontWeight={700} color="#0E4F8D" sx={{ fontSize: '12.5px' }}>
-                          {row.transactionType}
-                        </Typography>
-                      </Box>
-                    </TableCell>
-
-                    <TableCell align="center" sx={{ borderRight: '1px solid #cbd5e1', borderBottom: '1px solid #cbd5e1', p: '6px' }}>
-                      <TextField
-                        size="small"
-                        type="text"
-                        value={row.transactionCount}
-                        onChange={(e) => handleNumericChange(row.id, 'transactionCount', e.target.value)}
-                        inputProps={{
-                          style: { textAlign: 'right', padding: '4px 8px', fontSize: '12px', fontWeight: 700 },
-                        }}
-                        InputProps={{
-                          endAdornment: (
-                            <Typography variant="caption" sx={{ fontSize: '11px', fontWeight: 700, color: '#64748b', ml: 0.5 }}>
-                              %
-                            </Typography>
-                          ),
-                        }}
-                        sx={{
-                          width: 85,
-                          '& .MuiOutlinedInput-root': {
-                            borderRadius: '6px',
-                            bgcolor: '#ffffff',
-                          },
-                        }}
-                      />
-                    </TableCell>
-
-                    <TableCell align="center" sx={{ borderRight: '1px solid #cbd5e1', borderBottom: '1px solid #cbd5e1', p: '6px' }}>
-                      <TextField
-                        size="small"
-                        type="text"
-                        value={row.transactionValue}
-                        onChange={(e) => handleNumericChange(row.id, 'transactionValue', e.target.value)}
-                        inputProps={{
-                          style: { textAlign: 'right', padding: '4px 8px', fontSize: '12px', fontWeight: 700 },
-                        }}
-                        InputProps={{
-                          endAdornment: (
-                            <Typography variant="caption" sx={{ fontSize: '11px', fontWeight: 700, color: '#64748b', ml: 0.5 }}>
-                              %
-                            </Typography>
-                          ),
-                        }}
-                        sx={{
-                          width: 85,
-                          '& .MuiOutlinedInput-root': {
-                            borderRadius: '6px',
-                            bgcolor: '#ffffff',
-                          },
-                        }}
-                      />
-                    </TableCell>
-
-                    <TableCell align="center" sx={{ borderBottom: '1px solid #cbd5e1', p: '4px' }}>
-                      {row.isCustom ? (
-                        <Tooltip title="Delete custom projection channel" arrow>
-                          <IconButton size="small" color="error" onClick={() => handleDeleteRow(row.id)}>
-                            <DeleteOutline fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      ) : (
-                        <Typography variant="caption" color="text.disabled">
-                          —
-                        </Typography>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })
+              visibleCharges.map((row, idx) => (
+                <ProjectionTableRow
+                  key={row.id}
+                  row={row}
+                  idx={idx}
+                  onChangeNumeric={handleNumericChange}
+                  onBlurField={handleBlurField}
+                  onDeleteRow={handleDeleteRow}
+                />
+              ))
             ) : (
-              <TableRow>
-                <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
-                  No projection channels configured
-                </TableCell>
-              </TableRow>
+              <CommonTableEmptyState colSpan={PROJECTION_COLUMNS.length} message="No projection channels configured" />
             )}
-
-            {/* ── Total Allocation Summary Row ── */}
-            <TableRow sx={{ bgcolor: '#f8fafc', borderTop: '2px solid #64748b', borderBottom: '2px solid #64748b' }}>
-              <TableCell sx={{ borderRight: '1px solid #94a3b8' }} />
-              <TableCell sx={{ fontWeight: 800, fontSize: '12px', color: '#0E4F8D', borderRight: '1px solid #94a3b8' }}>
-                TOTAL PROJECTIONS
-              </TableCell>
-
+            <CommonTableTotalRow colSpan={2} label="TOTAL PROJECTIONS">
               <TableCell align="center" sx={{ borderRight: '1px solid #94a3b8', p: '6px' }}>
-                <Typography
-                  fontWeight={800}
-                  sx={{
-                    fontSize: '12.5px',
-                    color: isCountValid ? '#15803d' : '#b91c1c',
-                    bgcolor: isCountValid ? '#dcfce7' : '#fee2e2',
-                    py: 0.3,
-                    px: 1,
-                    borderRadius: '4px',
-                    display: 'inline-block',
-                  }}
-                >
+                <Typography fontWeight={800} sx={(theme) => ({ fontSize: '12.5px', color: totalCount === 100 ? theme.palette.success.main : theme.palette.error.main, py: 0.3, px: 1, borderRadius: '4px', display: 'inline-block' })}>
                   {totalCount}%
                 </Typography>
               </TableCell>
-
               <TableCell align="center" sx={{ borderRight: '1px solid #94a3b8', p: '6px' }}>
-                <Typography
-                  fontWeight={800}
-                  sx={{
-                    fontSize: '12.5px',
-                    color: isValueValid ? '#15803d' : '#b91c1c',
-                    bgcolor: isValueValid ? '#dcfce7' : '#fee2e2',
-                    py: 0.3,
-                    px: 1,
-                    borderRadius: '4px',
-                    display: 'inline-block',
-                  }}
-                >
+                <Typography fontWeight={800} sx={(theme) => ({ fontSize: '12.5px', color: totalValue === 100 ? theme.palette.success.main : theme.palette.error.main, py: 0.3, px: 1, borderRadius: '4px', display: 'inline-block' })}>
                   {totalValue}%
                 </Typography>
               </TableCell>
-
-              <TableCell sx={{ borderRight: 'none' }} />
-            </TableRow>
+              <TableCell />
+            </CommonTableTotalRow>
           </TableBody>
         </Table>
-      </TableContainer>
+      </CommonAppTable>
 
-      {/* ── Add Project / Channel Modal ── */}
-      <Dialog
-        open={addModalOpen}
-        onClose={() => setAddModalOpen(false)}
-        maxWidth="xs"
-        fullWidth
-        PaperProps={{ sx: { borderRadius: '12px' } }}
-      >
-        <DialogTitle
-          sx={{
-            background: 'linear-gradient(135deg, #0E4F8D 0%, #176FC1 100%)',
-            color: '#ffffff',
-            fontWeight: 700,
-            fontSize: '1rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            p: 2,
-          }}
-        >
-          Add Projection Channel
-          <IconButton size="small" onClick={() => setAddModalOpen(false)} sx={{ color: '#ffffff' }}>
-            <Close fontSize="small" />
-          </IconButton>
-        </DialogTitle>
-
-        <DialogContent sx={{ p: 2.5, pt: 2 }}>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <FormControl fullWidth size="small">
-              <InputLabel>Select Payment Channel</InputLabel>
-              <Select
-                value={newChannelType}
-                label="Select Payment Channel"
-                onChange={(e) => setNewChannelType(e.target.value)}
-              >
-                {PRESET_CHANNELS.map((ch) => (
-                  <MenuItem key={ch} value={ch}>
-                    {ch}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
-            {newChannelType === 'Custom Channel' && (
-              <TextField
-                label="Custom Channel Name"
-                placeholder="e.g. International Diners / Forex"
-                fullWidth
-                size="small"
-                required
-                value={customChannelName}
-                onChange={(e) => setCustomChannelName(e.target.value)}
-              />
-            )}
-
-            <Stack direction="row" spacing={1.5}>
-              <TextField
-                label="Share Count (%)"
-                placeholder="0"
-                type="number"
-                fullWidth
-                size="small"
-                value={newCountPercent}
-                onChange={(e) => setNewCountPercent(e.target.value)}
-                InputProps={{ endAdornment: <Typography variant="caption">%</Typography> }}
-              />
-
-              <TextField
-                label="Share Value (%)"
-                placeholder="0"
-                type="number"
-                fullWidth
-                size="small"
-                value={newValuePercent}
-                onChange={(e) => setNewValuePercent(e.target.value)}
-                InputProps={{ endAdornment: <Typography variant="caption">%</Typography> }}
-              />
-            </Stack>
-
-            <Alert severity="info" sx={{ fontSize: '0.78rem', borderRadius: '6px' }}>
-              After adding, you can click <b>"Auto-Balance to 100%"</b> to re-normalize all channel percentages automatically.
-            </Alert>
-          </Stack>
-        </DialogContent>
-
-        <DialogActions sx={{ p: 2, pt: 1, borderTop: '1px solid #f1f5f9' }}>
-          <Button onClick={() => setAddModalOpen(false)} color="inherit" sx={{ textTransform: 'none' }}>
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handleConfirmAddChannel}
-            sx={{ textTransform: 'none', fontWeight: 700, bgcolor: '#176FC1', borderRadius: '6px' }}
-          >
-            Add Channel
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <AddChannelModal open={addModalOpen} onClose={() => setAddModalOpen(false)} onAddChannel={handleAddChannelSubmit} />
     </Box>
   );
 };

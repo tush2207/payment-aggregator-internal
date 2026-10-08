@@ -49,8 +49,8 @@ def render_quote_request_email(
     custom_data: Optional[Dict[str, Any]] = None
 ) -> Dict[str, str]:
     """
-    Renders subject, HTML content, and Plain Text content for Send for Quote stage,
-    matching Central Bank of India's official Quotation Submission Mail Template.
+    Renders responsive HTML & Plain text email for the Quotation Request stage
+    issued by Central Bank of India - Neo Banking & Emerging Technologies Department.
     """
     c_data = custom_data or {}
 
@@ -62,22 +62,22 @@ def render_quote_request_email(
     avg_ticket = c_data.get("avgTransactionSize") or format_currency_inr(getattr(application, "avgTransactionSize", None))
     avg_yearly = c_data.get("avgTransactionYearly") or str(getattr(application, "avgTransactionYearly", "standard"))
     
-    # Editable intro paragraph
+    # Intro message
     intro_text = (
         c_data.get("introText") or 
         c_data.get("intro_text") or 
         "We request you to share the quotation for merchant onboarding whose details are mentioned below:"
     ).strip()
 
-    modes_of_collection = c_data.get("modesOfCollection") or "Credit cards/Debit cards/ Netbanking/ UPI/ Any Other mode (optional case to case basis)"
+    modes_of_collection = c_data.get("modesOfCollection") or "Credit cards / Debit cards / Netbanking / UPI / Any Other mode (optional case to case basis)"
     
-    # Conditional rows: omit completely if empty or omitted
+    # Conditional rows
     who_bears_charges = (c_data.get("whoBearsCharges") or "").strip()
     if who_bears_charges and who_bears_charges != "optional-case to case basis":
         who_bears_charges_row_html = f"""
           <tr>
-            <td class="key-col">Who Will Bear Charges</td>
-            <td class="val-col">{who_bears_charges}</td>
+            <td style="padding: 10px 14px; font-weight: 600; color: #1e293b; background-color: #f8fafc; border-bottom: 1px solid #e2e8f0; width: 44%;">Who Will Bear Charges</td>
+            <td style="padding: 10px 14px; color: #0f172a; border-bottom: 1px solid #e2e8f0; width: 56%;">{who_bears_charges}</td>
           </tr>"""
         who_bears_charges_row_text = f"Who will bear charges: {who_bears_charges}\n"
     else:
@@ -88,15 +88,15 @@ def render_quote_request_email(
     if additional_details and additional_details != "optional-case to case basis":
         additional_details_row_html = f"""
           <tr>
-            <td class="key-col">Additional Details If Any</td>
-            <td class="val-col">{additional_details}</td>
+            <td style="padding: 10px 14px; font-weight: 600; color: #1e293b; background-color: #f8fafc; border-bottom: 1px solid #e2e8f0; width: 44%;">Additional Details If Any</td>
+            <td style="padding: 10px 14px; color: #0f172a; border-bottom: 1px solid #e2e8f0; width: 56%;">{additional_details}</td>
           </tr>"""
         additional_details_row_text = f"Additional Details if Any: {additional_details}\n"
     else:
         additional_details_row_html = ""
         additional_details_row_text = ""
     
-    # Deadline: clean pure date, removing any "T+ 2" prefix
+    # Deadline formatting
     raw_deadline = c_data.get("submissionDeadline") or end_date_str or ""
     if "T+ 2" in raw_deadline:
         raw_deadline = raw_deadline.replace("T+ 2 Days (", "").replace("T+ 2 Days", "").replace(")", "").strip()
@@ -112,7 +112,7 @@ def render_quote_request_email(
     manager_name = c_data.get("managerName") or "Shraddha Saxena"
     manager_desig = c_data.get("managerDesignation") or "Manager"
     manager_dept = c_data.get("managerDept") or "Neo Banking & Emerging Technologies"
-    manager_office = c_data.get("managerOffice") or "Central Office"
+    manager_office = c_data.get("managerOffice") or "Central Office, Mumbai"
     manager_phone = c_data.get("managerPhone") or "022-49197333"
 
     custom_notes = c_data.get("customNotes") or c_data.get("custom_notes") or ""
@@ -120,7 +120,7 @@ def render_quote_request_email(
     custom_notes_text = ""
     if custom_notes and custom_notes.strip():
         notes_lines = [ln.strip() for ln in custom_notes.strip().split("\n") if ln.strip()]
-        custom_notes_html = "".join([f"<p style='color: #0E4F8D; font-weight: 600;'>* {l}</p>" for l in notes_lines])
+        custom_notes_html = "".join([f"<li style='margin-bottom: 6px; color: #0E4F8D; font-weight: 600;'>{l}</li>" for l in notes_lines])
         custom_notes_text = "\n".join([f"* {l}" for l in notes_lines]) + "\n"
 
     is_revision = bool(c_data.get("isRevision") or getattr(application, "isNegotiationRequested", False))
@@ -128,11 +128,11 @@ def render_quote_request_email(
     revision_version = c_data.get("quoteVersion") or getattr(application, "currentQuoteVersion", 2)
 
     negotiation_alert_html = f"""
-      <div style="background-color: #FEF3C7; border: 1px solid #F59E0B; border-left: 5px solid #D97706; padding: 12px 16px; margin: 15px 0 20px 0; border-radius: 4px;">
-        <div style="font-weight: 700; color: #92400E; font-size: 13px;">&#9888; Revised Quotation Request / Rate Negotiation</div>
-        <div style="color: #78350F; font-size: 12.5px; margin-top: 4px; line-height: 1.5;">
-          The merchant has reviewed the initial proposal and requested negotiated rates. Please consider the following merchant feedback and submit your best revised quotation:
-          <br><strong style="color: #92400E;">"{negotiation_remarks}"</strong>
+      <div style="background-color: #FEF3C7; border: 1px solid #F59E0B; border-left: 5px solid #D97706; padding: 14px 18px; margin: 18px 0; border-radius: 6px;">
+        <div style="font-weight: 700; color: #92400E; font-size: 13.5px;">Revised Quotation Request / Rate Negotiation</div>
+        <div style="color: #78350F; font-size: 13px; margin-top: 6px; line-height: 1.5;">
+          The merchant has reviewed the initial proposal and requested negotiated rates. Please consider the feedback below and submit your revised quotation:
+          <br><strong style="color: #92400E; display: inline-block; margin-top: 4px;">"{negotiation_remarks}"</strong>
         </div>
       </div>
     """ if (is_revision and negotiation_remarks) else ""
@@ -142,10 +142,6 @@ def render_quote_request_email(
     else:
         subject = c_data.get("subject") or f"Quotation Request for Merchant Onboarding Application (Application ID-{app_id}) - Central Bank of India"
 
-    # Logo header in HTML
-    logo_b64 = get_cbi_logo_base64()
-    logo_img_tag = f'<img src="data:image/png;base64,{logo_b64}" alt="Central Bank of India" style="height: 48px; max-height: 48px; width: auto; object-fit: contain; vertical-align: middle; margin-right: 14px;" />' if logo_b64 else ''
-
     html_content = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -154,40 +150,35 @@ def render_quote_request_email(
   <title>{subject}</title>
   <style>
     body {{
-      font-family: 'Segoe UI', Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       background-color: #f1f5f9;
       color: #1e293b;
       line-height: 1.6;
       margin: 0;
-      padding: 24px 12px;
+      padding: 20px 10px;
     }}
     .email-container {{
       max-width: 680px;
       margin: 0 auto;
       background-color: #ffffff;
-      border-radius: 12px;
+      border-radius: 10px;
       overflow: hidden;
-      border: 1px solid #dbeafe;
-      box-shadow: 0 4px 20px rgba(0, 73, 144, 0.08);
+      border: 1px solid #cbd5e1;
+      box-shadow: 0 4px 16px rgba(0, 73, 144, 0.07);
     }}
     .top-accent-bar {{
-      height: 5px;
+      height: 4px;
       background: linear-gradient(90deg, #004990 0%, #176FC1 50%, #C8102E 100%);
     }}
-    .header-section {{
+    .header-table {{
+      width: 100%;
+      border-collapse: collapse;
       padding: 22px 28px 18px 28px;
       border-bottom: 2px solid #004990;
       background-color: #ffffff;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }}
-    .header-brand {{
-      display: flex;
-      align-items: center;
     }}
     .bank-title-hindi {{
-      font-size: 17px;
+      font-size: 18px;
       font-weight: 800;
       color: #004990;
       line-height: 1.2;
@@ -197,36 +188,46 @@ def render_quote_request_email(
       font-size: 15px;
       font-weight: 800;
       color: #004990;
-      letter-spacing: 0.6px;
+      letter-spacing: 0.5px;
       text-transform: uppercase;
-      margin: 2px 0 0 0;
+      margin: 3px 0 0 0;
     }}
     .bank-tagline {{
-      font-size: 10.5px;
+      font-size: 11px;
       color: #64748b;
       font-weight: 600;
-      margin-top: 2px;
-    }}
-    .dept-badge-box {{
-      text-align: right;
+      margin-top: 3px;
     }}
     .dept-badge {{
       display: inline-block;
-      background-color: #e0f2fe;
-      color: #0369a1;
-      font-size: 11px;
+      background-color: #f0f7ff;
+      color: #004990;
+      font-size: 11.5px;
       font-weight: 800;
-      padding: 4px 10px;
+      padding: 5px 12px;
       border-radius: 6px;
       border: 1px solid #bae6fd;
       text-transform: uppercase;
       letter-spacing: 0.3px;
+      text-align: right;
     }}
     .dept-sub {{
       font-size: 11px;
       color: #64748b;
       margin-top: 4px;
       font-weight: 600;
+      text-align: right;
+    }}
+    .automated-banner {{
+      background-color: #eff6ff;
+      border-bottom: 1px solid #dbeafe;
+      padding: 8px 28px;
+      font-size: 11.5px;
+      color: #1e40af;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }}
     .notice-bar {{
       background-color: #f8fafc;
@@ -248,7 +249,7 @@ def render_quote_request_email(
       font-weight: 800;
       color: #C8102E;
       background-color: #fef2f2;
-      padding: 2px 8px;
+      padding: 3px 10px;
       border-radius: 4px;
       border: 1px solid #fecaca;
     }}
@@ -264,7 +265,7 @@ def render_quote_request_email(
       font-size: 13.5px;
       line-height: 1.6;
       color: #334155;
-      margin-bottom: 22px;
+      margin-bottom: 20px;
       padding: 12px 16px;
       background-color: #f8fafc;
       border-left: 4px solid #004990;
@@ -290,7 +291,7 @@ def render_quote_request_email(
       text-transform: uppercase;
     }}
     .details-table td {{
-      padding: 9px 14px;
+      padding: 10px 14px;
       border-bottom: 1px solid #e2e8f0;
       font-size: 13px;
     }}
@@ -331,9 +332,9 @@ def render_quote_request_email(
       letter-spacing: 0.5px;
     }}
     .deadline-desc {{
-      font-size: 13.5px;
+      font-size: 13px;
       color: #374151;
-      margin-top: 2px;
+      margin-top: 3px;
     }}
     .deadline-badge {{
       font-size: 15px;
@@ -394,16 +395,20 @@ def render_quote_request_email(
     .footer-section {{
       background-color: #f8fafc;
       border-top: 1px solid #e2e8f0;
-      padding: 16px 28px;
-      font-size: 11px;
+      padding: 18px 28px;
+      font-size: 11.5px;
       color: #64748b;
       text-align: center;
-      line-height: 1.5;
+      line-height: 1.6;
     }}
-    .footer-link {{
+    .footer-automated-note {{
+      font-weight: 700;
       color: #004990;
-      text-decoration: none;
-      font-weight: 600;
+      margin-bottom: 4px;
+    }}
+    .footer-sub {{
+      color: #475569;
+      margin: 2px 0;
     }}
   </style>
 </head>
@@ -411,20 +416,27 @@ def render_quote_request_email(
   <div class="email-container">
     <div class="top-accent-bar"></div>
 
-    <!-- Official CBI Corporate Header -->
-    <div class="header-section">
-      <div class="header-brand">
-        {logo_img_tag}
-        <div>
-          <div class="bank-title-hindi">सेन्ट्रल बैंक ऑफ़ इण्डिया</div>
-          <div class="bank-title-eng">Central Bank of India</div>
-          <div class="bank-tagline">1911 से आपके लिए 'केन्द्रित' | 'Central' To You Since 1911</div>
-        </div>
-      </div>
-      <div class="dept-badge-box">
-        <span class="dept-badge">Neo Banking &amp; Emerging Tech</span>
-        <div class="dept-sub">Central Office, Mumbai</div>
-      </div>
+    <!-- Official CBI Corporate Header (Logo-free clean typography) -->
+    <div style="padding: 22px 28px 18px 28px; border-bottom: 2px solid #004990; background-color: #ffffff;">
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="vertical-align: middle; text-align: left;">
+            <div class="bank-title-hindi">सेन्ट्रल बैंक ऑफ़ इण्डिया</div>
+            <div class="bank-title-eng">Central Bank of India</div>
+            <div class="bank-tagline">1911 से आपके लिए 'केन्द्रित' | 'Central' To You Since 1911</div>
+          </td>
+          <td style="vertical-align: middle; text-align: right; width: 45%;">
+            <div class="dept-badge">NEO BANKING &amp; EMERGING TECHNOLOGIES</div>
+            <div class="dept-sub">Central Office, Mumbai</div>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- Automated System Notification Banner -->
+    <div class="automated-banner">
+      <span>Automated RFQ Notification &bull; Central Bank of India PAPG System</span>
+      <span style="color: #64748b; font-size: 10.5px;">Auto-Generated</span>
     </div>
 
     <!-- Notice / Reference Bar -->
@@ -493,9 +505,9 @@ def render_quote_request_email(
 
       <!-- Instructions for Submission -->
       <div class="instructions-card">
-        <div class="instructions-title"> Instructions for Submission:</div>
+        <div class="instructions-title">Instructions for Submission:</div>
         <ul class="instructions-list">
-          <li><strong>System Integration Fee &amp; AMC Charges</strong> must be <strong>NIL</strong>. Kindly confirm the same in your quotation.</li>
+          <li style="margin-bottom: 6px;"><strong>System Integration Fee &amp; AMC Charges</strong> must be <strong>NIL</strong>. Kindly confirm the same in your quotation.</li>
           {custom_notes_html}
           <li>Aggregator is requested to submit quotes via email to: <a href="mailto:{submission_email}" style="color: #004990; font-weight: 700; text-decoration: underline;">{submission_email}</a></li>
         </ul>
@@ -512,10 +524,11 @@ def render_quote_request_email(
       </div>
     </div>
 
-    <!-- Official Footer & Confidentiality Disclaimer -->
+    <!-- Official Clean Footer -->
     <div class="footer-section">
-      <p style="margin: 0;">This is an official communication from <strong>Central Bank of India</strong>. Confidentiality notice applies.</p>
-      <p style="margin: 4px 0 0 0;">Chandramukhi, Nariman Point, Mumbai - 400 021 | Web: <a href="https://www.centralbankofindia.co.in" class="footer-link">centralbankofindia.co.in</a></p>
+      <div class="footer-automated-note">This is an automated notification generated by Central Bank of India Payment Aggregator &amp; RFQ System.</div>
+      <div class="footer-sub">Please do not reply directly to this automated sender address. All quotes and queries should be directed to: <a href="mailto:{submission_email}" style="color: #004990; font-weight: 700;">{submission_email}</a></div>
+      <div class="footer-sub" style="margin-top: 6px; font-size: 11px; color: #94a3b8;">Neo Banking &amp; Emerging Technologies Department &bull; Central Office, Mumbai &bull; &copy; 2026 Central Bank of India. All rights reserved.</div>
     </div>
   </div>
 </body>
@@ -523,8 +536,9 @@ def render_quote_request_email(
 """
 
     text_content = f"""Central Bank of India - Quotation Request
+Neo Banking & Emerging Technologies Department, Central Office, Mumbai
 =====================================================================================================
-
+[AUTOMATED RFQ NOTIFICATION]
 
 Dear {recipient_name},
 
@@ -534,7 +548,7 @@ Dear {recipient_name},
 Application ID: #{app_id}
 Mode of collection of fee/payment: {modes_of_collection}
 Type of Business / Entity Category (In Brief): {bus_cat}
-category ( Private /Govt): {category}
+Category (Private / Govt): {category}
 Average Ticket Size: {avg_ticket}
 Expected Number of online transactions per annum: {avg_yearly}
 {who_bears_charges_row_text}{additional_details_row_text}-----------------------------------------------------------------------------------------------------
@@ -542,15 +556,19 @@ Expected Number of online transactions per annum: {avg_yearly}
 Quotation Submission Deadline: {submission_deadline}
 
 Instructions for Submission:
-* System Integration Fee and AMC charges will be NIL Kindly mention the same in your Quotation.
-{custom_notes_text}* Kindly submit your Quotes on mail id- {submission_email}
+* System Integration Fee and AMC charges will be NIL. Kindly mention the same in your quotation.
+{custom_notes_text}* Kindly submit your quotes via email to: {submission_email}
 
-Thanks & Regards
+Thanks & Regards,
 {manager_name}
 {manager_desig}
 {manager_dept}
 {manager_office}
-{manager_phone}
+Tel: {manager_phone}
+
+-----------------------------------------------------------------------------------------------------
+This is an automated notification. Please do not reply directly to this address.
+Neo Banking & Emerging Technologies Department | Central Office, Mumbai
 """
 
     return {

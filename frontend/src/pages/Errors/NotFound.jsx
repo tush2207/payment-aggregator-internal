@@ -1,9 +1,18 @@
+/**
+ * ============================================================================
+ * Central Bank of India (CBI) - Payment Aggregator Portal
+ * Page: NotFound (404)
+ * Purpose: Friendly, theme-compliant 404 page for missing portal routes.
+ * ============================================================================
+ */
+
 import React from 'react';
-import { Box, Button, Container, Paper, Typography, Stack } from '@mui/material';
+import { Box, Button, Container, Paper, Typography, Stack, useTheme } from '@mui/material';
 import { Home, ArrowBack, SearchOff } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
 const NotFound = () => {
+  const theme = useTheme();
   const navigate = useNavigate();
 
   return (
@@ -13,7 +22,7 @@ const NotFound = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #0b1f3a 0%, #1a365d 50%, #0d2847 100%)',
+        background: `linear-gradient(135deg, ${theme.palette.primary.dark || theme.palette.primary.main} 0%, ${theme.palette.primary.main} 50%, ${theme.palette.secondary.main} 100%)`,
         p: 2,
       }}
     >
@@ -24,8 +33,8 @@ const NotFound = () => {
             p: { xs: 4, sm: 6 },
             borderRadius: 4,
             textAlign: 'center',
-            background: 'rgba(255, 255, 255, 0.98)',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+            bgcolor: 'background.paper',
+            boxShadow: 8,
           }}
         >
           <Box
@@ -33,8 +42,8 @@ const NotFound = () => {
               display: 'inline-flex',
               p: 2.5,
               borderRadius: '50%',
-              bgcolor: 'rgba(0, 76, 143, 0.1)',
-              color: '#004c8f',
+              bgcolor: 'action.hover',
+              color: 'primary.main',
               mb: 3,
             }}
           >
@@ -44,12 +53,13 @@ const NotFound = () => {
           <Typography
             variant="h2"
             fontWeight={900}
-            sx={{ color: '#004c8f', letterSpacing: '-1px', mb: 1 }}
+            color="primary.main"
+            sx={{ letterSpacing: '-1px', mb: 1 }}
           >
             404
           </Typography>
 
-          <Typography variant="h5" fontWeight={700} gutterBottom sx={{ color: '#0b1f3a' }}>
+          <Typography variant="h5" fontWeight={700} gutterBottom color="text.primary">
             Page Not Found
           </Typography>
 
@@ -59,31 +69,12 @@ const NotFound = () => {
 
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
             <Button
-              variant="outlined"
-              size="large"
-              startIcon={<ArrowBack />}
-              onClick={() => navigate(-1)}
-              sx={{
-                borderRadius: 2,
-                px: 3,
-                py: 1.2,
-                fontWeight: 600,
-                borderColor: '#004c8f',
-                color: '#004c8f',
-                textTransform: 'none',
-              }}
-            >
-              Go Back
-            </Button>
-
-            <Button
               variant="contained"
               size="large"
+              color="primary"
               startIcon={<Home />}
               onClick={() => navigate('/dashboard')}
               sx={{
-                bgcolor: '#004c8f',
-                '&:hover': { bgcolor: '#003366' },
                 borderRadius: 2,
                 px: 3,
                 py: 1.2,
@@ -92,6 +83,23 @@ const NotFound = () => {
               }}
             >
               Dashboard
+            </Button>
+
+            <Button
+              variant="outlined"
+              size="large"
+              color="inherit"
+              startIcon={<ArrowBack />}
+              onClick={() => navigate(-1)}
+              sx={{
+                borderRadius: 2,
+                px: 3,
+                py: 1.2,
+                fontWeight: 600,
+                textTransform: 'none',
+              }}
+            >
+              Go Back
             </Button>
           </Stack>
         </Paper>

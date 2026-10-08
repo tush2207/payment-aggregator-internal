@@ -76,14 +76,13 @@ ADMIN_USERS: list = [u.strip() for u in _raw_admin_users.split(",") if u.strip()
 ENABLE_MAIL: bool = os.getenv("ENABLE_MAIL", os.getenv("EMAIL_ENABLED", "True")).lower() in ("true", "1", "t", "yes", "y")
 EMAIL_ENABLED: bool = ENABLE_MAIL
 
-SMTP_HOST: str = os.getenv("SMTP_HOST", "smtp.gmail.com")
-SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
-SMTP_USER: str = os.getenv("SMTP_USER", "")
+SMTP_HOST: str = os.getenv("SMTP_HOST", "email.centralbankofindia.org.in")
+SMTP_FALLBACK_HOST: str = os.getenv("SMTP_FALLBACK_HOST", "10.16.33.177")
+SMTP_PORT: int = int(os.getenv("SMTP_PORT", "25"))
+SMTP_USER: str = os.getenv("SMTP_USER", "paws_notifiy@centralbankofindia.org.in")
 SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")
-SMTP_FROM_EMAIL: str = os.getenv("SMTP_FROM_EMAIL", "no-reply.papg@cbi.co.in")
+SMTP_FROM_EMAIL: str = os.getenv("SMTP_FROM_EMAIL", "paws_notifiy@centralbankofindia.org.in")
 SMTP_FROM_NAME: str = os.getenv("SMTP_FROM_NAME", "Central Bank of India - Payment Aggregator Portal")
-SMTP_USE_TLS: bool = os.getenv("SMTP_USE_TLS", "True").lower() in ("true", "1", "t", "yes", "y")
-SMTP_USE_SSL: bool = os.getenv("SMTP_USE_SSL", "False").lower() in ("true", "1", "t", "yes", "y")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 5. FRONTEND PORTAL URLS

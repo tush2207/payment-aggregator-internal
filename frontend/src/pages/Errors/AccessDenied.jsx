@@ -1,10 +1,19 @@
+/**
+ * ============================================================================
+ * Central Bank of India (CBI) - Payment Aggregator Portal
+ * Page: AccessDenied (403)
+ * Purpose: Gracefully notifies unauthorized users when accessing restricted modules.
+ * ============================================================================
+ */
+
 import React from 'react';
-import { Box, Button, Container, Paper, Typography, Stack } from '@mui/material';
+import { Box, Button, Container, Paper, Typography, Stack, useTheme } from '@mui/material';
 import { LockOutlined, Home, Logout } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { removeCookie } from '&src/utils/cookies';
 
 const AccessDenied = () => {
+  const theme = useTheme();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -21,7 +30,7 @@ const AccessDenied = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #0b1f3a 0%, #1a365d 50%, #0d2847 100%)',
+        background: `linear-gradient(135deg, ${theme.palette.primary.dark || theme.palette.primary.main} 0%, ${theme.palette.primary.main} 50%, ${theme.palette.secondary.main} 100%)`,
         p: 2,
       }}
     >
@@ -32,8 +41,8 @@ const AccessDenied = () => {
             p: { xs: 4, sm: 6 },
             borderRadius: 4,
             textAlign: 'center',
-            background: 'rgba(255, 255, 255, 0.98)',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+            bgcolor: 'background.paper',
+            boxShadow: 8,
           }}
         >
           <Box
@@ -41,8 +50,8 @@ const AccessDenied = () => {
               display: 'inline-flex',
               p: 2.5,
               borderRadius: '50%',
-              bgcolor: 'rgba(237, 108, 2, 0.1)',
-              color: '#ed6c02',
+              bgcolor: 'warning.lighter',
+              color: 'warning.main',
               mb: 3,
             }}
           >
@@ -52,12 +61,13 @@ const AccessDenied = () => {
           <Typography
             variant="h2"
             fontWeight={900}
-            sx={{ color: '#ed6c02', letterSpacing: '-1px', mb: 1 }}
+            color="warning.main"
+            sx={{ letterSpacing: '-1px', mb: 1 }}
           >
             403
           </Typography>
 
-          <Typography variant="h5" fontWeight={700} gutterBottom sx={{ color: '#0b1f3a' }}>
+          <Typography variant="h5" fontWeight={700} gutterBottom color="text.primary">
             Access Denied / Unauthorized
           </Typography>
 
@@ -69,11 +79,10 @@ const AccessDenied = () => {
             <Button
               variant="contained"
               size="large"
+              color="primary"
               startIcon={<Home />}
               onClick={() => navigate('/dashboard')}
               sx={{
-                bgcolor: '#004c8f',
-                '&:hover': { bgcolor: '#003366' },
                 borderRadius: 2,
                 px: 3,
                 py: 1.2,

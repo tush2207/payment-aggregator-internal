@@ -326,4 +326,5 @@ const TicketChatSection = ({ ticketData, openMessegner }) => {
     );
 };
 
+export { TicketChatSection };
 export default TicketChatSection;

@@ -1,3 +1,13 @@
+/**
+ * ============================================================================
+ * Central Bank of India (CBI) - Payment Aggregator Portal
+ * Component: DialogWithHeader
+ * Purpose: Standardized modal dialog with CenEODS brand gradient header
+ *          and bank-compliant structure.
+ * ============================================================================
+ */
+
+import React, { forwardRef } from 'react';
 import { Close } from '@mui/icons-material';
 import {
   Dialog,
@@ -7,9 +17,8 @@ import {
   Box,
   Typography,
   Slide,
-  DialogActions
+  DialogActions,
 } from '@mui/material';
-import { forwardRef } from 'react';
 
 const Transition = forwardRef(function Transition(props, ref) {
   return <Slide direction="down" ref={ref} {...props} />;
@@ -40,28 +49,31 @@ const DialogWithHeader = ({
       sx: {
         borderRadius: '16px',
         overflow: 'hidden',
-        boxShadow: '0 25px 50px -12px rgba(10, 35, 66, 0.25)',
-        border: '1px solid #cbd5e1',
-        ...(PaperProps?.sx || {})
+        boxShadow: (theme) => theme.shadows[8] || '0 25px 50px -12px rgba(10, 35, 66, 0.25)',
+        border: '1px solid',
+        borderColor: 'divider',
+        ...(PaperProps?.sx || {}),
       },
-      ...PaperProps
+      ...PaperProps,
     }}
     {...props}
   >
-    {/* ================= CONSISTENT PREMIUM HEADER ================= */}
+    {/* ================= HEADER ================= */}
     <DialogTitle
       sx={{
         p: 2.2,
         px: 3,
-        background: headerBg || 'linear-gradient(90deg, #176FC1 0%, #135FA6 40%, #9B0A2E 80%, #CE0F3E 100%)',
-        color: headerColor || '#ffffff',
+        background: (theme) =>
+          headerBg ||
+          `linear-gradient(90deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark || theme.palette.primary.main} 40%, ${theme.palette.secondary.main} 100%)`,
+        color: headerColor || 'primary.contrastText',
         position: 'relative',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+        boxShadow: (theme) => `0 4px 12px ${theme.palette.action.focus}`,
       }}
     >
       <Box display="flex" alignItems="center" justifyContent="space-between">
         <Box display="flex" alignItems="center" gap={1.5}>
-          {HeaderIcon && <HeaderIcon sx={{ fontSize: 24, color: '#f6d365' }} />}
+          {HeaderIcon && <HeaderIcon sx={{ fontSize: 24, color: 'accent.main' }} />}
           <Box>
             <Typography
               variant="h6"
@@ -71,7 +83,7 @@ const DialogWithHeader = ({
                 fontSize: '1.05rem',
                 letterSpacing: '0.3px',
                 color: 'inherit',
-                lineHeight: 1.3
+                lineHeight: 1.3,
               }}
             >
               {headerText}
@@ -80,10 +92,10 @@ const DialogWithHeader = ({
               <Typography
                 variant="caption"
                 sx={{
-                  color: 'rgba(255, 255, 255, 0.8)',
+                  color: 'rgba(255, 255, 255, 0.85)',
                   fontSize: '0.75rem',
                   display: 'block',
-                  mt: 0.2
+                  mt: 0.2,
                 }}
               >
                 {subHeaderText}
@@ -98,14 +110,14 @@ const DialogWithHeader = ({
             onClick={onClose}
             size="small"
             sx={{
-              color: '#ffffff',
+              color: 'primary.contrastText',
               bgcolor: 'rgba(255, 255, 255, 0.12)',
               backdropFilter: 'blur(4px)',
               transition: 'all 0.2s ease-in-out',
               '&:hover': {
                 bgcolor: 'rgba(255, 255, 255, 0.25)',
-                transform: 'rotate(90deg)'
-              }
+                transform: 'rotate(90deg)',
+              },
             }}
           >
             <Close fontSize="small" />
@@ -115,14 +127,20 @@ const DialogWithHeader = ({
     </DialogTitle>
 
     {/* Brand Accent Stripe */}
-    <Box sx={{ height: '3px', background: 'linear-gradient(90deg, #CE0F3E, #176FC1, #CE0F3E)' }} />
+    <Box
+      sx={{
+        height: '3px',
+        background: (theme) =>
+          `linear-gradient(90deg, ${theme.palette.secondary.main}, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+      }}
+    />
 
     {/* Content */}
-    <DialogContent sx={{ p: 3, bgcolor: '#ffffff' }}>{children}</DialogContent>
+    <DialogContent sx={{ p: 3, bgcolor: 'background.paper' }}>{children}</DialogContent>
 
     {/* Optional Footer Actions */}
     {actions && (
-      <DialogActions sx={{ px: 3, py: 2, bgcolor: '#f8fafc', borderTop: '1px solid #e2e8f0' }}>
+      <DialogActions sx={{ px: 3, py: 2, bgcolor: 'action.hover', borderTop: '1px solid', borderColor: 'divider' }}>
         {actions}
       </DialogActions>
     )}
@@ -130,4 +148,3 @@ const DialogWithHeader = ({
 );
 
 export default DialogWithHeader;
-

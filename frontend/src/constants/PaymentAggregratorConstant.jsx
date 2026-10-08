@@ -606,88 +606,181 @@ export const PAYMENT_PROJECTIONS = [
   'Debit card'
 ];
 
-const safeFormatDate = (dateStr, isCompleted = false, fallbackBaseDate = null) => {
-  if (dateStr) {
-    const d = new Date(dateStr);
-    if (!isNaN(d.getTime())) {
-      return formatDateAndTime(dateStr);
-    }
-  }
-  if (isCompleted || fallbackBaseDate) {
-    const base = fallbackBaseDate ? new Date(fallbackBaseDate) : new Date();
-    if (!isNaN(base.getTime())) {
-      return formatDateAndTime(base);
-    }
-    return formatDateAndTime(new Date());
+/**
+ * Helper to safely format ISO/string dates into Bank Standard format (DD-MM-YYYY hh:mm A).
+ * Ensures that if a stage is pending or hasn't recorded its own timestamp, it returns null
+ * rather than improperly falling back to the initial application creation date.
+ *
+ * @param {string|Date|null} dateStr - Raw date string or timestamp.
+ * @returns {string|null} Formatted date or null if not present/invalid.
+ */
+const safeFormatDate = (dateStr) => {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  if (!isNaN(d.getTime())) {
+    return formatDateAndTime(dateStr);
   }
   return null;
 };
 
-export const PAYMENT_AGGREGATOR_WORKFLOW = (applicationStatus) => [
-  {
-    role: 'BO / RO / ZO / CO',
-    label: 'Application Submission',
-    description: 'Branch submits application and documents.',
-    icon: <DescriptionIcon />,
-    status: applicationStatus?.isApplicationSubmittedBR ?? true,
-    date: safeFormatDate(applicationStatus?.createdAt, true),
-    approvedBy: applicationStatus?.createdByBRId ? `ID: ${applicationStatus.createdByBRId}` : 'Branch User',
-  },
-  {
-    role: 'BO / RO / ZO / CO',
-    label: 'RO / ZO Review',
-    description: 'RO / ZO reviews and uploads RH / ZH Recommendation.',
-    icon: <RateReviewIcon />,
-    status: applicationStatus?.isReviewByRO || applicationStatus?.isReviewByZO,
-    date: safeFormatDate(applicationStatus?.approvedByRODate || applicationStatus?.approvedByZODate || (applicationStatus?.isReviewByRO ? applicationStatus?.createdAt : null), applicationStatus?.isReviewByRO || applicationStatus?.isReviewByZO, applicationStatus?.createdAt),
-    approvedBy: applicationStatus?.approvedByROId ? `ID: ${applicationStatus.approvedByROId}` : applicationStatus?.approvedByZOId ? `ID: ${applicationStatus.approvedByZOId}` : 'RO User',
-  },
-  {
-    role: 'BO / RO / ZO / CO',
-    label: 'CO Review',
-    description: 'CO reviews and forwards details to Aggregator.',
-    icon: <ForwardToInboxIcon />,
-    status: applicationStatus?.isReviewByCO,
-    date: safeFormatDate(applicationStatus?.approvedByCODate || (applicationStatus?.isReviewByCO ? applicationStatus?.createdAt : null), applicationStatus?.isReviewByCO, applicationStatus?.createdAt),
-    approvedBy: applicationStatus?.approvedByCOId ? `ID: ${applicationStatus.approvedByCOId}` : 'CO User',
-  },
-  {
-    role: 'AEPA',
-    label: 'Quote Submission',
-    description: 'Aggregator submits quotes.',
-    icon: <UploadIcon />,
-    status: applicationStatus?.isQuoteAddedPA || applicationStatus?.isAggregatorAdded,
-    date: safeFormatDate(applicationStatus?.quoteAddedPADate || ((applicationStatus?.isQuoteAddedPA || applicationStatus?.isAggregatorAdded) ? applicationStatus?.createdAt : null), (applicationStatus?.isQuoteAddedPA || applicationStatus?.isAggregatorAdded), applicationStatus?.createdAt),
-    approvedBy: applicationStatus?.finalizedAggregatorName || 'Aggregator (PA)',
-  },
-  {
-    role: 'CO',
-    label: 'Quote Analysis',
-    description: 'CO selects suitable quote and applies mark-up.',
-    icon: <CalculateIcon />,
-    status: applicationStatus?.isQuoteReviewCO || applicationStatus?.isMarkUpAddedCO,
-    date: safeFormatDate(applicationStatus?.quoteReviewCODate || ((applicationStatus?.isQuoteReviewCO || applicationStatus?.isMarkUpAddedCO) ? applicationStatus?.createdAt : null), (applicationStatus?.isQuoteReviewCO || applicationStatus?.isMarkUpAddedCO), applicationStatus?.createdAt),
-    approvedBy: applicationStatus?.approvedByQuoteId ? `ID: ${applicationStatus.approvedByQuoteId}` : applicationStatus?.approvedByCOId ? `ID: ${applicationStatus.approvedByCOId}` : 'CO User',
-  },
-  {
-    role: 'RO / CO',
-    label: 'Customer Acceptance',
-    description: 'Customer accepts terms.',
-    icon: <ThumbUpAltIcon />,
-    status: applicationStatus?.isQuoteAcceptRO,
-    date: safeFormatDate(applicationStatus?.quoteAcceptRODate || (applicationStatus?.isQuoteAcceptRO ? applicationStatus?.createdAt : null), applicationStatus?.isQuoteAcceptRO, applicationStatus?.createdAt),
-    approvedBy: applicationStatus?.approvedByROId ? `ID: ${applicationStatus.approvedByROId}` : 'Customer',
-  },
-  {
-    role: 'BO / RO / ZO / CO',
-    label: 'Final Approval',
-    description: 'CO verifies and issues PO.',
-    icon: <FactCheckIcon />,
-    status: applicationStatus?.isFinalApproved,
-    date: safeFormatDate(applicationStatus?.finalApprovedDate || (applicationStatus?.isFinalApproved ? applicationStatus?.createdAt : null), applicationStatus?.isFinalApproved, applicationStatus?.createdAt),
-    approvedBy: applicationStatus?.approvedByCOId ? `ID: ${applicationStatus.approvedByCOId}` : 'CO User',
-  },
-];
+/**
+ * Derives the 7-stage Payment Aggregator Workflow pipeline with individual stage
+ * completion status, genuine stage-specific audit timestamps, and acting authority IDs.
+ *
+ * @business_rule CBI-PAPG Workflow Standard Operating Procedure:
+ * Stage 1: Branch submission (BR/BO)
+ * Stage 2: Regional/Zonal recommendation & verification (RO/ZO)
+ * Stage 3: Central Office verification & forward to Aggregators (CO)
+ * Stage 4: Payment Aggregator quotation submission (AEPA)
+ * Stage 5: Central Office commercial analysis & markup application (CO)
+ * Stage 6: Customer term acceptance & recommendation (RO/Customer)
+ * Stage 7: Competent Authority final sanction & Purchase Order issuance (CO)
+ *
+ * @param {Object} applicationStatus - The active application data record.
+ * @returns {Array<Object>} List of structured stage descriptors for Steppers and audit logs.
+ */
+export const PAYMENT_AGGREGATOR_WORKFLOW = (applicationStatus) => {
+  if (!applicationStatus) return [];
+
+  // Stage 1: Branch Submission
+  const isStage1Completed = Boolean(applicationStatus.isApplicationSubmittedBR ?? true);
+  const stage1Date = safeFormatDate(applicationStatus.submittedAt || applicationStatus.createdAt);
+
+  // Stage 2: RO / ZO Review
+  const isStage2Completed = Boolean(applicationStatus.isReviewByRO || applicationStatus.isReviewByZO);
+  const stage2Date = safeFormatDate(
+    applicationStatus.approvedByRODate ||
+    applicationStatus.approvedByZODate ||
+    applicationStatus.roReviewDate ||
+    applicationStatus.zoReviewDate ||
+    applicationStatus.reviewedAtRO ||
+    applicationStatus.reviewedAtZO
+  );
+
+  // Stage 3: CO Review
+  const isStage3Completed = Boolean(applicationStatus.isReviewByCO);
+  const stage3Date = safeFormatDate(
+    applicationStatus.approvedByCODate ||
+    applicationStatus.coReviewDate ||
+    applicationStatus.forwardedToAggregatorDate ||
+    applicationStatus.reviewedAtCO
+  );
+
+  // Stage 4: Quote Submission by Aggregator
+  const isStage4Completed = Boolean(applicationStatus.isQuoteAddedPA || applicationStatus.isAggregatorAdded);
+  const stage4Date = safeFormatDate(
+    applicationStatus.quoteAddedPADate ||
+    applicationStatus.quoteSubmissionDate ||
+    applicationStatus.aggregatorQuoteDate
+  );
+
+  // Stage 5: Quote Analysis & Markup
+  const isStage5Completed = Boolean(applicationStatus.isQuoteReviewCO || applicationStatus.isMarkUpAddedCO);
+  const stage5Date = safeFormatDate(
+    applicationStatus.quoteReviewCODate ||
+    applicationStatus.markupAddedDate ||
+    applicationStatus.markupDate
+  );
+
+  // Stage 6: Customer Acceptance
+  const isStage6Completed = Boolean(applicationStatus.isQuoteAcceptRO);
+  const stage6Date = safeFormatDate(
+    applicationStatus.quoteAcceptRODate ||
+    applicationStatus.customerAcceptanceDate ||
+    applicationStatus.acceptedAtRO
+  );
+
+  // Stage 7: Final Approval & PO Issuance
+  const isStage7Completed = Boolean(applicationStatus.isFinalApproved);
+  const stage7Date = safeFormatDate(
+    applicationStatus.finalApprovedDate ||
+    applicationStatus.poGeneratedDate ||
+    applicationStatus.finalApprovalDate ||
+    applicationStatus.completedAt
+  );
+
+  return [
+    {
+      role: 'BO / RO / ZO / CO',
+      label: 'Application Submission',
+      description: 'Branch submits application and documents.',
+      icon: <DescriptionIcon />,
+      status: isStage1Completed,
+      date: stage1Date,
+      approvedBy: applicationStatus.createdByBRId ? `ID: ${applicationStatus.createdByBRId}` : 'Branch User',
+    },
+    {
+      role: 'BO / RO / ZO / CO',
+      label: 'RO / ZO Review',
+      description: 'RO / ZO reviews and uploads RH / ZH Recommendation.',
+      icon: <RateReviewIcon />,
+      status: isStage2Completed,
+      date: stage2Date,
+      approvedBy: applicationStatus.approvedByROId
+        ? `ID: ${applicationStatus.approvedByROId}`
+        : applicationStatus.approvedByZOId
+        ? `ID: ${applicationStatus.approvedByZOId}`
+        : isStage2Completed
+        ? 'RO / ZO User'
+        : null,
+    },
+    {
+      role: 'BO / RO / ZO / CO',
+      label: 'CO Review',
+      description: 'CO reviews and forwards details to Aggregator.',
+      icon: <ForwardToInboxIcon />,
+      status: isStage3Completed,
+      date: stage3Date,
+      approvedBy: applicationStatus.approvedByCOId
+        ? `ID: ${applicationStatus.approvedByCOId}`
+        : isStage3Completed
+        ? 'CO User'
+        : null,
+    },
+    {
+      role: 'AEPA',
+      label: 'Quote Submission',
+      description: 'Aggregator submits quotes.',
+      icon: <UploadIcon />,
+      status: isStage4Completed,
+      date: stage4Date,
+      approvedBy: applicationStatus.finalizedAggregatorName || (isStage4Completed ? 'Payment Aggregator' : null),
+    },
+    {
+      role: 'CO',
+      label: 'Quote Analysis',
+      description: 'CO selects suitable quote and applies mark-up.',
+      icon: <CalculateIcon />,
+      status: isStage5Completed,
+      date: stage5Date,
+      approvedBy: applicationStatus.approvedByQuoteId
+        ? `ID: ${applicationStatus.approvedByQuoteId}`
+        : applicationStatus.approvedByCOId
+        ? `ID: ${applicationStatus.approvedByCOId}`
+        : isStage5Completed
+        ? 'CO User'
+        : null,
+    },
+    {
+      role: 'RO / CO',
+      label: 'Customer Acceptance',
+      description: 'Customer accepts terms.',
+      icon: <ThumbUpAltIcon />,
+      status: isStage6Completed,
+      date: stage6Date,
+      approvedBy: applicationStatus.customerAcceptedBy || (isStage6Completed ? 'Customer / Branch' : null),
+    },
+    {
+      role: 'BO / RO / ZO / CO',
+      label: 'Final Approval',
+      description: 'CO verifies and issues PO.',
+      icon: <FactCheckIcon />,
+      status: isStage7Completed,
+      date: stage7Date,
+      approvedBy: applicationStatus.finalApprovedBy || (applicationStatus.approvedByCOId ? `ID: ${applicationStatus.approvedByCOId}` : isStage7Completed ? 'CO User' : null),
+    },
+  ];
+};
 
 export const CUSTOMERS_APPLICATION_TABLE_COLUMNS = [
   {

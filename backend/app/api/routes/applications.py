@@ -149,25 +149,28 @@ def get_all_application(
 
     if effective_role == "BO":
         # BO sees all applications belonging to their branch
-        if branchId and str(branchId).strip() not in ("all", "0", "00000", "undefined", "null", ""):
+        eff_branch = branchId or getattr(current_user, "Locationid", None) or getattr(current_user, "branchId", None) or getattr(current_user, "BranchId", None)
+        if eff_branch and str(eff_branch).strip() not in ("all", "0", "00000", "undefined", "null", ""):
             try:
-                query = query.filter(ApplicationsInDB.branchId == int(branchId))
+                query = query.filter(ApplicationsInDB.branchId == int(eff_branch))
             except ValueError:
                 pass
 
     elif effective_role == "RO":
         # RO sees all applications belonging to their region (pending review, approved, or rejected)
-        if regionId and str(regionId).strip() not in ("all", "0", "00000", "undefined", "null", ""):
+        eff_region = regionId or getattr(current_user, "RegionId", None) or getattr(current_user, "regionId", None) or getattr(current_user, "Region_Id", None)
+        if eff_region and str(eff_region).strip() not in ("all", "0", "00000", "undefined", "null", ""):
             try:
-                query = query.filter(ApplicationsInDB.regionId == int(regionId))
+                query = query.filter(ApplicationsInDB.regionId == int(eff_region))
             except ValueError:
                 pass
 
     elif effective_role == "ZO":
         # ZO sees applications in their zone ONLY AFTER RO approval is complete (or rejected at ZO/CO stage)
-        if zoneId and str(zoneId).strip() not in ("all", "0", "00000", "undefined", "null", ""):
+        eff_zone = zoneId or getattr(current_user, "ZoneId", None) or getattr(current_user, "zoneId", None) or getattr(current_user, "Zone_Id", None)
+        if eff_zone and str(eff_zone).strip() not in ("all", "0", "00000", "undefined", "null", ""):
             try:
-                query = query.filter(ApplicationsInDB.zoneId == int(zoneId))
+                query = query.filter(ApplicationsInDB.zoneId == int(eff_zone))
             except ValueError:
                 pass
         query = query.filter(
@@ -186,10 +189,20 @@ def get_all_application(
         )
 
     else:
-        # CO / ADMIN: Sees bank-wide applications across all zones
+        # CO / ADMIN: Sees bank-wide applications across all zones (or filtered by specific zone/region/branch if requested)
         if zoneId and str(zoneId).strip() not in ("all", "0", "00000", "undefined", "null", ""):
             try:
                 query = query.filter(ApplicationsInDB.zoneId == int(zoneId))
+            except ValueError:
+                pass
+        if regionId and str(regionId).strip() not in ("all", "0", "00000", "undefined", "null", ""):
+            try:
+                query = query.filter(ApplicationsInDB.regionId == int(regionId))
+            except ValueError:
+                pass
+        if branchId and str(branchId).strip() not in ("all", "0", "00000", "undefined", "null", ""):
+            try:
+                query = query.filter(ApplicationsInDB.branchId == int(branchId))
             except ValueError:
                 pass
 
@@ -214,7 +227,7 @@ def get_all_application(
         if status and status != "all" and app.status != status:
             continue
 
-        # 2. search filter across multiple fields
+        # 2. search filter across multiple fields and identifiers
         if search and search.strip():
             s = str(search.strip()).lower()
             app_id_str = str(app.applicationId or "").lower()
@@ -224,7 +237,11 @@ def get_all_application(
             cat_str = str(app.category or "").lower()
             bus_cat_str = str(getattr(app, "businessCategory", "") or "").lower()
             branch_str = str(app.branchName or "").lower()
+            branch_id_str = str(app.branchId or "").lower()
             region_str = str(app.regionName or "").lower()
+            region_id_str = str(app.regionId or "").lower()
+            zone_str = str(app.zoneName or "").lower()
+            zone_id_str = str(app.zoneId or "").lower()
             status_str = str(app.status or "").lower()
             if not (
                 s in app_id_str
@@ -234,7 +251,11 @@ def get_all_application(
                 or s in cat_str
                 or s in bus_cat_str
                 or s in branch_str
+                or s in branch_id_str
                 or s in region_str
+                or s in region_id_str
+                or s in zone_str
+                or s in zone_id_str
                 or s in status_str
             ):
                 continue
