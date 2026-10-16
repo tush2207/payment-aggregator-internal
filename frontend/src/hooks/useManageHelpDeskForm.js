@@ -5,7 +5,7 @@ import { HELP_DESK_FORM_VALUES } from '&src/constants/PaymentAggregratorConstant
 import applicationServices from '&src/services/applications';
 import HelpdeskServices from '&src/services/helpdesk';
 import { helpDeskFormSchema } from '&src/utils/validationSchemas';
-import useStatusWiseAlert from '&src/components/ToastNotifications/useStatusWiseAlert';
+import useStatusWiseAlert from '&src/components/feedback/ToastNotifications/useStatusWiseAlert';
 
 /**
  * Custom hook encapsulating helpdesk ticket creation, editing,

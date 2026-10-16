@@ -16,8 +16,8 @@ import {
 } from '@mui/icons-material';
 
 import { papgLogo, loginLeftside } from '&src/assets';
-import { FormField } from '&src/components/FormFields';
-import FullScreenLoader from '&src/components/Loaders/FullScreenLoader';
+import { FormField } from '&src/components/form/FormFields';
+import FullScreenLoader from '&src/components/feedback/FullScreenLoader';
 import { DEV_ROLES, IS_DEV, useLogin } from './useLogin';
 
 // ─────────────────────────────────────────────────────────────────────────────

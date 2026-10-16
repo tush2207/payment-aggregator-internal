@@ -150,38 +150,38 @@ export const aggregatorFormSchema = Yup.object().shape({
 
 export const poFormSchema = Yup.object().shape({
   branchName: Yup.string()
-  .required("Branch name is required."),
+    .trim()
+    .required("Branch name is required."),
 
   regionName: Yup.string()
-  .required("Region name is required."),
+    .trim()
+    .required("Region name is required."),
 
   rccContactPersonName: Yup.string()
     .trim()
-    .matches(/^[A-Za-z0-9 ]+$/, "Only alphabets are allowed")
+    .matches(/^[A-Za-z0-9 .'-]+$/, "Only valid characters (alphabets, spaces, dots) allowed")
     .min(2, "Name must be at least 2 characters")
     .required("Contact person name is required."),
 
-    rccMailId: Yup.string()
+  rccMailId: Yup.string()
     .trim()
-    .matches(
-      /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,}$/,
-      "Enter a valid email address"
-    )
-    .required("RCC Mail is required"),
+    .email("Enter a valid email address")
+    .required("RCC Mail ID is required."),
 
   rccMobileNo: Yup.string()
     .trim()
-    .matches(/^[6-9]\d{9}$/, 'Mobile number must be valid')
-    .required('Mobile number is required'),
+    .matches(/^(?:(?:\+|0{0,2})91(\s*[-]\s*)?|[0]?)?[6789]\d{9}$/, 'Enter a valid 10-digit mobile number')
+    .required('Mobile number is required.'),
 
   authorisedPersonName: Yup.string()
     .trim()
-    .matches(/^[A-Za-z0-9 ]+$/, "Only alphabets are allowed")
+    .matches(/^[A-Za-z0-9 .'-]+$/, "Only valid characters (alphabets, spaces, dots) allowed")
     .min(2, "Name must be at least 2 characters")
     .required("Authorised Person name is required."),
 
-  authorisedPersonDesignation: Yup.string().required("Authorised Person Designation is required."),
-
+  authorisedPersonDesignation: Yup.string()
+    .trim()
+    .required("Authorised Person Designation is required."),
 });
 
 export const helpDeskFormSchema = Yup.object({

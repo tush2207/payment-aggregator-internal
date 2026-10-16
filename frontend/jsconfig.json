@@ -2,9 +2,43 @@
   "compilerOptions": {
     "baseUrl": "./",
     "paths": {
-      "&src/*": [
-        "src/*"
-      ]
+      "&src/*": ["src/*"],
+      "@src/*": ["src/*"],
+      "@/*": ["src/*"],
+      "src/*": ["src/*"],
+      "@components/*": ["src/components/*"],
+      "&components/*": ["src/components/*"],
+      "@services/*": ["src/services/*"],
+      "&services/*": ["src/services/*"],
+      "@hooks/*": ["src/hooks/*"],
+      "&hooks/*": ["src/hooks/*"],
+      "@pages/*": ["src/pages/*"],
+      "&pages/*": ["src/pages/*"],
+      "@utils/*": ["src/utils/*"],
+      "&utils/*": ["src/utils/*"],
+      "@modules/*": ["src/modules/*"],
+      "&modules/*": ["src/modules/*"],
+      "@constants/*": ["src/constants/*"],
+      "&constants/*": ["src/constants/*"],
+      "@store/*": ["src/store/*"],
+      "&store/*": ["src/store/*"],
+      "@assets/*": ["src/assets/*"],
+      "&assets/*": ["src/assets/*"],
+      "@routes/*": ["src/routes/*"],
+      "&routes/*": ["src/routes/*"],
+      "@styles/*": ["src/styles/*"],
+      "&styles/*": ["src/styles/*"],
+      "@theme/*": ["src/theme/*"],
+      "&theme/*": ["src/theme/*"],
+      "@features/*": ["src/features/*"],
+      "&features/*": ["src/features/*"],
+      "@layout/*": ["src/components/layout/*"],
+      "&layout/*": ["src/components/layout/*"],
+      "@feedback/*": ["src/components/feedback/*"],
+      "&feedback/*": ["src/components/feedback/*"],
+      "@table/*": ["src/components/table/*"],
+      "&table/*": ["src/components/table/*"]
     }
-  }
+  },
+  "include": ["src/**/*"]
 }

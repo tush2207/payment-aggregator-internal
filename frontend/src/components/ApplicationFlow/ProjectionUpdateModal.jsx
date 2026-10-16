@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { 
   Dialog, DialogTitle, DialogContent, DialogActions, 
   Button, Table, TableBody, TableCell, TableContainer, 
-  TableHead, TableRow, Paper, TextField, Typography, IconButton 
+  TableHead, TableRow, Paper, TextField, Typography, IconButton, Box 
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import { PROJECTION_CAL_DETAILS } from '&src/constants/PaymentAggregratorConstant';
 
 export default function ProjectionUpdateModal({ open, onClose, applicationData, onUpdate }) {
@@ -33,12 +34,57 @@ export default function ProjectionUpdateModal({ open, onClose, applicationData, 
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
-      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="h6">Update Projections</Typography>
-        <IconButton onClick={onClose} size="small">
-          <CloseIcon />
-        </IconButton>
+    <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth PaperProps={{ sx: { borderRadius: '16px', overflow: 'hidden' } }}>
+      <DialogTitle
+        sx={{
+          background: 'linear-gradient(90deg, #176FC1 0%, #135FA6 40%, #9B0A2E 80%, #CE0F3E 100%)',
+          backgroundColor: '#176FC1',
+          color: '#ffffff',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          py: 1.8,
+          px: 3,
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
+          borderBottom: '3px solid #CE0F3E',
+        }}
+      >
+        <Box display="flex" alignItems="center" gap={1.5}>
+          <TrendingUpIcon sx={{ fontSize: 26, color: '#ffffff' }} />
+          <Typography variant="h6" fontWeight={700} sx={{ color: '#ffffff', fontSize: '1.05rem' }}>
+            Update Projections
+          </Typography>
+        </Box>
+        <Box display="flex" alignItems="center" gap={1.5}>
+          {applicationData?.applicationId && (
+            <Typography
+              variant="subtitle2"
+              sx={{
+                backgroundColor: 'rgba(255,255,255,0.15)',
+                px: 1.5,
+                py: 0.5,
+                borderRadius: '6px',
+                fontWeight: 600,
+                fontSize: '12px',
+                color: '#ffffff',
+              }}
+            >
+              App ID: {applicationData.applicationId}
+            </Typography>
+          )}
+          <IconButton
+            onClick={onClose}
+            size="small"
+            sx={{
+              color: '#ffffff',
+              bgcolor: 'rgba(255,255,255,0.15)',
+              borderRadius: '8px',
+              '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' },
+            }}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </Box>
       </DialogTitle>
       
       <DialogContent dividers>

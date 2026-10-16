@@ -221,6 +221,43 @@ const applicationServices = {
     }
   },
 
+  // ---------------- QA & Testing Database Management ----------------
+  getQATablesSummary: async (config) => {
+    try {
+      return await getMethod(ApiUrls.QA_TABLES_SUMMARY, config);
+    } catch (error) {
+      console.error(`Error in ${ApiUrls.QA_TABLES_SUMMARY}:`, error);
+      throw error;
+    }
+  },
+
+  truncateQATable: async (tableName, config) => {
+    try {
+      return await deleteMethod(ApiUrls.QA_TRUNCATE_TABLE(tableName), config);
+    } catch (error) {
+      console.error(`Error in ${ApiUrls.QA_TRUNCATE_TABLE(tableName)}:`, error);
+      throw error;
+    }
+  },
+
+  wipeAllQAApplications: async (config) => {
+    try {
+      return await deleteMethod(ApiUrls.QA_WIPE_ALL_APPLICATIONS, config);
+    } catch (error) {
+      console.error(`Error in ${ApiUrls.QA_WIPE_ALL_APPLICATIONS}:`, error);
+      throw error;
+    }
+  },
+
+  forceDeleteQAApplication: async (applicationId, config) => {
+    try {
+      return await deleteMethod(ApiUrls.QA_FORCE_DELETE_APPLICATION(applicationId), config);
+    } catch (error) {
+      console.error(`Error in ${ApiUrls.QA_FORCE_DELETE_APPLICATION(applicationId)}:`, error);
+      throw error;
+    }
+  },
+
 };
 
 export default applicationServices;

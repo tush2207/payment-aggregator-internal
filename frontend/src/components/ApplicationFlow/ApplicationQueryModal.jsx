@@ -117,30 +117,60 @@ export const ApplicationQueryModal = ({
     >
       {/* ── Modal Header ── */}
       <DialogTitle
-        sx={(theme) => ({
-          background: theme.palette.cbi?.gradients?.modalHeader || 'linear-gradient(135deg, #0E4F8D 0%, #176FC1 100%)',
+        sx={{
+          background: 'linear-gradient(90deg, #176FC1 0%, #135FA6 40%, #9B0A2E 80%, #CE0F3E 100%)',
+          backgroundColor: '#176FC1',
           color: '#ffffff',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          py: 1.5,
-          px: 2.5,
-        })}
+          py: 1.8,
+          px: 3,
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
+          borderBottom: '3px solid #CE0F3E',
+        }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
-          <QuestionAnswerRounded sx={{ color: '#f6d365' }} />
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <QuestionAnswerRounded sx={{ color: '#ffffff', fontSize: 26 }} />
           <Box>
-            <Typography variant="subtitle1" fontWeight={800} lineHeight={1.2}>
+            <Typography variant="h6" fontWeight={700} sx={{ fontSize: '1.05rem', color: '#ffffff', lineHeight: 1.2 }}>
               Application Queries & Clarifications
             </Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.74rem' }}>
-              App ID: <b>{applicationId}</b> &bull; {customerDetails?.customerName || 'Merchant'}
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.75rem' }}>
+              {customerDetails?.customerName ? `Customer: ${customerDetails.customerName}` : 'Merchant Queries & Escalations'}
             </Typography>
           </Box>
         </Box>
-        <IconButton onClick={onClose} sx={{ color: '#ffffff' }}>
-          <Close fontSize="small" />
-        </IconButton>
+        <Box display="flex" alignItems="center" gap={1.5}>
+          {applicationId && (
+            <Typography
+              variant="subtitle2"
+              sx={{
+                backgroundColor: 'rgba(255,255,255,0.15)',
+                px: 1.5,
+                py: 0.5,
+                borderRadius: '6px',
+                fontWeight: 600,
+                fontSize: '12px',
+                color: '#ffffff',
+              }}
+            >
+              App ID: {applicationId}
+            </Typography>
+          )}
+          <IconButton
+            onClick={onClose}
+            size="small"
+            sx={{
+              color: '#ffffff',
+              bgcolor: 'rgba(255,255,255,0.15)',
+              borderRadius: '8px',
+              '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' },
+            }}
+          >
+            <Close fontSize="small" />
+          </IconButton>
+        </Box>
       </DialogTitle>
 
       <DialogContent sx={{ p: 2.5, display: 'flex', flexDirection: 'column' }}>

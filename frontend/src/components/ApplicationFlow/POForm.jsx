@@ -1,8 +1,9 @@
+import React from "react";
 import {
     EmailField,
     FormField,
     MobileNoField
-} from "&src/components/FormFields";
+} from "&src/components/form/FormFields";
 import {
     DESIGNATIONS
 } from "&src/constants/PaymentAggregratorConstant";
@@ -12,8 +13,14 @@ import {
     Grid,
     Typography,
     Paper,
-    Box
+    Box,
+    Stack,
+    CircularProgress
 } from "@mui/material";
+import AssignmentIcon from "@mui/icons-material/Assignment";
+import BusinessIcon from "@mui/icons-material/Business";
+import BadgeIcon from "@mui/icons-material/Badge";
+import DescriptionIcon from "@mui/icons-material/Description";
 import AutocompleteDropdown from "../AutocompleteDropdown";
 import DialogWithHeader from "../Dialog/DialogWithHeader";
 import FullScreenLoader from "../Loaders/FullScreenLoader";
@@ -29,8 +36,7 @@ const POForm = ({
     inline = false,
     onCancel
 }) => {
-
-    const { values, errors, touched, handleChange, handleBlur, handleSubmit, resetForm, setFieldTouched, setFieldValue } = poFormDetails;
+    const { values, errors, touched, handleChange, handleBlur, handleSubmit, resetForm, setFieldValue } = poFormDetails;
 
     const handleClose = () => {
         if (setOpenPOModal) setOpenPOModal(false);
@@ -38,133 +44,191 @@ const POForm = ({
     };
 
     const renderFormContent = () => (
-        <form onSubmit={(event) => {
-            event.preventDefault();
-            handleSubmit(applicationId, aggregatorId);
-        }}
-            noValidate
-        >
-            <Grid container spacing={2}>
+        <form onSubmit={handleSubmit} noValidate>
+            <Grid container spacing={2.5}>
+                {/* Section 1: Branch & RCC Details */}
                 <Grid item xs={12}>
-                    <Typography fontWeight={500} variant="subtitle2" color="text.secondary">
-                        Branch / RCC Details
-                    </Typography>
-                </Grid>
-                <Grid item xs={12}>
-                    <Divider />
-                </Grid>
-                {/* Branch Name */}
-                <Grid item xs={12} sm={inline ? 6 : 12}>
-                    <FormField
-                        required
-                        name="branchName"
-                        label="Branch Name"
-                        value={values?.branchName}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        helperText={touched?.branchName && errors?.branchName}
-                    />
-                </Grid>
-                {/* Region Name */}
-                <Grid item xs={12} sm={inline ? 6 : 12}>
-                    <FormField
-                        required
-                        name="regionName"
-                        label="Region Name"
-                        value={values?.regionName}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        helperText={touched?.regionName && errors?.regionName}
-                    />
+                    <Paper
+                        elevation={0}
+                        sx={{
+                            p: 2.5,
+                            borderRadius: "10px",
+                            border: "1px solid #cbd5e1",
+                            bgcolor: "#f8fafc"
+                        }}
+                    >
+                        <Box display="flex" alignItems="center" gap={1} mb={1.5}>
+                            <BusinessIcon sx={{ color: "#0E4F8D", fontSize: 20 }} />
+                            <Typography variant="subtitle2" fontWeight={800} sx={{ color: "#0E4F8D", fontSize: "13.5px" }}>
+                                Branch & RCC Communication Details
+                            </Typography>
+                        </Box>
+                        <Divider sx={{ mb: 2 }} />
+
+                        <Grid container spacing={2}>
+                            {/* Branch Name */}
+                            <Grid item xs={12} sm={6}>
+                                <FormField
+                                    required
+                                    name="branchName"
+                                    label="Branch Name"
+                                    placeholder="e.g. Mumbai Main Branch"
+                                    value={values?.branchName}
+                                    onChange={handleChange}
+                                    onBlur={handleBlur}
+                                    error={touched?.branchName && Boolean(errors?.branchName)}
+                                    helperText={touched?.branchName && errors?.branchName}
+                                />
+                            </Grid>
+                            {/* Region Name */}
+                            <Grid item xs={12} sm={6}>
+                                <FormField
+                                    required
+                                    name="regionName"
+                                    label="Region Name"
+                                    placeholder="e.g. Mumbai Metro Region"
+                                    value={values?.regionName}
+                                    onChange={handleChange}
+                                    onBlur={handleBlur}
+                                    error={touched?.regionName && Boolean(errors?.regionName)}
+                                    helperText={touched?.regionName && errors?.regionName}
+                                />
+                            </Grid>
+
+                            {/* Contact Person Name */}
+                            <Grid item xs={12} sm={4}>
+                                <FormField
+                                    required
+                                    name="rccContactPersonName"
+                                    label="RCC Contact Person"
+                                    placeholder="e.g. Rajesh Sharma"
+                                    value={values?.rccContactPersonName}
+                                    onChange={handleChange}
+                                    onBlur={handleBlur}
+                                    error={touched?.rccContactPersonName && Boolean(errors?.rccContactPersonName)}
+                                    helperText={touched?.rccContactPersonName && errors?.rccContactPersonName}
+                                />
+                            </Grid>
+
+                            {/* Mail Id */}
+                            <Grid item xs={12} sm={4}>
+                                <EmailField
+                                    required
+                                    name="rccMailId"
+                                    label="RCC Official Email"
+                                    placeholder="rcc.mumbai@centralbank.co.in"
+                                    value={values?.rccMailId}
+                                    onChange={handleChange}
+                                    onBlur={handleBlur}
+                                    error={touched?.rccMailId && Boolean(errors?.rccMailId)}
+                                    helperText={touched?.rccMailId && errors?.rccMailId}
+                                />
+                            </Grid>
+
+                            {/* Mobile Number */}
+                            <Grid item xs={12} sm={4}>
+                                <MobileNoField
+                                    required
+                                    name="rccMobileNo"
+                                    label="Contact Mobile No"
+                                    placeholder="9876543210"
+                                    value={values?.rccMobileNo}
+                                    onChange={handleChange}
+                                    onBlur={handleBlur}
+                                    error={touched?.rccMobileNo && Boolean(errors?.rccMobileNo)}
+                                    helperText={touched?.rccMobileNo && errors?.rccMobileNo}
+                                />
+                            </Grid>
+                        </Grid>
+                    </Paper>
                 </Grid>
 
-                {/* Contact Person Name */}
-                <Grid item xs={12} sm={inline ? 6 : 12}>
-                    <FormField
-                        required
-                        name="rccContactPersonName"
-                        label="Contact Person Name"
-                        value={values?.rccContactPersonName}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        helperText={touched?.rccContactPersonName && errors?.rccContactPersonName}
-                    />
-                </Grid>
-
-                {/* Mail Id */}
-                <Grid item xs={12} sm={inline ? 6 : 12}>
-                    <EmailField
-                        required
-                        name="rccMailId"
-                        label="Mail Id"
-                        value={values?.rccMailId}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        error={touched?.rccMailId && Boolean(errors?.rccMailId)}
-                        helperText={touched?.rccMailId && errors?.rccMailId}
-                    />
-                </Grid>
-
-                {/* Mobile Number */}
-                <Grid item xs={12} sm={inline ? 6 : 12}>
-                    <MobileNoField
-                        required
-                        name="rccMobileNo"
-                        label="Mobile Number"
-                        value={values?.rccMobileNo}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        error={touched?.rccMobileNo && Boolean(errors?.rccMobileNo)}
-                        helperText={touched?.rccMobileNo && errors?.rccMobileNo}
-                    />
-                </Grid>
-                <Grid item xs={12} sx={{ mt: 1 }}>
-                    <Typography fontWeight={500} variant="subtitle2" color="text.secondary">
-                        Authorised Person Details
-                    </Typography>
-                </Grid>
+                {/* Section 2: Authorised Person Details */}
                 <Grid item xs={12}>
-                    <Divider />
+                    <Paper
+                        elevation={0}
+                        sx={{
+                            p: 2.5,
+                            borderRadius: "10px",
+                            border: "1px solid #cbd5e1",
+                            bgcolor: "#f8fafc"
+                        }}
+                    >
+                        <Box display="flex" alignItems="center" gap={1} mb={1.5}>
+                            <BadgeIcon sx={{ color: "#0E4F8D", fontSize: 20 }} />
+                            <Typography variant="subtitle2" fontWeight={800} sx={{ color: "#0E4F8D", fontSize: "13.5px" }}>
+                                Authorised Signatory / Issuing Authority Details
+                            </Typography>
+                        </Box>
+                        <Divider sx={{ mb: 2 }} />
+
+                        <Grid container spacing={2}>
+                            <Grid item xs={12} sm={6}>
+                                <FormField
+                                    required
+                                    name="authorisedPersonName"
+                                    label="Authorised Person Name"
+                                    placeholder="e.g. S. K. Verma"
+                                    value={values?.authorisedPersonName}
+                                    onChange={handleChange}
+                                    onBlur={handleBlur}
+                                    error={touched?.authorisedPersonName && Boolean(errors?.authorisedPersonName)}
+                                    helperText={touched?.authorisedPersonName && errors?.authorisedPersonName}
+                                />
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                                <AutocompleteDropdown
+                                    label="Authorised Designation"
+                                    name="authorisedPersonDesignation"
+                                    options={DESIGNATIONS}
+                                    value={values?.authorisedPersonDesignation}
+                                    setFieldValue={setFieldValue}
+                                    handleBlur={handleBlur}
+                                    touched={touched}
+                                    errors={errors}
+                                    required
+                                />
+                            </Grid>
+                        </Grid>
+                    </Paper>
                 </Grid>
-                <Grid item xs={12} sm={inline ? 6 : 12}>
-                    <FormField
-                        required
-                        name="authorisedPersonName"
-                        label="Person Name"
-                        value={values?.authorisedPersonName}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        helperText={touched?.authorisedPersonName && errors?.authorisedPersonName}
-                    />
-                </Grid>
-                <Grid item xs={12} sm={inline ? 6 : 12}>
-                    <AutocompleteDropdown
-                        label="Designation"
-                        name="authorisedPersonDesignation"
-                        options={DESIGNATIONS}
-                        value={values.authorisedPersonDesignation}
-                        setFieldValue={setFieldValue}
-                        handleBlur={handleBlur}
-                        touched={touched}
-                        errors={errors}
-                        required
-                    />
-                </Grid>
-                <Grid item xs={12} display="flex" justifyContent="flex-end" gap={2} sx={{ mt: 3 }}>
+
+                {/* Action Buttons */}
+                <Grid item xs={12} display="flex" justifyContent="flex-end" gap={2} sx={{ mt: 1 }}>
                     <Button
                         variant="outlined"
                         onClick={inline ? onCancel : handleClose}
-                        sx={{ px: 4 }}
+                        disabled={isLoading}
+                        sx={{
+                            px: 3.5,
+                            py: 1,
+                            fontWeight: 700,
+                            borderRadius: "8px",
+                            textTransform: "none",
+                            borderColor: "#cbd5e1",
+                            color: "#475569",
+                            "&:hover": { bgcolor: "#f1f5f9", borderColor: "#94a3b8" }
+                        }}
                     >
                         Cancel
                     </Button>
                     <Button
                         type="submit"
                         variant="contained"
-                        color="success"
-                        sx={{ px: 4 }}
+                        disabled={isLoading}
+                        startIcon={isLoading ? <CircularProgress size={18} color="inherit" /> : <DescriptionIcon />}
+                        sx={{
+                            px: 4,
+                            py: 1,
+                            fontWeight: 800,
+                            borderRadius: "8px",
+                            textTransform: "none",
+                            background: "linear-gradient(90deg, #15803d 0%, #16a34a 100%)",
+                            boxShadow: "0 4px 12px rgba(22, 163, 74, 0.3)",
+                            "&:hover": { background: "linear-gradient(90deg, #166534 0%, #15803d 100%)" }
+                        }}
                     >
-                        Generate PO
+                        {isLoading ? "Generating PO..." : "Generate & Issue Purchase Order"}
                     </Button>
                 </Grid>
             </Grid>
@@ -173,11 +237,30 @@ const POForm = ({
 
     if (inline) {
         return (
-            <Paper variant="outlined" sx={{ p: 4, borderRadius: "12px", border: "1px solid #cbd5e1", mt: 2 }}>
-                {isLoading && <FullScreenLoader />}
-                <Typography variant="h6" fontWeight={700} color="primary" sx={{ mb: 2 }}>
-                    Required PO Details
-                </Typography>
+            <Paper
+                elevation={0}
+                sx={{
+                    p: 3,
+                    borderRadius: "12px",
+                    border: "1.5px solid #cbd5e1",
+                    mt: 2,
+                    bgcolor: "#ffffff",
+                    boxShadow: "0 4px 16px rgba(14, 79, 141, 0.06)"
+                }}
+            >
+                {isLoading && <FullScreenLoader message="Generating Purchase Order and sending email notifications..." />}
+                <Box display="flex" alignItems="center" gap={1.5} mb={2}>
+                    <AssignmentIcon sx={{ color: "#0E4F8D", fontSize: 26 }} />
+                    <Box>
+                        <Typography variant="h6" fontWeight={800} sx={{ color: "#0E4F8D", fontSize: "16px" }}>
+                            Enter Purchase Order (PO) Details
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                            Provide branch, RCC, and authorized signatory details to generate the official Central Bank PO document.
+                        </Typography>
+                    </Box>
+                </Box>
+                <Divider sx={{ mb: 2.5 }} />
                 {renderFormContent()}
             </Paper>
         );
@@ -187,11 +270,15 @@ const POForm = ({
         <DialogWithHeader
             open={openPOModal}
             onClose={handleClose}
-            maxWidth="sm"
-            headerText="Required PO Details"
+            maxWidth="md"
+            headerText="Required Purchase Order Details"
+            applicationId={applicationId}
+            icon={AssignmentIcon}
         >
-            {isLoading && <FullScreenLoader />}
-            {renderFormContent()}
+            {isLoading && <FullScreenLoader message="Generating Purchase Order and sending email notifications..." />}
+            <Box sx={{ p: 1 }}>
+                {renderFormContent()}
+            </Box>
         </DialogWithHeader>
     );
 };

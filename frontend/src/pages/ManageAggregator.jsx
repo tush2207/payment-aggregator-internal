@@ -46,10 +46,10 @@ import {
 import ConfirmationDialogWithReason from '&src/components/Dialog/ConfirmationDialogWithReason';
 import DialogWithHeader from '&src/components/Dialog/DialogWithHeader';
 import SectionHeader from '&src/components/Headers/SectionHeader';
-import FullScreenLoader from '&src/components/Loaders/FullScreenLoader';
-import NoData from '&src/components/NoData';
-import StatusChipOrSelect from '&src/components/StatusChipOrSelect';
-import ManageAggregatorForm from '&src/modules/ManageAggregrator/ManageAggregatorForm';
+import FullScreenLoader from '&src/components/feedback/FullScreenLoader';
+import NoData from '&src/components/feedback/NoData';
+import StatusChipOrSelect from '&src/components/table/common/StatusChipOrSelect';
+import ManageAggregatorForm from '&src/features/manage-aggregator/ManageAggregatorForm';
 import useManageAggregator from '&src/hooks/useManageAggregator';
 import { CommonTableFilterSection } from '&src/components/Filters';
 
@@ -113,13 +113,15 @@ const ManageAggregator = () => {
       {
         label: 'Export All',
         onClick: handleExportExcel,
-        variant: 'contained',
-        color: 'success',
+        variant: 'outlined',
+        color: 'primary',
         startIcon: <FileDownloadRounded />,
         sx: {
-          bgcolor: '#2E7D32',
-          '&:hover': { bgcolor: '#1B5E20' },
-          boxShadow: '0 2px 8px rgba(46, 125, 50, 0.25)',
+          fontWeight: 700,
+          borderRadius: '8px',
+          px: 2.2,
+          py: 0.9,
+          boxShadow: '0 2px 8px rgba(155, 10, 46, 0.25)',
         },
       },
     ];
@@ -312,7 +314,6 @@ const ManageAggregator = () => {
               <TableCell sx={{ color: '#fff', fontWeight: 700 }}>Contact Person</TableCell>
               <TableCell sx={{ color: '#fff', fontWeight: 700 }}>Email Address</TableCell>
               <TableCell sx={{ color: '#fff', fontWeight: 700 }}>Mobile Number</TableCell>
-              <TableCell sx={{ color: '#fff', fontWeight: 700 }}>Services</TableCell>
               <TableCell sx={{ color: '#fff', fontWeight: 700, textAlign: 'center' }}>Status</TableCell>
               <TableCell sx={{ color: '#fff', fontWeight: 700, textAlign: 'center', width: 160 }}>Actions</TableCell>
             </TableRow>
@@ -320,7 +321,7 @@ const ManageAggregator = () => {
           <TableBody>
             {paginatedAggregators.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} sx={{ py: 6 }}>
+                <TableCell colSpan={7} sx={{ py: 6 }}>
                   <NoData message="No payment aggregators match your search or filter criteria." />
                 </TableCell>
               </TableRow>
@@ -330,17 +331,55 @@ const ManageAggregator = () => {
                   <TableCell>{(page - 1) * rowsPerPage + index + 1}</TableCell>
                   <TableCell sx={{ fontWeight: 700, color: 'primary.dark' }}>{row.aggregatorName}</TableCell>
                   <TableCell>{row.contactPersonName || '-'}</TableCell>
-                  <TableCell>{row.email || '-'}</TableCell>
-                  <TableCell>{row.mobileNo || '-'}</TableCell>
                   <TableCell>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                      {(row.services || '').split('|').filter(Boolean).map((srv, sIdx) => (
-                        <Chip key={sIdx} label={srv.trim()} size="small" variant="outlined" sx={{ fontSize: '0.68rem', height: 20 }} />
-                      ))}
+                    <Box>
+                      <Typography variant="body2" sx={{ fontSize: '13px', fontWeight: 600, color: 'text.primary' }}>
+                        {row.email || '—'}
+                      </Typography>
+                      {row.alternateEmail && (
+                        <Typography variant="caption" sx={{ fontSize: '11px', color: 'text.secondary', display: 'block', mt: 0.3 }}>
+                          Alt: {row.alternateEmail}
+                        </Typography>
+                      )}
                     </Box>
                   </TableCell>
+                  <TableCell>{row.mobileNo || '-'}</TableCell>
                   <TableCell align="center">
-                    <StatusChipOrSelect value={row.status || 'active'} type="status" />
+                    <Tooltip title={isAdmin ? `Click to mark as ${row.status === 'active' ? 'Inactive' : 'Active'}` : 'Aggregator Status'}>
+                      <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
+                        <Switch
+                          size="small"
+                          checked={row.status === 'active'}
+                          onChange={() => handleStatusToggle(row)}
+                          disabled={!isAdmin}
+                          color="success"
+                          sx={{
+                            '& .MuiSwitch-switchBase.Mui-checked': {
+                              color: '#2E7D32',
+                              '&:hover': {
+                                backgroundColor: alpha('#2E7D32', 0.08),
+                              },
+                            },
+                            '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                              backgroundColor: '#2E7D32',
+                            },
+                          }}
+                        />
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            fontWeight: 700,
+                            fontSize: '12px',
+                            color: row.status === 'active' ? 'success.main' : 'text.disabled',
+                            minWidth: 50,
+                            textAlign: 'left',
+                            userSelect: 'none',
+                          }}
+                        >
+                          {row.status === 'active' ? 'Active' : 'Inactive'}
+                        </Typography>
+                      </Box>
+                    </Tooltip>
                   </TableCell>
                   <TableCell align="center">
                     <Stack direction="row" spacing={0.5} justifyContent="center">
@@ -420,7 +459,8 @@ const ManageAggregator = () => {
       <DialogWithHeader
         open={open}
         onClose={handleClose}
-        title={isViewMode ? 'Aggregator Details' : aggregatorData ? 'Edit Aggregator' : 'Add New Payment Aggregator'}
+        headerText={isViewMode ? 'Aggregator Details' : aggregatorData ? 'Edit Aggregator Details' : 'Add New Payment Aggregator'}
+        subHeaderText={isViewMode ? 'Review registered partner configuration and credentials' : 'Configure aggregator information, nodal contact, and enabled services.'}
         maxWidth="md"
       >
         <ManageAggregatorForm

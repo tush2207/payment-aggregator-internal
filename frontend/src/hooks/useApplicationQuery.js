@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import HelpdeskServices from '&src/services/helpdesk';
 import applicationServices from '&src/services/applications';
-import useStatusWiseAlert from '&src/components/ToastNotifications/useStatusWiseAlert';
+import useStatusWiseAlert from '&src/components/feedback/ToastNotifications/useStatusWiseAlert';
 import useQueryWebSocket from '&src/hooks/useQueryWebSocket';
 import axios from 'axios';
 

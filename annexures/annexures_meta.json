@@ -1,0 +1,51 @@
+[
+  {
+    "id": "annexure_2",
+    "filename": "Annexure_2_Technical_Specifications.docx",
+    "title": "Annexure II - Technical Specifications & Integration Architecture",
+    "description": "API specifications, JSON payload standards, webhook callback guidelines, and encryption standards.",
+    "createdAt": "2026-10-01T10:00:00",
+    "modifiedAt": "2026-10-01T10:00:00"
+  },
+  {
+    "id": "annexure_4",
+    "filename": "Annexure_4_Non_Disclosure_Agreement.docx",
+    "title": "Annexure IV - Non-Disclosure Agreement (NDA)",
+    "description": "Confidentiality undertaking, customer data protection, and proprietary security covenants.",
+    "createdAt": "2026-10-01T10:00:00",
+    "modifiedAt": "2026-10-01T10:00:00"
+  },
+  {
+    "id": "annexure_5",
+    "filename": "Annexure_5_Escrow_Agreement_Format.docx",
+    "title": "Annexure V - Escrow Account Agreement Format",
+    "description": "RBI Master Direction compliant escrow operations, pooling of merchant funds, and audit mandates.",
+    "createdAt": "2026-10-01T10:00:00",
+    "modifiedAt": "2026-10-01T10:00:00"
+  },
+  {
+    "id": "annexure_6",
+    "filename": "Annexure_6_Merchant_Onboarding_Checklist.docx",
+    "title": "Annexure VI - Merchant Onboarding Checklist & Due Diligence",
+    "description": "Entity verification guidelines, KYC documentation, AML screening, and underwriting checklist.",
+    "createdAt": "2026-10-01T10:00:00",
+    "modifiedAt": "2026-10-01T10:00:00"
+  },
+  {
+    "id": "annexure_7",
+    "filename": "Annexure_7_Security_and_Compliance_Declaration.docx",
+    "title": "Annexure VII - Information Security & Compliance Declaration",
+    "description": "PCI-DSS v4.0, ISO 27001 certifications, annual VAPT reports, and RBI data localization undertakings.",
+    "createdAt": "2026-10-01T10:00:00",
+    "modifiedAt": "2026-10-01T10:00:00"
+  },
+  {
+    "id": "annexure_88ce156f",
+    "filename": "Annexure_II_-_Technical_Specifications_Integration_Architecture_c9fa11.docx",
+    "title": "Annexure II - Technical Specifications & Integration Architecture",
+    "description": "Annexure II - Technical Specifications & Integration Architecture\r\nAnnexure II - Technical Specifications & Integration Architecture\r\nAnnexure II - Technical Specifications & Integration Architecture\r\nAnnexure II - Technical Specifications & Integration Architecture\r\nAnnexure II - Technical Specifications & Integration Architecture",
+    "sizeBytes": 34481,
+    "createdAt": "2026-10-08T14:59:44.260867",
+    "modifiedAt": "2026-10-08T14:59:44.260867"
+  }
+]

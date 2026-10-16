@@ -35,8 +35,8 @@ import {
 } from '@mui/icons-material';
 import { useDispatch, useSelector } from 'react-redux';
 
-import StatusChipOrSelect from '&src/components/StatusChipOrSelect';
-import NoData from '&src/components/NoData';
+import StatusChipOrSelect from '&src/components/table/common/StatusChipOrSelect';
+import NoData from '&src/components/feedback/NoData';
 import { openWorkflowDialog, selectUserRole } from '&src/store/applicationFlowSlice';
 import { formatDateOnly, formatTimeOnly } from '&src/utils';
 

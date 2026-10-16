@@ -85,6 +85,30 @@ const FileUploadOrView = ({
     }
   };
 
+  const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
+
+  const validateAndSetFile = (file) => {
+    if (!file) return;
+
+    // 1. Strict PDF format validation
+    const fileName = (file.name || '').toLowerCase();
+    const isPdf = fileName.endsWith('.pdf') || file.type === 'application/pdf';
+    if (!isPdf) {
+      errorNotification(`Only PDF files (.pdf) are allowed for ${label}. Please choose a valid PDF document.`);
+      return;
+    }
+
+    // 2. Strict 5 MB file size validation
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
+      errorNotification(`File size (${sizeMb} MB) exceeds the maximum limit of 5 MB. Please upload a compressed PDF.`);
+      return;
+    }
+
+    setSelectedFile(file);
+    if (setFieldTouched) setFieldTouched(name, true, true);
+  };
+
   //  Upload Staged File
   const handleUpload = async () => {
     if (!selectedFile)
@@ -177,68 +201,104 @@ const FileUploadOrView = ({
       {uploading && <FullScreenLoader />}
       <TextFieldLabel required={required} label={label} />
 
-      {/* ── MODE 1: LOCKED / SUBMITTED / APPROVED APPLICATION (DOWNLOAD ONLY - NO DELETE OR REPLACE) ── */}
+      {/* ── MODE 1: LOCKED / SUBMITTED / APPROVED APPLICATION (DOWNLOAD ONLY) ── */}
       {isLockedOrSubmitted ? (
-        <Box sx={{ mt: 1 }}>
+        <Box sx={{ mt: 0.8 }}>
           {activeFileId ? (
             <Paper
               elevation={0}
               sx={{
-                p: 1.2,
+                p: "10px 14px",
+                minHeight: 52,
                 bgcolor: "#f8fafc",
                 border: "1px solid #cbd5e1",
                 borderRadius: "8px",
                 display: "flex",
-                justifyContent: "space-between",
                 alignItems: "center",
+                justifyContent: "space-between",
                 gap: 1.5,
-                width: "100%",
-                boxSizing: "border-box"
+                boxSizing: "border-box",
+                transition: "all 0.2s ease",
+                "&:hover": { borderColor: "#94a3b8", bgcolor: "#f1f5f9" }
               }}
             >
               <Box display="flex" alignItems="center" gap={1.2} sx={{ minWidth: 0, flex: 1 }}>
-                <CheckCircle sx={{ color: "#0E4F8D", fontSize: 20, flexShrink: 0 }} />
+                <Box
+                  sx={{
+                    width: 34,
+                    height: 34,
+                    borderRadius: "6px",
+                    bgcolor: "#e0f2fe",
+                    color: "#0369a1",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0
+                  }}
+                >
+                  <FileIcon sx={{ fontSize: 20 }} />
+                </Box>
                 <Box sx={{ minWidth: 0, flex: 1 }}>
-                  <Typography variant="body2" fontWeight={700} color="#0E4F8D" noWrap sx={{ overflow: "hidden", textOverflow: "ellipsis", fontSize: "13px" }}>
+                  <Typography
+                    variant="body2"
+                    fontWeight={700}
+                    color="#0f172a"
+                    noWrap
+                    sx={{ fontSize: "13px" }}
+                  >
                     {label}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: "11px" }}>
-                    File ID: #{activeFileId}
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ fontSize: "11px", display: "block" }}
+                  >
+                    PDF Document &bull; File #{activeFileId}
                   </Typography>
                 </Box>
               </Box>
 
-              <Tooltip title={`Download ${label}`} arrow placement="top">
-                <IconButton
-                  size="small"
-                  onClick={() => handleDownload(activeFileId)}
-                  sx={{
-                    p: "6px",
-                    border: "1px solid #bae6fd",
-                    borderRadius: "7px",
-                    bgcolor: "#f0f9ff",
-                    color: "#0284c7",
-                    "&:hover": { bgcolor: "#e0f2fe", color: "#0369a1" }
-                  }}
-                >
-                  <Download sx={{ fontSize: 18 }} />
-                </IconButton>
-              </Tooltip>
+              <Button
+                size="small"
+                variant="contained"
+                startIcon={<Download sx={{ fontSize: 16 }} />}
+                onClick={() => handleDownload(activeFileId)}
+                sx={{
+                  textTransform: "none",
+                  fontWeight: 600,
+                  fontSize: "0.78rem",
+                  py: 0.55,
+                  px: 1.8,
+                  borderRadius: "6px",
+                  background: "linear-gradient(135deg, #0E4F8D 0%, #176FC1 100%)",
+                  color: "#ffffff",
+                  boxShadow: "none",
+                  flexShrink: 0,
+                  "&:hover": {
+                    background: "linear-gradient(135deg, #0a3d6f 0%, #0E4F8D 100%)",
+                    boxShadow: "0 2px 4px rgba(14, 79, 141, 0.2)"
+                  }
+                }}
+              >
+                Download
+              </Button>
             </Paper>
           ) : (
             <Box
               sx={{
-                p: 1.2,
-                bgcolor: "#f1f5f9",
+                p: "10px 14px",
+                minHeight: 52,
+                bgcolor: "#f8fafc",
                 borderRadius: "8px",
-                border: "1px solid #e2e8f0",
-                display: "inline-flex",
+                border: "1px dashed #cbd5e1",
+                display: "flex",
                 alignItems: "center",
-                gap: 1
+                gap: 1.2,
+                boxSizing: "border-box"
               }}
             >
-              <InfoOutlined sx={{ fontSize: 18, color: "#64748b" }} />
-              <Typography variant="caption" color="text.secondary" fontWeight={500}>
+              <InfoOutlined sx={{ fontSize: 18, color: "#94a3b8" }} />
+              <Typography variant="caption" color="text.secondary" fontWeight={500} sx={{ fontSize: "12px" }}>
                 No attachment uploaded for {label}.
               </Typography>
             </Box>
@@ -246,161 +306,226 @@ const FileUploadOrView = ({
         </Box>
       ) : (
         /* ── MODE 2: ACTIVE CREATION / DRAFT FORM (CAN UPLOAD / REPLACE / DELETE) ── */
-        <Box sx={{ mt: 1 }}>
-          {/* CASE 1: File is already uploaded/attached -> SHOW DOWNLOAD & DELETE ICON ONLY */}
+        <Box sx={{ mt: 0.8 }}>
+          {/* CASE 1: File is already uploaded/attached */}
           {activeFileId ? (
             <Paper
               elevation={0}
               sx={{
-                p: 1.2,
+                p: "10px 14px",
+                minHeight: 52,
                 bgcolor: "#f0fdf4",
-                border: "1px solid #bbf7d0",
+                border: "1.5px solid #86efac",
                 borderRadius: "8px",
                 display: "flex",
-                justifyContent: "space-between",
                 alignItems: "center",
+                justifyContent: "space-between",
                 gap: 1.5,
-                width: "100%",
                 boxSizing: "border-box"
               }}
             >
               <Box display="flex" alignItems="center" gap={1.2} sx={{ minWidth: 0, flex: 1 }}>
                 <CheckCircle sx={{ color: "#16a34a", fontSize: 20, flexShrink: 0 }} />
                 <Box sx={{ minWidth: 0, flex: 1 }}>
-                  <Typography variant="body2" fontWeight={700} color="#15803d" noWrap sx={{ overflow: "hidden", textOverflow: "ellipsis", fontSize: "13px" }}>
+                  <Typography variant="body2" fontWeight={700} color="#15803d" noWrap sx={{ fontSize: "13px" }}>
                     {label} Attached
                   </Typography>
-                  <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: "11px" }}>
-                    File ID: #{activeFileId}
+                  <Typography variant="caption" color="#166534" sx={{ fontSize: "11px", display: "block" }}>
+                    File #{activeFileId} (PDF)
                   </Typography>
                 </Box>
               </Box>
 
-              <Stack direction="row" spacing={0.8} alignItems="center" sx={{ flexShrink: 0 }}>
-                <Tooltip title={`Download ${label}`} arrow placement="top">
-                  <IconButton
-                    size="small"
-                    onClick={() => handleDownload(activeFileId)}
-                    sx={{
-                      p: "6px",
-                      border: "1px solid #bbf7d0",
-                      borderRadius: "7px",
-                      bgcolor: "#f0fdf4",
-                      color: "#16a34a",
-                      "&:hover": { bgcolor: "#dcfce7", color: "#15803d" }
-                    }}
-                  >
-                    <Download sx={{ fontSize: 18 }} />
-                  </IconButton>
-                </Tooltip>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexShrink: 0 }}>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<Download sx={{ fontSize: 15 }} />}
+                  onClick={() => handleDownload(activeFileId)}
+                  sx={{
+                    textTransform: "none",
+                    fontWeight: 600,
+                    fontSize: "0.78rem",
+                    py: 0.4,
+                    px: 1.4,
+                    borderRadius: "6px",
+                    borderColor: "#86efac",
+                    bgcolor: "#ffffff",
+                    color: "#15803d",
+                    "&:hover": { bgcolor: "#f0fdf4", borderColor: "#16a34a" }
+                  }}
+                >
+                  Download
+                </Button>
 
-                <Tooltip title={`Delete ${label}`} arrow placement="top">
-                  <IconButton
-                    size="small"
-                    onClick={handleDelete}
-                    sx={{
-                      p: "6px",
-                      border: "1px solid #fecaca",
-                      borderRadius: "7px",
-                      bgcolor: "#fef2f2",
-                      color: "#dc2626",
-                      "&:hover": { bgcolor: "#fee2e2", color: "#b91c1c" }
-                    }}
-                  >
-                    <Delete sx={{ fontSize: 18 }} />
-                  </IconButton>
-                </Tooltip>
-              </Stack>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  color="error"
+                  startIcon={<Delete sx={{ fontSize: 15 }} />}
+                  onClick={handleDelete}
+                  sx={{
+                    textTransform: "none",
+                    fontWeight: 600,
+                    fontSize: "0.78rem",
+                    py: 0.4,
+                    px: 1.2,
+                    borderRadius: "6px",
+                    borderColor: "#fecaca",
+                    bgcolor: "#ffffff",
+                    color: "#dc2626",
+                    "&:hover": { bgcolor: "#fef2f2", borderColor: "#dc2626" }
+                  }}
+                >
+                  Remove
+                </Button>
+              </Box>
             </Paper>
           ) : selectedFile ? (
-            /* CASE 2: File is selected (staged) -> SHOW UPLOAD FILE & REPLACE ICON BUTTONS */
+            /* CASE 2: File is selected (staged) -> TOP: File Name + Size; BOTTOM: Upload, Change, Delete */
             <Paper
               elevation={0}
               sx={{
-                p: 1.2,
-                bgcolor: "#eff6ff",
-                border: "1px solid #93c5fd",
-                borderRadius: "8px",
+                p: 1.5,
+                minHeight: 88,
+                bgcolor: "#f0f7ff",
+                border: "1.5px solid #93c5fd",
+                borderRadius: "10px",
                 display: "flex",
+                flexDirection: "column",
                 justifyContent: "space-between",
-                alignItems: "center",
-                gap: 1.5,
-                width: "100%",
                 boxSizing: "border-box"
               }}
             >
-              <Box display="flex" alignItems="center" gap={1.2} sx={{ minWidth: 0, flex: 1 }}>
-                <FileIcon color="primary" sx={{ fontSize: 22, flexShrink: 0 }} />
-                <Box sx={{ minWidth: 0, flex: 1 }}>
-                  <Typography variant="body2" fontWeight={700} color="primary.900" noWrap sx={{ overflow: "hidden", textOverflow: "ellipsis", fontSize: "13px" }}>
-                    {selectedFile.name}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: "11px" }}>
-                    {(selectedFile.size / 1024).toFixed(1)} KB &bull; Ready to upload
-                  </Typography>
+              {/* Top Row: File Name + Size */}
+              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0, flex: 1 }}>
+                  <FileIcon sx={{ color: "#176FC1", fontSize: 20, flexShrink: 0 }} />
+                  <Tooltip title={selectedFile.name} arrow placement="top">
+                    <Typography
+                      variant="body2"
+                      fontWeight={700}
+                      color="#0E4F8D"
+                      noWrap
+                      sx={{ fontSize: "13px", minWidth: 0, flex: 1 }}
+                    >
+                      {selectedFile.name}
+                    </Typography>
+                  </Tooltip>
                 </Box>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    fontWeight: 600,
+                    fontSize: "11px",
+                    color: "#1e40af",
+                    bgcolor: "#dbeafe",
+                    px: 1,
+                    py: 0.2,
+                    borderRadius: "4px",
+                    flexShrink: 0
+                  }}
+                >
+                  {(selectedFile.size / 1024).toFixed(1)} KB
+                </Typography>
               </Box>
 
-              <Stack direction="row" spacing={0.8} alignItems="center" sx={{ flexShrink: 0 }}>
-                <Tooltip title={`Upload ${selectedFile.name}`} arrow placement="top">
-                  <IconButton
-                    size="small"
-                    disabled={uploading}
-                    onClick={handleUpload}
-                    sx={{
-                      p: "6px",
-                      border: "1px solid #93c5fd",
-                      borderRadius: "7px",
-                      bgcolor: "#eff6ff",
-                      color: "#1d4ed8",
-                      "&:hover": { bgcolor: "#dbeafe", color: "#1e40af" }
-                    }}
-                  >
-                    <UploadFile sx={{ fontSize: 18 }} />
-                  </IconButton>
-                </Tooltip>
+              {/* Bottom Action Row: [Upload] [Change] [Delete Icon] */}
+              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1, pt: 0.6, borderTop: "1px dashed #bfdbfe" }}>
+                <Button
+                  size="small"
+                  variant="contained"
+                  disabled={uploading}
+                  onClick={handleUpload}
+                  startIcon={<CloudUploadRounded sx={{ fontSize: 16 }} />}
+                  sx={{
+                    textTransform: "none",
+                    fontWeight: 700,
+                    fontSize: "0.78rem",
+                    py: 0.4,
+                    px: 1.5,
+                    borderRadius: "6px",
+                    background: "linear-gradient(135deg, #0E4F8D 0%, #176FC1 100%)",
+                    color: "#ffffff",
+                    boxShadow: "none",
+                    "&:hover": { background: "linear-gradient(135deg, #0a3d6f 0%, #0E4F8D 100%)" }
+                  }}
+                >
+                  {uploading ? "Uploading..." : "Upload"}
+                </Button>
 
-                <Tooltip title="Choose a different file" arrow placement="top">
-                  <IconButton
+                <Box sx={{ display: "flex", alignItems: "center", gap: 0.8 }}>
+                  <Button
                     size="small"
+                    variant="outlined"
                     component="label"
+                    disabled={uploading}
+                    startIcon={<Replay sx={{ fontSize: 15 }} />}
                     sx={{
-                      p: "6px",
-                      border: "1px solid #cbd5e1",
-                      borderRadius: "7px",
-                      bgcolor: "#f8fafc",
+                      textTransform: "none",
+                      fontWeight: 600,
+                      fontSize: "0.78rem",
+                      py: 0.35,
+                      px: 1.2,
+                      borderRadius: "6px",
+                      borderColor: "#cbd5e1",
+                      bgcolor: "#ffffff",
                       color: "#475569",
-                      "&:hover": { bgcolor: "#f1f5f9", color: "#1e293b" }
+                      "&:hover": { bgcolor: "#f8fafc", borderColor: "#94a3b8" }
                     }}
                   >
-                    <Replay sx={{ fontSize: 18 }} />
+                    Change
                     <input
                       type="file"
                       hidden
-                      accept=".pdf,.jpg,.jpeg,.png"
+                      accept=".pdf,application/pdf"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
-                        if (file) setSelectedFile(file);
+                        if (file) validateAndSetFile(file);
+                        e.target.value = "";
                       }}
                     />
-                  </IconButton>
-                </Tooltip>
-              </Stack>
+                  </Button>
+
+                  <Tooltip title="Delete file selection" arrow placement="top">
+                    <IconButton
+                      size="small"
+                      disabled={uploading}
+                      onClick={() => setSelectedFile(null)}
+                      sx={{
+                        p: "5px",
+                        borderRadius: "6px",
+                        border: "1px solid #e2e8f0",
+                        bgcolor: "#ffffff",
+                        color: "#dc2626",
+                        "&:hover": { bgcolor: "#fef2f2", borderColor: "#fca5a5" }
+                      }}
+                    >
+                      <Delete sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              </Box>
             </Paper>
           ) : (
-            /* CASE 3: No file selected yet -> Clean Dropzone */
+            /* CASE 3: No file selected yet -> Clean Dropzone with matching 88px height */
             <Button
               variant="outlined"
               component="label"
               onBlur={() => setFieldTouched && setFieldTouched(name, true, true)}
               sx={{
                 width: "100%",
-                p: 2,
+                minHeight: 88,
+                p: 1.5,
                 border: touched?.[name] && helperText?.[name] ? "1.5px dashed #ef4444" : "1.5px dashed #94a3b8",
-                borderRadius: "8px",
+                borderRadius: "10px",
                 bgcolor: "#f8fafc",
                 color: "#475569",
                 textTransform: "none",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "flex-start",
+                boxSizing: "border-box",
                 transition: "all 0.2s ease",
                 "&:hover": {
                   borderColor: "#176FC1",
@@ -410,24 +535,38 @@ const FileUploadOrView = ({
               }}
             >
               <Box display="flex" alignItems="center" gap={1.5}>
-                <CloudUploadRounded sx={{ color: "#176FC1", fontSize: 28 }} />
+                <Box
+                  sx={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: "8px",
+                    bgcolor: "#eff6ff",
+                    color: "#176FC1",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0
+                  }}
+                >
+                  <CloudUploadRounded sx={{ fontSize: 22 }} />
+                </Box>
                 <Box textAlign="left">
-                  <Typography variant="body2" fontWeight={700}>
+                  <Typography variant="body2" fontWeight={700} color="#1e293b" sx={{ fontSize: "13px" }}>
                     Choose Document to Upload
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    Click to browse files (.pdf, .jpg, .png formats)
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: "11px" }}>
+                    Click to browse files (.pdf format, max 5 MB)
                   </Typography>
                 </Box>
               </Box>
               <input
                 type="file"
                 hidden
-                accept=".pdf,.jpg,.jpeg,.png"
+                accept=".pdf,application/pdf"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
-                  setSelectedFile(file || null);
-                  if (setFieldTouched) setFieldTouched(name, true, true);
+                  if (file) validateAndSetFile(file);
+                  e.target.value = "";
                 }}
               />
             </Button>

@@ -19,27 +19,18 @@ import {
 import { useSelector, useDispatch } from 'react-redux';
 import { useSearchParams } from 'react-router-dom';
 
-import { ApplicationFlowTable, ApplicationFlowDialog } from '&src/components/ApplicationFlow';
+import { ApplicationFlowTable, ApplicationFlowDialog } from '&src/features/application-flow';
 import SectionHeader from '&src/components/Headers/SectionHeader';
 import DialogWithHeader from '&src/components/Dialog/DialogWithHeader';
-import ApplicationForm from '&src/modules/PaymentAggregator/ApplicationForm';
-import FullScreenLoader from '&src/components/Loaders/FullScreenLoader';
-import useStatusWiseAlert from '&src/components/ToastNotifications/useStatusWiseAlert';
+import ApplicationForm from '&src/features/payment-aggregator/ApplicationForm';
+import FullScreenLoader from '&src/components/feedback/FullScreenLoader';
+import useStatusWiseAlert from '&src/components/feedback/ToastNotifications/useStatusWiseAlert';
 import useAggregatorDetails from '&src/hooks/useAggregatorDetails';
 import applicationServices from '&src/services/applications';
 import { selectUserRole, selectDialogOpen, openWorkflowDialog } from '&src/store/applicationFlowSlice';
+import { exportApplicationsToExcel } from '&src/utils/excelExport';
+import { getCurrentFinancialYear } from '&src/utils';
 import AggregatorApplicationsTable from './AggregatorApplicationsTable';
-
-const getCurrentFinancialYear = () => {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = today.getMonth();
-  if (month >= 3) {
-    return `FY ${year}-${(year + 1).toString().slice(2)}`;
-  } else {
-    return `FY ${year - 1}-${year.toString().slice(2)}`;
-  }
-};
 
 export default function Applications() {
   const theme = useTheme();
@@ -211,50 +202,23 @@ export default function Applications() {
   const handleExportExcel = async () => {
     setLoading(true);
     try {
-      let filterby = '00000';
-      let reqBranchId = undefined;
-      let reqRegionId = undefined;
+      const recordsToExport = applications && applications.length > 0
+        ? applications
+        : [];
 
-      if (userRole === 'BO') {
-        reqBranchId = userDetails.branchId;
-      } else if (userRole === 'RO') {
-        reqRegionId = userDetails.regionId;
-      } else if (userRole === 'ZO') {
-        filterby = (userDetails.zoneId && userDetails.zoneId !== '0' && userDetails.zoneId !== 0) ? userDetails.zoneId : '00000';
-      } else {
-        filterby = '00000';
+      if (!recordsToExport || recordsToExport.length === 0) {
+        errorNotification('No application records available to export.');
+        return;
       }
 
-      const response = await applicationServices.getAllApplications({
-        zoneId: filterby,
-        search: filters.search,
-        status: 'all',
-        createdAt: '',
-        financialYear: filters.financialYear,
-        month: filters.selectedMonth,
-        startDate: filters.startDate,
-        endDate: filters.endDate,
-        branchId: reqBranchId,
-        regionId: reqRegionId,
-        userRole: userRole,
-        exportType: 'excel',
-        config: { responseType: 'blob' },
-      });
-
-      const blob = new Blob([response.data], {
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      });
-      const link = document.createElement('a');
-      link.href = window.URL.createObjectURL(blob);
-      link.download = `applications_report_${new Date().toISOString().slice(0, 10)}.xlsx`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      successNotification('Excel report exported successfully');
+      exportApplicationsToExcel(
+        recordsToExport,
+        `CBI_Customer_Applications_Report_${new Date().toISOString().slice(0, 10)}.xlsx`
+      );
+      successNotification(`Exported ${recordsToExport.length} application records to Excel successfully!`);
     } catch (err) {
       console.error('Failed to export applications to Excel:', err);
-      errorNotification('Failed to export Excel report');
+      errorNotification('Failed to export Excel report. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -278,13 +242,15 @@ export default function Applications() {
           {
             label: 'Export All',
             startIcon: <FileDownloadRounded />,
-            variant: 'contained',
-            color: 'success',
+            variant: 'outlined',
+            color: 'primary',
             onClick: handleExportExcel,
             sx: {
-              bgcolor: '#2E7D32',
-              '&:hover': { bgcolor: '#1B5E20' },
-              boxShadow: '0 2px 8px rgba(46, 125, 50, 0.25)',
+              fontWeight: 700,
+              borderRadius: '8px',
+              px: 2.2,
+              py: 0.9,
+              boxShadow: '0 2px 8px rgba(155, 10, 46, 0.25)',
             },
           },
         ]}
@@ -404,6 +370,8 @@ export default function Applications() {
         onClose={handleClose}
         maxWidth="md"
         headerText={isReview ? 'Review Customer Application' : 'Customer Application Details'}
+        applicationId={applicationData?.applicationId}
+        icon={AssignmentRounded}
       >
         <ApplicationForm
           fetchAllApplications={handleApplicationCreatedOrUpdated}

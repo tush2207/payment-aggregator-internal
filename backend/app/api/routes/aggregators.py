@@ -197,6 +197,7 @@ def create_manageAggregator(
 
 
 @router.post('/api/manage-aggregator/{aggregatorId}/reset-credentials')
+@router.post('/manage-aggregator/{aggregatorId}/reset-credentials')
 def reset_aggregator_credentials(
     aggregatorId: int,
     background_tasks: BackgroundTasks,
@@ -228,18 +229,27 @@ def reset_aggregator_credentials(
         details=f"Portal login credentials reset by {admin_name}. New temporary password dispatched to {aggregator.email} with mandatory reset flag set."
     )
 
-    if aggregator.email:
+    # Gather recipient emails (primary + alternate)
+    recipients = []
+    if aggregator.email and aggregator.email.strip():
+        recipients.append(aggregator.email.strip())
+    if getattr(aggregator, "alternateEmail", None) and aggregator.alternateEmail.strip():
+        alt = aggregator.alternateEmail.strip()
+        if alt not in recipients:
+            recipients.append(alt)
+
+    if recipients:
         background_tasks.add_task(
             EmailService.send_aggregator_onboarding_email,
             aggregator_name=aggregator.aggregatorName,
             contact_person=aggregator.contactPersonName,
-            email=aggregator.email,
+            email=recipients,
             temp_password=new_temp_password
         )
 
     return {
         "success": True,
-        "message": f"New temporary password generated and dispatched to {aggregator.email}.",
+        "message": f"New temporary password generated and dispatched to {', '.join(recipients) if recipients else aggregator.email}.",
         "aggregatorId": aggregatorId,
         "email": aggregator.email,
         "temporaryPassword": new_temp_password if config.DEV_MODE else None
@@ -301,10 +311,12 @@ def update_manageAggregator(id: int, new_manageAggregator: ManageAggregatorUpdat
 
     old_status = getattr(existing_manageAggregator, "status", "active")
     changes = []
-    for key, value in new_manageAggregator.__dict__.items():
-        if value is not None:
+    valid_cols = {c.name for c in ManageAggregatorInDB.__table__.columns}
+    update_data = new_manageAggregator.dict(exclude_unset=True) if hasattr(new_manageAggregator, 'dict') else new_manageAggregator.__dict__
+    for key, value in update_data.items():
+        if key in valid_cols and value is not None:
             old_val = getattr(existing_manageAggregator, key, None)
-            if old_val != value:
+            if str(old_val) != str(value):
                 changes.append(f"{key}: '{old_val}' -> '{value}'")
             setattr(existing_manageAggregator, key, value)
     db.commit()
@@ -493,6 +505,7 @@ def create_paymentAggregator(
                             "email": ", ".join(recipients),
                             "contactPerson": contact_person
                         })
+                        dispatch_projs = agg_custom_data.get("projections") or [p for p in unique_base_projections if not getattr(p, "isIB", False)]
                         try:
                             background_tasks.add_task(
                                 EmailService.send_quote_request_email,
@@ -501,7 +514,7 @@ def create_paymentAggregator(
                                 contact_person=contact_person,
                                 application=app,
                                 end_date_str=str(agg_entry.endDate) if agg_entry.endDate else None,
-                                projections=[p for p in unique_base_projections if not getattr(p, "isIB", False)],
+                                projections=dispatch_projs,
                                 custom_data=agg_custom_data
                             )
                         except Exception as e:

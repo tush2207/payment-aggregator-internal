@@ -1,9 +1,10 @@
 import logging
-from ldap3 import Server, Connection, ALL, NTLM
+from ldap3 import Server, Connection, ALL
 from ldap3.core.exceptions import LDAPBindError, LDAPSocketOpenError, LDAPException
 from app.core import config
 
 logger = logging.getLogger(__name__)
+
 
 class LDAPAuthRepository:
     def authenticate(self, username: str, password: str) -> bool:
@@ -11,21 +12,23 @@ class LDAPAuthRepository:
         Authenticate user against LDAP / Active Directory.
 
         Returns:
-            True   - credentials valid (bind succeeded)
-            False  - invalid credentials (wrong password / user not in AD)
+            True   — credentials valid (bind succeeded)
+            False  — invalid credentials (wrong password / user not in AD)
 
         Raises:
-            RuntimeError - LDAP server unreachable or unexpected error
+            RuntimeError — LDAP server unreachable or unexpected error
         """
-        mode = getattr(config, "MODE", "DEV")
+        mode = getattr(config, "MODE", "")
         if mode and mode.strip().upper() == "UAT":
-            logger.info(f"MODE is UAT - bypassing LDAP password validation for '{username}' and returning True.")
+            logger.info(f"MODE is UAT — bypassing LDAP password validation for '{username}' and returning True.")
             return True
 
-        ldap_enabled = getattr(config, "LDAP_ENABLED", True)
-        if not ldap_enabled or getattr(config, "DEV_MODE", False):
+        ldap_enabled = getattr(config, "LDAP_ENABLED", False)
+        if not ldap_enabled:
+            # Bypass only allowed when explicitly disabled (e.g., local dev without bank network)
             logger.warning(
-                f"LDAP is DISABLED / DEV_MODE - skipping Active Directory authentication for '{username}'."
+                f"LDAP is DISABLED — skipping authentication for '{username}'. "
+                "Set LDAP_ENABLED=True to enforce real AD validation."
             )
             return True
 
@@ -34,17 +37,11 @@ class LDAPAuthRepository:
             return False
 
         try:
-            ldap_server = config.LDAP_SERVER
-            if ldap_server.startswith("ldaps://"):
-                ldap_server = ldap_server.replace("ldaps://", "")
-            elif ldap_server.startswith("ldap://"):
-                ldap_server = ldap_server.replace("ldap://", "")
-
-            server = Server(ldap_server, port=config.LDAP_PORT, get_info=ALL, use_ssl=True, connect_timeout=5)
-            domain = getattr(config, "DOMAIN", "CBI")
+            ldap_server = getattr(config, "LDAP_SERVER", "ldaps://CBI.CO.IN")
+            server = Server(ldap_server, get_info=ALL, use_ssl=True, connect_timeout=5)
             conn = Connection(
                 server,
-                user=f"{domain}\\{username}",
+                user=f"{config.DOMAIN}\\{username}",
                 password=password,
                 auto_bind=True,
             )
@@ -56,16 +53,19 @@ class LDAPAuthRepository:
             return bound
 
         except LDAPBindError as e:
-            logger.warning(f"LDAP auth FAILED for '{username}': invalid credentials - {e}")
+            # Wrong password or account locked/disabled in AD
+            logger.warning(f"LDAP auth FAILED for '{username}': invalid credentials — {e}")
             return False
 
         except LDAPSocketOpenError as e:
+            # LDAP server unreachable — network issue
             logger.error(f"LDAP server unreachable for '{username}': {e}")
             raise RuntimeError(
                 "Unable to reach the authentication server. Please try again later or contact IT support."
             ) from e
 
         except LDAPException as e:
+            # Any other ldap3 exception
             logger.error(f"LDAP unexpected error for '{username}': {e}")
             raise RuntimeError(
                 "An unexpected authentication error occurred. Please try again."

@@ -57,7 +57,8 @@ echo  Starting Frontend dev server...
 echo  ---------------------------------------------------------
 echo.
 
-npm run dev --prefix "%FRONTEND_DIR%"
+cd /d "%FRONTEND_DIR%"
+npm run dev
 
 echo.
 echo  [!] Frontend server stopped.

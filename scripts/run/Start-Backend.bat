@@ -82,8 +82,8 @@ if exist ".venv\Scripts\python.exe" (
     set "UVICORN_EXE=%PROJECT_ROOT%\.venv\Scripts\uvicorn.exe"
 )
 
-:: Auto-detect port (Default 9003 or 8000)
-set "PORT=9003"
+:: Auto-detect port (Default 8000 or 9003)
+set "PORT=8000"
 if exist ".env" findstr /i "PORT=" .env > %TEMP%\_port_detect.tmp 2>nul
 if exist ".env.dev" findstr /i "PORT=" .env.dev >> %TEMP%\_port_detect.tmp 2>nul
 if exist ".env.prod" findstr /i "PORT=" .env.prod >> %TEMP%\_port_detect.tmp 2>nul

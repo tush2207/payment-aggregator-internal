@@ -32,28 +32,20 @@ import {
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
-import { ApplicationFlowTable, ApplicationFlowDialog } from '&src/components/ApplicationFlow';
+import { ApplicationFlowTable, ApplicationFlowDialog } from '&src/features/application-flow';
 import SectionHeader from '&src/components/Headers/SectionHeader';
+import CommonKpiCards from '&src/components/common/CommonKpiCards';
 import DialogWithHeader from '&src/components/Dialog/DialogWithHeader';
-import ApplicationForm from '&src/modules/PaymentAggregator/ApplicationForm';
+import ApplicationForm from '&src/features/payment-aggregator/ApplicationForm';
 import RoleBasedStepper from '&src/components/RoleBasedStepper';
-import FullScreenLoader from '&src/components/Loaders/FullScreenLoader';
-import useStatusWiseAlert from '&src/components/ToastNotifications/useStatusWiseAlert';
+import FullScreenLoader from '&src/components/feedback/FullScreenLoader';
+import useStatusWiseAlert from '&src/components/feedback/ToastNotifications/useStatusWiseAlert';
 import { PAYMENT_AGGREGATOR_WORKFLOW } from '&src/constants/PaymentAggregratorConstant';
 import { APPLICATION_ROUTES_URLS } from '&src/routes/routesConfig';
-import applicationServices from '&src/services/applications';
 import { selectUserRole, selectDialogOpen, openWorkflowDialog, fetchApplicationDetails } from '&src/store/applicationFlowSlice';
-
-const getCurrentFinancialYear = () => {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = today.getMonth(); // 0-11
-  if (month >= 3) {
-    return `FY ${year}-${(year + 1).toString().slice(2)}`;
-  } else {
-    return `FY ${year - 1}-${year.toString().slice(2)}`;
-  }
-};
+import { exportApplicationsToExcel } from '&src/utils/excelExport';
+import applicationServices from '&src/services/applications';
+import { getCurrentFinancialYear } from '&src/utils';
 
 export default function Dashboard() {
   const theme = useTheme();
@@ -132,6 +124,7 @@ export default function Dashboard() {
         regionId: reqRegionId,
         userRole: userRole,
       });
+      console.log(response, 'responseresponse')
 
       if (response && response.data) {
         const appList = response.data.data || response.data || [];
@@ -265,6 +258,9 @@ export default function Dashboard() {
         const zoneName = String(app.zoneName || '').toLowerCase();
         const zoneId = String(app.zoneId || '').toLowerCase();
         const status = String(app.status || '').toLowerCase();
+        const category = String(app.category || '').toLowerCase();
+        const busCategory = String(app.businessCategory || app.merchantCategory || '').toLowerCase();
+        const entityType = String(app.entityType || app.businessType || '').toLowerCase();
         return (
           appId.includes(s) ||
           custName.includes(s) ||
@@ -276,7 +272,10 @@ export default function Dashboard() {
           regionId.includes(s) ||
           zoneName.includes(s) ||
           zoneId.includes(s) ||
-          status.includes(s)
+          status.includes(s) ||
+          category.includes(s) ||
+          busCategory.includes(s) ||
+          entityType.includes(s)
         );
       });
     }
@@ -336,7 +335,7 @@ export default function Dashboard() {
   };
 
   const handleKpiCardClick = (id) => {
-    setSelectedKpiFilter(id);
+    setSelectedKpiFilter((prev) => (prev === id ? 'ALL' : id));
     setSelectedStageIndex(null);
   };
 
@@ -347,6 +346,10 @@ export default function Dashboard() {
   };
 
   const handleFilterChange = useCallback((newFilters) => {
+    if (newFilters.search === '' && newFilters.financialYear === 'all' && newFilters.selectedMonth === 'all') {
+      setSelectedKpiFilter('ALL');
+      setSelectedStageIndex(null);
+    }
     setFilters((prev) => ({ ...prev, ...newFilters }));
   }, []);
 
@@ -407,50 +410,23 @@ export default function Dashboard() {
   const handleExportExcel = async () => {
     setLoading(true);
     try {
-      let filterby = '00000';
-      let reqBranchId = undefined;
-      let reqRegionId = undefined;
+      const recordsToExport = displayedApplications && displayedApplications.length > 0
+        ? displayedApplications
+        : applications;
 
-      if (userRole === 'BO') {
-        reqBranchId = userDetails.branchId;
-      } else if (userRole === 'RO') {
-        reqRegionId = userDetails.regionId;
-      } else if (userRole === 'ZO') {
-        filterby = (userDetails.zoneId && userDetails.zoneId !== '0' && userDetails.zoneId !== 0) ? userDetails.zoneId : '00000';
-      } else {
-        filterby = '00000';
+      if (!recordsToExport || recordsToExport.length === 0) {
+        errorNotification('No application records available to export.');
+        return;
       }
 
-      const response = await applicationServices.getAllApplications({
-        zoneId: filterby,
-        search: filters.search,
-        status: 'all',
-        createdAt: '',
-        financialYear: filters.financialYear,
-        month: filters.selectedMonth,
-        startDate: filters.startDate,
-        endDate: filters.endDate,
-        branchId: reqBranchId,
-        regionId: reqRegionId,
-        userRole: userRole,
-        exportType: 'excel',
-        config: { responseType: 'blob' },
-      });
-
-      const blob = new Blob([response.data], {
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      });
-      const link = document.createElement('a');
-      link.href = window.URL.createObjectURL(blob);
-      link.download = `applications_report_${new Date().toISOString().slice(0, 10)}.xlsx`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      successNotification('Excel report exported successfully');
+      exportApplicationsToExcel(
+        recordsToExport,
+        `CBI_Customer_Applications_Report_${new Date().toISOString().slice(0, 10)}.xlsx`
+      );
+      successNotification(`Exported ${recordsToExport.length} application records to Excel successfully!`);
     } catch (err) {
       console.error('Failed to export applications to Excel:', err);
-      errorNotification('Failed to export Excel report');
+      errorNotification('Failed to export Excel report. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -524,7 +500,7 @@ export default function Dashboard() {
         description="Monitor, review, and process merchant payment aggregator applications, approvals, and quotations in real-time."
         icon={<DashboardRounded />}
         showButton={isBO && !isReadOnlyUser}
-        buttonText="Add Customer Application"
+        buttonText="Add Application"
         buttonProps={{
           startIcon: <Add />,
         }}
@@ -539,13 +515,15 @@ export default function Dashboard() {
           {
             label: 'Export All',
             startIcon: <FileDownloadRounded />,
-            variant: 'contained',
-            color: 'success',
+            variant: 'outlined',
+            color: 'primary',
             onClick: handleExportExcel,
             sx: {
-              bgcolor: '#2E7D32',
-              '&:hover': { bgcolor: '#1B5E20' },
-              boxShadow: '0 2px 8px rgba(46, 125, 50, 0.25)',
+              fontWeight: 700,
+              borderRadius: '8px',
+              px: 2.2,
+              py: 0.9,
+              boxShadow: '0 2px 8px rgba(155, 10, 46, 0.25)',
             },
           },
         ]}
@@ -553,85 +531,11 @@ export default function Dashboard() {
       />
 
       {/* ── Interactive KPI Analytics Metric Cards ── */}
-      <Grid container spacing={2} mb={3}>
-        {kpiCards.map((card) => {
-          const isSelected = selectedKpiFilter === card.id && selectedStageIndex === null;
-
-          return (
-            <Grid item xs={12} sm={6} md={4} lg={2.4} key={card.id}>
-              <Card
-                onClick={() => handleKpiCardClick(card.id)}
-                elevation={0}
-                sx={{
-                  cursor: 'pointer',
-                  p: 0,
-                  borderRadius: '14px',
-                  border: '2px solid',
-                  borderColor: isSelected ? card.color : 'grey.200',
-                  background: isSelected ? card.bgGradient : theme.palette.background.paper,
-                  boxShadow: isSelected
-                    ? `0 6px 18px ${alpha(card.color, 0.25)}`
-                    : '0 2px 8px rgba(0,0,0,0.03)',
-                  transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                  position: 'relative',
-                  overflow: 'hidden',
-                  '&:hover': {
-                    transform: 'translateY(-3px)',
-                    boxShadow: `0 8px 20px ${alpha(card.color, 0.22)}`,
-                    borderColor: card.color,
-                  },
-                }}
-              >
-                <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.2 }}>
-                    <Box
-                      sx={{
-                        width: 44,
-                        height: 44,
-                        borderRadius: '10px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        bgcolor: alpha(card.color, 0.12),
-                        color: card.color,
-                      }}
-                    >
-                      {card.icon}
-                    </Box>
-
-                    <Chip
-                      label={card.badge}
-                      size="small"
-                      sx={{
-                        bgcolor: isSelected ? card.color : alpha(card.color, 0.08),
-                        color: isSelected ? theme.palette.common.white : card.color,
-                        fontWeight: 700,
-                        fontSize: '0.68rem',
-                        borderRadius: '6px',
-                        height: 20,
-                      }}
-                    />
-                  </Box>
-
-                  <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600, fontSize: '0.80rem' }}>
-                    {card.title}
-                  </Typography>
-
-                  <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', mt: 0.4 }}>
-                    <Typography variant="h4" sx={{ fontWeight: 800, color: card.color, fontSize: '1.75rem', lineHeight: 1.1 }}>
-                      {card.value}
-                    </Typography>
-
-                    <Typography variant="caption" sx={{ color: isSelected ? card.color : 'text.disabled', fontSize: '0.70rem', fontWeight: 600 }}>
-                      {isSelected ? '● Filtering active' : 'Click to filter'}
-                    </Typography>
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
-          );
-        })}
-      </Grid>
+      <CommonKpiCards
+        cards={kpiCards}
+        selectedId={selectedStageIndex === null ? selectedKpiFilter : null}
+        onCardClick={handleKpiCardClick}
+      />
 
       {/* ── Active KPI Filter Indicator & Reset ── */}
       {selectedKpiFilter !== 'ALL' && selectedStageIndex === null && (
@@ -747,6 +651,8 @@ export default function Dashboard() {
         onClose={handleClose}
         maxWidth="md"
         headerText={isReview ? 'Review Customer Application' : 'Customer Application Details'}
+        applicationId={applicationData?.applicationId}
+        icon={AssignmentRounded}
       >
         <ApplicationForm
           fetchAllApplications={handleApplicationCreatedOrUpdated}

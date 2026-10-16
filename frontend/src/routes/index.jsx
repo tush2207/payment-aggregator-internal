@@ -1,8 +1,8 @@
 import React, { Suspense } from 'react';
-import FullScreenLoader from '&src/components/Loaders/FullScreenLoader';
+import FullScreenLoader from '&src/components/feedback/FullScreenLoader';
 import { user_role } from '&src/constants/PaymentAggregratorConstant';
-import ProtectedLayout from '&src/containers/Layout/ProtectedLayout';
-import PageErrorBoundary from '&src/containers/PageErrorBoundary';
+import ProtectedLayout from '&src/components/layout/ProtectedLayout';
+import PageErrorBoundary from '&src/components/layout/PageErrorBoundary';
 import NetworkStatusBanner from '&src/components/common/NetworkStatusBanner';
 import { getCookie } from '&src/utils/cookies';
 import { Helmet } from 'react-helmet';

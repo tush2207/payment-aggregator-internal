@@ -4,7 +4,7 @@ import { selectUserRole } from '&src/store/applicationFlowSlice';
 import usePOGenerator from '&src/hooks/usePOGenerator';
 import { isUserAdmin } from '&src/utils';
 import applicationServices from '&src/services/applications';
-import useStatusWiseAlert from '&src/components/ToastNotifications/useStatusWiseAlert';
+import useStatusWiseAlert from '&src/components/feedback/ToastNotifications/useStatusWiseAlert';
 
 /**
  * Custom hook encapsulating state, rejection flow, sanction letter download,

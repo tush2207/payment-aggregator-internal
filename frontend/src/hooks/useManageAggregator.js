@@ -1,10 +1,9 @@
 import { useState, useMemo, useCallback } from 'react';
 import useAggregatorDetails from './useAggregatorDetails';
-import useStatusWiseAlert from '&src/components/ToastNotifications/useStatusWiseAlert';
+import useStatusWiseAlert from '&src/components/feedback/ToastNotifications/useStatusWiseAlert';
 import manageAggregatorServices from '&src/services/manageAggregator';
 import { isUserAdmin } from '&src/utils';
-import * as XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
+import { exportAggregatorsToExcel } from '&src/utils/excelExport';
 
 /**
  * Custom hook encapsulating all business logic, API mutations, Excel exports,
@@ -93,16 +92,25 @@ export default function useManageAggregator() {
 
   const handleStatusToggle = useCallback(async (row) => {
     try {
-      const newStatus = row.status === 'active' ? 'inactive' : 'active';
+      const currentStatus = (row.status || 'active').toLowerCase();
+      const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
       const payload = {
-        ...row,
+        aggregatorName: row.aggregatorName,
+        contactPersonName: row.contactPersonName,
+        email: row.email,
+        mobileNo: row.mobileNo,
+        location: row.location,
+        services: row.services,
+        alternateEmail: row.alternateEmail,
         status: newStatus,
+        isDeleted: row.isDeleted || false,
       };
-      await manageAggregatorServices.updateManageAggregator(row.aggregatorId, payload);
-      successNotification(`Aggregator status updated to ${newStatus.toUpperCase()}`);
+      await manageAggregatorServices.updateAggregator(row.aggregatorId, payload);
+      successNotification(`Aggregator "${row.aggregatorName}" status updated to ${newStatus.toUpperCase()}`);
       fetchAllAggregators();
     } catch (err) {
-      errorNotification(err?.response?.data?.message || 'Failed to update aggregator status');
+      console.error('[STATUS TOGGLE ERROR]', err);
+      errorNotification(err?.response?.data?.message || err?.message || 'Failed to update aggregator status');
     }
   }, [fetchAllAggregators, errorNotification, successNotification]);
 
@@ -125,35 +133,31 @@ export default function useManageAggregator() {
   }, [errorNotification, successNotification]);
 
   const handleExportExcel = useCallback(() => {
-    const list = Array.isArray(aggregatorDetails?.data) ? aggregatorDetails.data : [];
+    const list = Array.isArray(aggregatorDetails)
+      ? aggregatorDetails
+      : (Array.isArray(aggregatorDetails?.data) ? aggregatorDetails.data : []);
     if (!list.length) {
       errorNotification('No aggregator records available for export');
       return;
     }
 
-    const exportRows = list.map((item, index) => ({
-      'Sr No.': index + 1,
-      'Aggregator Name': item.aggregatorName || '-',
-      'Contact Person': item.contactPersonName || '-',
-      'Email ID': item.email || '-',
-      'Mobile Number': item.mobileNo || '-',
-      'Active Services': item.services ? item.services.replace(/\|/g, ', ') : '-',
-      'Account Status': (item.status || 'active').toUpperCase(),
-      'Onboarding Date': item.createdAt ? new Date(item.createdAt).toLocaleDateString('en-GB') : '-',
-    }));
-
-    const worksheet = XLSX.utils.json_to_sheet(exportRows);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Payment Aggregators');
-    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-    const dataBlob = new Blob([excelBuffer], { type: 'application/octet-stream' });
-    saveAs(dataBlob, `CBI_Payment_Aggregators_${new Date().toISOString().slice(0, 10)}.xlsx`);
-    successNotification('Aggregator directory exported successfully');
+    try {
+      exportAggregatorsToExcel(
+        list,
+        `CBI_Payment_Aggregators_${new Date().toISOString().slice(0, 10)}.xlsx`
+      );
+      successNotification(`Exported ${list.length} aggregator records to Excel successfully!`);
+    } catch (err) {
+      console.error('Export aggregators failed:', err);
+      errorNotification('Failed to export aggregators directory');
+    }
   }, [aggregatorDetails, errorNotification, successNotification]);
 
   // Metric Calculation
   const aggregatorsList = useMemo(() => {
-    return Array.isArray(aggregatorDetails?.data) ? aggregatorDetails.data : [];
+    if (Array.isArray(aggregatorDetails)) return aggregatorDetails;
+    if (Array.isArray(aggregatorDetails?.data)) return aggregatorDetails.data;
+    return [];
   }, [aggregatorDetails]);
 
   const kpiStats = useMemo(() => {

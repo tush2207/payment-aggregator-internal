@@ -19,7 +19,11 @@ export const clearApiCache = () => {
 // Set Headers with Token if Required
 const setHeaders = (config, isTokenRequired = true) => {
   if (isTokenRequired) {
-    const token = getCookie('accessToken') || (typeof window !== 'undefined' ? sessionStorage.getItem('accessToken') : null);
+    const token =
+      getCookie('accessToken') ||
+      (typeof window !== 'undefined'
+        ? sessionStorage.getItem('accessToken') || localStorage.getItem('accessToken')
+        : null);
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }

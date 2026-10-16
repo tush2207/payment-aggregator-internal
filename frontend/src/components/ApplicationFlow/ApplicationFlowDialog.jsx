@@ -37,7 +37,7 @@ import {
 import RoleBasedWorkflowStepper from "./RoleBasedWorkflowStepper";
 import WorkflowTabs from "./WorkflowTabs";
 import ApplicationHelpdeskSection from "./ApplicationHelpdeskSection";
-import useStatusWiseAlert from "&src/components/ToastNotifications/useStatusWiseAlert";
+import useStatusWiseAlert from "&src/components/feedback/ToastNotifications/useStatusWiseAlert";
 import { isUserAdmin } from "&src/utils";
 
 // Slide transition from bottom for full-screen dialog
@@ -181,26 +181,7 @@ export default function ApplicationFlowDialog() {
 
         {/* Main Content Area - Full Width without bulky bounding box */}
         <Container maxWidth={false} sx={{ mt: 1.5, mb: 10, pb: 4, px: { xs: 1, sm: 2 } }}>
-          {/* View-Only Mode Banner */}
-          {isReadOnlyUser && (
-            <Paper
-              elevation={0}
-              sx={{
-                p: 1.5,
-                mb: 2,
-                borderRadius: '8px',
-                bgcolor: '#eff6ff',
-                border: '1.5px solid #93c5fd',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1.5,
-              }}
-            >
-              <Typography variant="body2" color="#1d4ed8" fontWeight={700}>
-                ℹ View-Only Mode Active &bull; You are reviewing this application in read-only inspection mode. All 5 workflow stages, aggregator quotes, CBA comparisons, and document downloads remain active while update/approval controls are restricted to Central Office Admin.
-              </Typography>
-            </Paper>
-          )}
+
 
           {/* Rejection Details & Workflow Lockout Banner */}
           {isRejected && (

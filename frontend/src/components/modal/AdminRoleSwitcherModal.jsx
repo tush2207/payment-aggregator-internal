@@ -105,13 +105,16 @@ export const AdminRoleSwitcherModal = ({ open, onClose, currentUser }) => {
     >
       <DialogTitle
         sx={{
-          background: 'linear-gradient(135deg, #0E4F8D 0%, #176FC1 100%)',
-          color: '#fff',
+          background: 'linear-gradient(90deg, #176FC1 0%, #135FA6 40%, #9B0A2E 80%, #CE0F3E 100%)',
+          backgroundColor: '#176FC1',
+          color: '#ffffff',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          py: 2,
+          py: 1.8,
           px: 3,
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
+          borderBottom: '3px solid #CE0F3E',
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -126,18 +129,27 @@ export const AdminRoleSwitcherModal = ({ open, onClose, currentUser }) => {
               justifyContent: 'center',
             }}
           >
-            <AdminPanelSettingsRounded sx={{ color: '#f6d365', fontSize: 24 }} />
+            <AdminPanelSettingsRounded sx={{ color: '#ffffff', fontSize: 24 }} />
           </Box>
           <Box>
-            <Typography variant="h6" sx={{ fontWeight: 800, fontSize: '1.05rem', lineHeight: 1.2 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1.05rem', color: '#ffffff', lineHeight: 1.2 }}>
               Switch Role & Scope View
             </Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.74rem' }}>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.75rem' }}>
               Digital Ambassador Portal Role & Location Simulator
             </Typography>
           </Box>
         </Box>
-        <IconButton onClick={onClose} sx={{ color: '#fff', background: 'rgba(255,255,255,0.1)', '&:hover': { background: 'rgba(255,255,255,0.25)' } }}>
+        <IconButton
+          onClick={onClose}
+          size="small"
+          sx={{
+            color: '#ffffff',
+            bgcolor: 'rgba(255,255,255,0.15)',
+            borderRadius: '8px',
+            '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' },
+          }}
+        >
           <Close fontSize="small" />
         </IconButton>
       </DialogTitle>

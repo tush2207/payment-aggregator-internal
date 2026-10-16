@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Button, Typography, Grid, TextField } from '@mui/material';
+import LockOpenIcon from '@mui/icons-material/LockOpen';
 import { PO_FORM_VALUES } from '&src/constants/PaymentAggregratorConstant';
 import DialogWithHeader from '&src/components/Dialog/DialogWithHeader';
 
@@ -26,6 +27,8 @@ export default function POFreezeModal({ open, onClose, applicationData, onFinali
       maxWidth="md"
       headerText="Final Approval & Freeze PO Details"
       subHeaderText="Enter the required Purchase Order (PO) details to freeze the application and generate the PO document."
+      applicationId={applicationData?.applicationId}
+      icon={LockOpenIcon}
       actions={
         <>
           <Button onClick={onClose} variant="outlined" color="inherit" disabled={isSubmitting}>

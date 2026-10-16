@@ -12,7 +12,9 @@ import {
   Stack,
   Chip
 } from "@mui/material";
-import { Download, DescriptionOutlined, CheckCircle } from "@mui/icons-material";
+import { Download, DescriptionOutlined, CheckCircle, EmailOutlined } from "@mui/icons-material";
+import { CircularProgress } from "@mui/material";
+import useStatusWiseAlert from "&src/components/feedback/ToastNotifications/useStatusWiseAlert";
 import {
   selectApplicationDetails,
   selectCurrentStep,
@@ -33,11 +35,28 @@ export default function WorkflowTabs() {
   const selectedApplication = useSelector(selectApplicationDetails);
   const currentStep = useSelector(selectCurrentStep);
   const userRole = useSelector(selectUserRole);
+  const { successNotification, errorNotification } = useStatusWiseAlert();
   const [showPOFormFields, setShowPOFormFields] = useState(false);
   const [finalizedTab, setFinalizedTab] = useState("finalized");
   const [downloadingSanction, setDownloadingSanction] = useState(false);
+  const [dispatchingOutcomeEmails, setDispatchingOutcomeEmails] = useState(false);
 
   const { poFormDetails, poLoading, generatePO } = usePOGenerator(selectedApplication);
+
+  const handleDispatchOutcomeEmails = async () => {
+    if (!selectedApplication?.applicationId) return;
+    setDispatchingOutcomeEmails(true);
+    try {
+      const response = await applicationServices.resendPOEmail(selectedApplication.applicationId);
+      const msg = response?.data?.message || "Acceptance & rejection outcome emails dispatched successfully to respective aggregators!";
+      successNotification(msg);
+    } catch (err) {
+      console.error("Failed to dispatch outcome emails:", err);
+      errorNotification(err?.response?.data?.detail || "Failed to dispatch outcome emails. Please verify aggregator email addresses and SMTP settings.");
+    } finally {
+      setDispatchingOutcomeEmails(false);
+    }
+  };
 
   const handleDownloadSanctionLetter = async () => {
     if (!selectedApplication?.applicationId) return;
@@ -252,15 +271,14 @@ export default function WorkflowTabs() {
         {/* ========================================================
             STEP 4: QUOTATION PREVIEW & ACCEPTANCE
             ======================================================== */}
-        {/* ========================================================
-            STEP 4: QUOTATION PREVIEW & ACCEPTANCE
-            ======================================================== */}
         {currentStep === 3 && (
           <Box>
             {userRole === "RO" ? (
               <AcceptedQuoteTable
                 customer={selectedApplication}
-                applicationId={selectedApplication.applicationId}
+                applicationDetails={selectedApplication}
+                applicationId={selectedApplication?.applicationId}
+                aggregatorId={selectedApplication?.finalizedAggregatorId}
               />
             ) : (
               <AggregatorDetails customerDetails={selectedApplication} />
@@ -276,51 +294,124 @@ export default function WorkflowTabs() {
             {canEdit ? (
               !showPOFormFields ? (
                 <Box>
-                  <Paper variant="outlined" sx={{ p: 4, borderRadius: "12px", border: "1px solid #cbd5e1", mb: 3 }}>
-                    <Typography variant="h6" fontWeight={700} color="primary" gutterBottom>
-                      Finalized Aggregator Details
-                    </Typography>
-                    <Divider sx={{ mb: 3 }} />
-                    <Grid container spacing={3} sx={{ mb: 4 }}>
-                      <Grid item xs={12} sm={4}>
-                        <Typography variant="caption" color="text.secondary">Finalized Aggregator</Typography>
-                        <Typography variant="body1" fontWeight={600}>
-                          {selectedApplication.finalizedAggregatorName || "N/A"}
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={12} sm={4}>
-                        <Typography variant="caption" color="text.secondary">Status</Typography>
-                        <Typography variant="body1" fontWeight={600} color="success.main">
-                          Quote Accepted & Finalized
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={12} sm={4}>
-                        <Typography variant="caption" color="text.secondary">Expected Volume</Typography>
-                        <Typography variant="body1" fontWeight={600}>
-                          ₹ {selectedApplication.totalAnnualTransaction?.toLocaleString() || 0}
-                        </Typography>
-                      </Grid>
-                    </Grid>
+                  <Paper
+                    variant="outlined"
+                    sx={{
+                      p: 2,
+                      px: 2.5,
+                      borderRadius: "10px",
+                      border: "1px solid #cbd5e1",
+                      mb: 2,
+                      bgcolor: "#ffffff"
+                    }}
+                  >
+                    <Box
+                      display="flex"
+                      flexDirection={{ xs: "column", lg: "row" }}
+                      alignItems={{ xs: "flex-start", lg: "center" }}
+                      justifyContent="space-between"
+                      gap={2}
+                      flexWrap="wrap"
+                    >
+                      {/* Details in One Line */}
+                      <Stack
+                        direction={{ xs: "column", sm: "row" }}
+                        spacing={{ xs: 2, sm: 3.5 }}
+                        alignItems={{ sm: "center" }}
+                        divider={<Divider orientation="vertical" flexItem sx={{ height: 28, my: "auto" }} />}
+                      >
+                        <Box>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: "block", fontSize: "11px", fontWeight: 600 }}>
+                            Finalized Aggregator
+                          </Typography>
+                          <Typography variant="body2" fontWeight={700} color="#0E4F8D" sx={{ fontSize: "14px" }}>
+                            {selectedApplication.finalizedAggregatorName || "N/A"}
+                          </Typography>
+                        </Box>
 
-                    <Box display="flex" justifyContent="flex-start" gap={2} flexWrap="wrap">
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={() => setShowPOFormFields(true)}
-                        sx={{ fontWeight: 700, px: 4, py: 1.2, borderRadius: "8px" }}
-                      >
-                        Add PO Details & Generate PO
-                      </Button>
-                      <Button
-                        variant="outlined"
-                        color="primary"
-                        startIcon={<DescriptionOutlined />}
-                        disabled={downloadingSanction}
-                        onClick={handleDownloadSanctionLetter}
-                        sx={{ fontWeight: 700, px: 3, py: 1.2, borderRadius: "8px", textTransform: "none" }}
-                      >
-                        {downloadingSanction ? "Downloading..." : "Download Sanction Letter (.docx)"}
-                      </Button>
+                        <Box>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: "block", fontSize: "11px", fontWeight: 600 }}>
+                            Status
+                          </Typography>
+                          <Typography variant="body2" fontWeight={700} color="success.main" sx={{ fontSize: "13px" }}>
+                            Quote Accepted & Finalized
+                          </Typography>
+                        </Box>
+
+                        <Box>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: "block", fontSize: "11px", fontWeight: 600 }}>
+                            Expected Volume
+                          </Typography>
+                          <Typography variant="body2" fontWeight={700} sx={{ fontSize: "14px" }}>
+                            ₹ {selectedApplication.totalAnnualTransaction?.toLocaleString() || 0}
+                          </Typography>
+                        </Box>
+                      </Stack>
+
+                      {/* Action Buttons in Same Line */}
+                      <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
+                        {!Boolean(
+                          selectedApplication?.isFinalApproved ||
+                          selectedApplication?.isQuoteAcceptReviewByCO ||
+                          selectedApplication?.isPOGenerated ||
+                          selectedApplication?.status === "finalapproval" ||
+                          selectedApplication?.poNumber
+                        ) && (
+                          <Button
+                            variant="contained"
+                            color="primary"
+                            size="small"
+                            onClick={() => setShowPOFormFields(true)}
+                            sx={{ fontWeight: 700, px: 2.5, py: 0.9, borderRadius: "6px", textTransform: "none", fontSize: "12.5px" }}
+                          >
+                            Approve & Add PO Details
+                          </Button>
+                        )}
+
+                        {Boolean(
+                          selectedApplication?.isFinalApproved ||
+                          selectedApplication?.isQuoteAcceptReviewByCO ||
+                          selectedApplication?.isPOGenerated ||
+                          selectedApplication?.status === "finalapproval" ||
+                          selectedApplication?.poNumber
+                        ) && (
+                          <>
+                            <Button
+                              variant="outlined"
+                              color="primary"
+                              size="small"
+                              startIcon={<DescriptionOutlined />}
+                              disabled={downloadingSanction}
+                              onClick={handleDownloadSanctionLetter}
+                              sx={{ fontWeight: 700, px: 2, py: 0.9, borderRadius: "6px", textTransform: "none", fontSize: "12px" }}
+                            >
+                              {downloadingSanction ? "Downloading..." : "Download Sanction Letter (.docx)"}
+                            </Button>
+
+                            <Button
+                              variant="outlined"
+                              color="secondary"
+                              size="small"
+                              startIcon={dispatchingOutcomeEmails ? <CircularProgress size={14} color="inherit" /> : <EmailOutlined />}
+                              disabled={dispatchingOutcomeEmails || !selectedApplication?.finalizedAggregatorId}
+                              onClick={handleDispatchOutcomeEmails}
+                              sx={{
+                                fontWeight: 700,
+                                px: 2,
+                                py: 0.9,
+                                borderRadius: "6px",
+                                textTransform: "none",
+                                fontSize: "12px",
+                                borderColor: "#0E4F8D",
+                                color: "#0E4F8D",
+                                "&:hover": { borderColor: "#093661", bgcolor: "rgba(14, 79, 141, 0.04)" }
+                              }}
+                            >
+                              {dispatchingOutcomeEmails ? "Sending Emails..." : "Send Acceptance & Rejection Emails"}
+                            </Button>
+                          </>
+                        )}
+                      </Stack>
                     </Box>
                   </Paper>
 
@@ -371,6 +462,27 @@ export default function WorkflowTabs() {
                   </Typography>
                 </Box>
                 <Stack direction="row" spacing={1.5} alignItems="center">
+                  <Button
+                    variant="outlined"
+                    color="secondary"
+                    size="small"
+                    startIcon={dispatchingOutcomeEmails ? <CircularProgress size={16} color="inherit" /> : <EmailOutlined />}
+                    disabled={dispatchingOutcomeEmails}
+                    onClick={handleDispatchOutcomeEmails}
+                    sx={{
+                      fontWeight: 700,
+                      borderRadius: "8px",
+                      textTransform: "none",
+                      fontSize: "12.5px",
+                      px: 2,
+                      py: 0.8,
+                      borderColor: "#0E4F8D",
+                      color: "#0E4F8D",
+                      "&:hover": { borderColor: "#093661", bgcolor: "rgba(14, 79, 141, 0.04)" }
+                    }}
+                  >
+                    {dispatchingOutcomeEmails ? "Sending Emails..." : "Send / Resend Outcome Emails"}
+                  </Button>
                   <Button
                     variant="outlined"
                     color="primary"

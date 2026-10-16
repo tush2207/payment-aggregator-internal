@@ -34,6 +34,7 @@ const AutocompleteDropdown = ({
       disableCloseOnSelect={multiple}
       options={options}
       value={value || (multiple ? [] : null)}
+      freeSolo={creatable}
       filterOptions={(opts, params) => {
         const filtered = defaultFilter(opts, params);
         const { inputValue } = params;
@@ -66,8 +67,11 @@ const AutocompleteDropdown = ({
           if (typeof newValue === "string" && newValue.startsWith('+ Add "') && newValue.endsWith('"')) {
             finalVal = newValue.slice(7, -1);
             if (onNewOptionCreated) onNewOptionCreated(finalVal);
+          } else if (newValue && typeof newValue === "object" && newValue.inputValue) {
+            finalVal = newValue.inputValue;
+            if (onNewOptionCreated) onNewOptionCreated(finalVal);
           }
-          setFieldValue(name, finalVal);
+          setFieldValue(name, finalVal || "");
         }
       }}
       onBlur={handleBlur}
@@ -97,33 +101,37 @@ const AutocompleteDropdown = ({
               ))
           : undefined
       }
-      renderOption={
-        multiple
-          ? (props, option, { selected }) => {
-              const isCreateOption = typeof option === "string" && option.startsWith('+ Add "');
-              if (isCreateOption) {
-                return (
-                  <li {...props} style={{ color: "#176FC1", fontWeight: 700, backgroundColor: "#f0f9ff" }}>
-                    <AddCircleOutline fontSize="small" sx={{ mr: 1, color: "#176FC1" }} />
-                    {option}
-                  </li>
-                );
-              }
+      renderOption={(props, option, { selected }) => {
+        const isCreateOption = typeof option === "string" && option.startsWith('+ Add "');
+        if (isCreateOption) {
+          return (
+            <li {...props} key={option} style={{ color: "#176FC1", fontWeight: 700, backgroundColor: "#f0f9ff" }}>
+              <AddCircleOutline fontSize="small" sx={{ mr: 1, color: "#176FC1" }} />
+              {option}
+            </li>
+          );
+        }
 
-              return (
-                <li {...props}>
-                  <Checkbox
-                    icon={icon}
-                    checkedIcon={checkedIcon}
-                    style={{ marginRight: 8 }}
-                    checked={selected}
-                  />
-                  {option}
-                </li>
-              );
-            }
-          : undefined
-      }
+        if (multiple) {
+          return (
+            <li {...props} key={option}>
+              <Checkbox
+                icon={icon}
+                checkedIcon={checkedIcon}
+                style={{ marginRight: 8 }}
+                checked={selected}
+              />
+              {option}
+            </li>
+          );
+        }
+
+        return (
+          <li {...props} key={option}>
+            {option}
+          </li>
+        );
+      }}
       renderInput={(params) => (
         <>
           {label ? <TextFieldLabel label={label} required={required} /> : null}

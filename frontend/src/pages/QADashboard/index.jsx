@@ -47,6 +47,7 @@ import {
 import axios from 'axios';
 import { getMethod } from '&src/services/axiosConfig';
 import ApiUrls from '&src/services/apiUrls';
+import DatabaseTablesManager from './components/DatabaseTablesManager';
 
 // ── In-Memory Console Log Store for Live Session Monitoring ───────────────────
 let capturedConsoleLogs = [];
@@ -514,6 +515,11 @@ export default function QADashboard() {
           <Tab icon={<FactCheckRounded sx={{ fontSize: 18 }} />} iconPosition="start" label="Regression Test Assertions" />
           <Tab icon={<AccountTreeRounded sx={{ fontSize: 18 }} />} iconPosition="start" label="5-Stage State Runner" />
           <Tab icon={<SecurityRounded sx={{ fontSize: 18 }} />} iconPosition="start" label="RBAC Security Matrix" />
+          <Tab
+            icon={<StorageRounded sx={{ fontSize: 18, color: '#dc2626' }} />}
+            iconPosition="start"
+            label="Database & Tables Manager (Truncate/Wipe)"
+          />
         </Tabs>
 
         <Box sx={{ p: 3 }}>
@@ -846,6 +852,11 @@ export default function QADashboard() {
                 </Table>
               </TableContainer>
             </Box>
+          )}
+
+          {/* ════════════════ TAB 5: DATABASE & TABLES MANAGER (TRUNCATE/WIPE) ════════════════ */}
+          {activeTab === 5 && (
+            <DatabaseTablesManager />
           )}
         </Box>
       </Paper>

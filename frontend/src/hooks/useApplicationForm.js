@@ -1,4 +1,4 @@
-import useStatusWiseAlert from "&src/components/ToastNotifications/useStatusWiseAlert";
+import useStatusWiseAlert from "&src/components/feedback/ToastNotifications/useStatusWiseAlert";
 import {
   APPLICATION_FORM_VALUES,
   user_Id,
@@ -181,6 +181,7 @@ const useApplicationForm = ({
     // ---- Continue only if validation passes ----
     const isApprove = actionType === "approve";
     const isReject = actionType === "reject";
+
     const payload = {};
 
     if (isReject) payload.reasonOfRejection = reasonOfRejection;
@@ -204,6 +205,8 @@ const useApplicationForm = ({
         break;
       case "CO":
       case "ADMIN":
+        // CO can edit any merchant or projection fields before final approval
+        Object.assign(payload, buildPayload(values));
         payload.isReviewByCO = isApprove;
         payload.status = isApprove
           ? WORK_FLOW_OPTIONS.APPROVED_BY_CO

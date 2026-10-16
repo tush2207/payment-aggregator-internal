@@ -41,6 +41,14 @@ const manageAggregatorServices = {
       throw error;
     }
   },
+  updateManageAggregator: async (aggregatorId, data, config) => {
+    try {
+      return await putMethod(ApiUrls.UPDATE_AGGREGATOR(aggregatorId), data, config);
+    } catch (error) {
+      console.error(`Error in ${ApiUrls.UPDATE_AGGREGATOR(aggregatorId)}:`, error);
+      throw error;
+    }
+  },
 
   //  Delete aggregator
   deleteAggregator: async (aggregatorId, config) => {
@@ -51,9 +59,33 @@ const manageAggregatorServices = {
       throw error;
     }
   },
+  deleteManageAggregator: async (aggregatorId, config) => {
+    try {
+      return await deleteMethod(ApiUrls.DELETE_AGGREGATOR(aggregatorId), config);
+    } catch (error) {
+      console.error(`Error in ${ApiUrls.DELETE_AGGREGATOR(aggregatorId)}:`, error);
+      throw error;
+    }
+  },
 
   //  Reset & Resend Aggregator Login Credentials
   resetCredentials: async (aggregatorId, config) => {
+    try {
+      return await postMethod(ApiUrls.RESET_AGGREGATOR_CREDENTIALS(aggregatorId), {}, config);
+    } catch (error) {
+      console.error(`Error in ${ApiUrls.RESET_AGGREGATOR_CREDENTIALS(aggregatorId)}:`, error);
+      throw error;
+    }
+  },
+  sendCredentialsEmail: async (aggregatorId, config) => {
+    try {
+      return await postMethod(ApiUrls.RESET_AGGREGATOR_CREDENTIALS(aggregatorId), {}, config);
+    } catch (error) {
+      console.error(`Error in ${ApiUrls.RESET_AGGREGATOR_CREDENTIALS(aggregatorId)}:`, error);
+      throw error;
+    }
+  },
+  resetPasswordEmail: async (aggregatorId, config) => {
     try {
       return await postMethod(ApiUrls.RESET_AGGREGATOR_CREDENTIALS(aggregatorId), {}, config);
     } catch (error) {

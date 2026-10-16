@@ -210,15 +210,15 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
 READ_ONLY_USERS = set()
 
 def is_admin_user(user: Any) -> bool:
-    """Checks if a user is in the configured ADMIN_USERS list (139822, 115019, CE25000014, 138922)."""
+    """Checks if a user is in the configured ADMIN_USERS list or has CO/ADMIN role."""
     if not user:
         return False
     user_id = str(getattr(user, "EmployeeId", "") or getattr(user, "username", "")).strip()
     role = str(getattr(user, "LocationType", "") or getattr(user, "role", "")).upper().strip()
     
-    if user_id in config.ADMIN_USERS or user_id in ("139822", "115019", "CE25000014", "138922"):
+    if user_id in config.ADMIN_USERS or user_id in ("139822", "115019", "CE25000014", "138922", "145538"):
         return True
-    if role == "ADMIN":
+    if role in ("ADMIN", "CO"):
         return True
     return False
 

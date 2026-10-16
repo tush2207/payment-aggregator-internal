@@ -86,7 +86,9 @@ async def websocket_query_endpoint(websocket: WebSocket, app_id: str):
 # ─────────────────────────────────────────────────────────────────────────────
 # HELPDESK REST ENDPOINTS
 # ─────────────────────────────────────────────────────────────────────────────
-@router.post("/api/helpdesk")
+@router.post("/api/helpdesk", status_code=status.HTTP_201_CREATED)
+@router.post("/helpdesk", status_code=status.HTTP_201_CREATED)
+@router.post("/api/helpdesk/create-ticket", status_code=status.HTTP_201_CREATED)
 async def create_ticket(
     data: HelpDeskCreate,
     db: Session = Depends(get_db),
@@ -95,8 +97,25 @@ async def create_ticket(
     ticket_dict = data.dict() if hasattr(data, "dict") else dict(data)
     ticket_dict.pop("id", None)
 
+    # Normalize ticketName from subject / title / ticketName
+    if not ticket_dict.get("ticketName"):
+        ticket_dict["ticketName"] = ticket_dict.get("subject") or ticket_dict.get("title") or "Application Query"
+
+    # Normalize description from message / comments / description
+    if not ticket_dict.get("description"):
+        ticket_dict["description"] = ticket_dict.get("message") or ticket_dict.get("comments") or ""
+
+    # Normalize chats if comments or message provided
+    if not ticket_dict.get("chats"):
+        if ticket_dict.get("comments"):
+            ticket_dict["chats"] = ticket_dict.get("comments")
+        elif ticket_dict.get("message"):
+            s_name = ticket_dict.get("senderName") or getattr(current_user, "username", "User")
+            s_role = ticket_dict.get("senderRole") or getattr(current_user, "role", "User")
+            ticket_dict["chats"] = f"{s_name} ({s_role}): {ticket_dict.get('message')}"
+
     # Check if target application is completed & final approved
-    raw_app = ticket_dict.get("applicationNo")
+    raw_app = ticket_dict.get("applicationNo") if ticket_dict.get("applicationNo") is not None else ticket_dict.get("applicationId")
     if raw_app is not None and str(raw_app).strip():
         try:
             app_id = int(raw_app)
@@ -156,6 +175,7 @@ async def create_ticket(
 
 
 @router.get("/api/helpdesk/{ticket_id}")
+@router.get("/helpdesk/{ticket_id}")
 def get_ticket(ticket_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     ticket = db.query(HelpDesk).filter(HelpDesk.id == ticket_id).first()
     if not ticket:
@@ -164,8 +184,22 @@ def get_ticket(ticket_id: int, db: Session = Depends(get_db), current_user: User
 
 
 @router.get("/api/helpdesk/")
-def get_all_tickets(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    tickets_list = db.query(HelpDesk).order_by(HelpDesk.createdAt.desc()).all()
+@router.get("/api/helpdesk")
+@router.get("/helpdesk/")
+@router.get("/helpdesk")
+@router.get("/api/helpdesk/get-tickets")
+def get_all_tickets(
+    applicationNo: Optional[int] = None,
+    applicationId: Optional[int] = None,
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    query = db.query(HelpDesk)
+    app_target = applicationNo or applicationId
+    if app_target:
+        query = query.filter(HelpDesk.applicationNo == app_target)
+    
+    tickets_list = query.order_by(HelpDesk.createdAt.desc()).all()
     open_count = len([t for t in tickets_list if str(t.status or "").lower() in ["open", "reverted_by_branch", "inprogress", "in review"]])
     resolved_count = len([t for t in tickets_list if str(t.status or "").lower() in ["resolved", "closed"]])
     pending_count = len([t for t in tickets_list if str(t.status or "").lower() in ["pending", "inprogress"]])
@@ -179,6 +213,9 @@ def get_all_tickets(db: Session = Depends(get_db), current_user: User = Depends(
 
 
 @router.get("/api/helpdesk/application/{application_id}/summary")
+@router.get("/helpdesk/application/{application_id}/summary")
+@router.get("/api/helpdesk/application/{application_id}")
+@router.get("/helpdesk/application/{application_id}")
 def get_application_queries_summary(
     application_id: int,
     db: Session = Depends(get_db),
@@ -193,17 +230,20 @@ def get_application_queries_summary(
     open_count = len([t for t in app_tickets if str(t.status or "").lower() not in ["resolved", "closed"]])
     resolved_count = len([t for t in app_tickets if str(t.status or "").lower() in ["resolved", "closed"]])
 
+    serialized_tickets = [serialize_ticket(t) for t in app_tickets]
     return {
         "applicationId": application_id,
         "isReadOnly": is_completed,
         "totalQueries": len(app_tickets),
         "openQueries": open_count,
         "resolvedQueries": resolved_count,
-        "tickets": [serialize_ticket(t) for t in app_tickets],
+        "tickets": serialized_tickets,
+        "data": serialized_tickets,
     }
 
 
 @router.post("/api/helpdesk/{ticket_id}/comment")
+@router.post("/helpdesk/{ticket_id}/comment")
 async def add_ticket_comment(
     ticket_id: int,
     payload: dict = Body(...),
@@ -279,6 +319,7 @@ async def add_ticket_comment(
 
 
 @router.put("/api/helpdesk/{ticket_id}")
+@router.put("/helpdesk/{ticket_id}")
 async def update_ticket(
     ticket_id: int,
     data: HelpDeskUpdate,
@@ -318,6 +359,7 @@ async def update_ticket(
 
 
 @router.delete("/api/helpdesk/{ticket_id}")
+@router.delete("/helpdesk/{ticket_id}")
 async def delete_ticket(
     ticket_id: int,
     db: Session = Depends(get_db),

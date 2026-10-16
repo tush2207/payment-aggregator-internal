@@ -66,25 +66,31 @@ class PaymentAggregatorUpdate(BaseModel):
 
 class ManageAggregator(BaseModel):
     aggregatorName : str
-    contactPersonName :str
-    email : str
-    mobileNo : int
-    location : str
-    services : str
+    contactPersonName : Optional[str] = None
+    email : Optional[str] = None
+    mobileNo : Optional[Any] = None
+    location : Optional[str] = None
+    services : Optional[str] = None
     alternateEmail : Optional[str] = None
     status : Optional[str] = "active"
     isDeleted : bool = False
+
+    class Config:
+        extra = "allow"
     
 class ManageAggregatorUpdate(BaseModel):
     aggregatorName : Optional[str] = None
     contactPersonName:  Optional[str] = None
     email : Optional[str] = None
-    mobileNo : Optional[int] = None
+    mobileNo : Optional[Any] = None
     location : Optional[str] = None
     services : Optional[str] = None
     alternateEmail : Optional[str] = None
     status : Optional[str] = None
     isDeleted : Optional[bool] = False
+
+    class Config:
+        extra = "allow"
     
 class Applications(BaseModel):
     userType: Optional[str] = None
@@ -297,7 +303,11 @@ class ProjectionDetailsUpdate(BaseModel):
     bankUnit: Optional[str] = None
 
 class HelpDeskBase(BaseModel):
-    ticketName: str
+    ticketName: Optional[str] = None
+    subject: Optional[str] = None
+    message: Optional[str] = None
+    comments: Optional[str] = None
+    applicationId: Optional[Any] = None
     customerName: Optional[str] = "Customer"
     branchName: Optional[str] = None
     zoneName: Optional[str] = None
@@ -306,39 +316,55 @@ class HelpDeskBase(BaseModel):
     customerEmail: Optional[str] = None
     customerMobileNo: Optional[Any] = None
     description: Optional[str] = ""
-    priority : Optional[str] = "Medium"
-    status : Optional[str] = "Open"
-    applicationNo: Optional[int] = None
+    priority: Optional[str] = "Medium"
+    status: Optional[str] = "Open"
+    applicationNo: Optional[Any] = None
     chats: Optional[str] = None
     remark: Optional[str] = None
     attachmentUrl: Optional[str] = None
     attachmentName: Optional[str] = None
-    attachments: Optional[str] = None
-    changedFields: Optional[str] = None
+    attachments: Optional[Any] = None
+    changedFields: Optional[Any] = None
     targetOffice: Optional[str] = "BO"
     queryType: Optional[str] = "APPLICATION_QUERY"
+    senderRole: Optional[str] = None
+    senderName: Optional[str] = None
+    senderId: Optional[Any] = None
+
+    class Config:
+        extra = "allow"
 
 class HelpDeskUpdate(BaseModel):
     ticketName: Optional[str] = None
+    subject: Optional[str] = None
+    message: Optional[str] = None
+    comments: Optional[str] = None
     customerName: Optional[str] = None
     branchName: Optional[str] = None
     zoneName: Optional[str] = None
     regionName: Optional[str] = None
     accountNo: Optional[Any] = None
-    applicationNo: Optional[int] = None
+    applicationNo: Optional[Any] = None
+    applicationId: Optional[Any] = None
     chats: Optional[str] = None
     customerEmail: Optional[str] = None
     customerMobileNo: Optional[Any] = None
     description: Optional[str] = None
-    priority : Optional[str] = None
-    status : Optional[str] = None
+    priority: Optional[str] = None
+    status: Optional[str] = None
     remark: Optional[str] = None
     attachmentUrl: Optional[str] = None
     attachmentName: Optional[str] = None
-    attachments: Optional[str] = None
-    changedFields: Optional[str] = None
+    attachments: Optional[Any] = None
+    changedFields: Optional[Any] = None
     targetOffice: Optional[str] = None
     queryType: Optional[str] = None
+    senderRole: Optional[str] = None
+    senderName: Optional[str] = None
+    senderId: Optional[Any] = None
+
+    class Config:
+        extra = "allow"
 
 class HelpDeskCreate(HelpDeskBase):
     pass

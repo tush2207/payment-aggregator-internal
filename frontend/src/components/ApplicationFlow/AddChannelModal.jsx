@@ -14,8 +14,9 @@ import {
   TextField,
   Alert,
   Typography,
+  Box,
 } from '@mui/material';
-import { Close } from '@mui/icons-material';
+import { Close, Add } from '@mui/icons-material';
 
 const PRESET_CHANNELS = [
   'Internet banking',
@@ -64,22 +65,40 @@ export const AddChannelModal = ({
       onClose={onClose}
       maxWidth="xs"
       fullWidth
-      PaperProps={{ sx: { borderRadius: '12px' } }}
+      PaperProps={{ sx: { borderRadius: '14px', overflow: 'hidden' } }}
     >
       <DialogTitle
-        sx={(theme) => ({
-          background: theme.palette.cbi?.gradients?.modalHeader || 'linear-gradient(135deg, #0E4F8D 0%, #176FC1 100%)',
+        sx={{
+          background: 'linear-gradient(90deg, #176FC1 0%, #135FA6 40%, #9B0A2E 80%, #CE0F3E 100%)',
+          backgroundColor: '#176FC1',
           color: '#ffffff',
           fontWeight: 700,
-          fontSize: '1rem',
+          fontSize: '1.05rem',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          p: 2,
-        })}
+          py: 1.8,
+          px: 2.5,
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
+          borderBottom: '3px solid #CE0F3E',
+        }}
       >
-        Add Projection Channel
-        <IconButton size="small" onClick={onClose} sx={{ color: '#ffffff' }}>
+        <Box display="flex" alignItems="center" gap={1.2}>
+          <Add sx={{ color: '#ffffff', fontSize: 24 }} />
+          <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1.05rem', color: '#ffffff' }}>
+            Add Projection Channel
+          </Typography>
+        </Box>
+        <IconButton
+          size="small"
+          onClick={onClose}
+          sx={{
+            color: '#ffffff',
+            bgcolor: 'rgba(255,255,255,0.15)',
+            borderRadius: '8px',
+            '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' },
+          }}
+        >
           <Close fontSize="small" />
         </IconButton>
       </DialogTitle>

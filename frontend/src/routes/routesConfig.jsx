@@ -20,7 +20,7 @@ const APPLICATION_ROUTES_URLS = {
 
 //-------------------------------LAZY IMPORTS-------------------------------//
 
-const Login = lazyWithRetry(() => import('&src/pages/Login'), 'Login');
+const Login = lazyWithRetry(() => import('&src/pages/Login/index'), 'Login');
 const Dashboard = lazyWithRetry(() => import('&src/pages/Dashboard'), 'Dashboard');
 const Applications = lazyWithRetry(() => import('&src/pages/Applications'), 'Applications');
 const ManageAggregator = lazyWithRetry(() => import('&src/pages/ManageAggregator'), 'ManageAggregator');

@@ -31,27 +31,39 @@ export const ApplicationFlowRejectDialog = ({
       maxWidth="xs"
       fullWidth
       PaperProps={{
-        sx: { borderRadius: '12px' },
+        sx: { borderRadius: '14px', overflow: 'hidden' },
       }}
     >
       <DialogTitle
-        sx={(theme) => ({
-          background: theme.palette.secondary?.main || '#CE0F3E',
+        sx={{
+          background: 'linear-gradient(90deg, #176FC1 0%, #135FA6 40%, #9B0A2E 80%, #CE0F3E 100%)',
+          backgroundColor: '#176FC1',
           color: '#ffffff',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          py: 1.5,
+          py: 1.8,
           px: 2.5,
-        })}
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
+          borderBottom: '3px solid #CE0F3E',
+        }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <CancelOutlined fontSize="small" />
-          <Typography variant="subtitle1" fontWeight={700}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
+          <CancelOutlined sx={{ fontSize: 24, color: '#ffffff' }} />
+          <Typography variant="h6" fontWeight={700} sx={{ fontSize: '1.05rem', color: '#ffffff' }}>
             Reject Application
           </Typography>
         </Box>
-        <IconButton onClick={onClose} sx={{ color: '#ffffff' }}>
+        <IconButton
+          onClick={onClose}
+          size="small"
+          sx={{
+            color: '#ffffff',
+            bgcolor: 'rgba(255,255,255,0.15)',
+            borderRadius: '8px',
+            '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' },
+          }}
+        >
           <Close fontSize="small" />
         </IconButton>
       </DialogTitle>

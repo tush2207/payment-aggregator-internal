@@ -22,13 +22,12 @@ import {
   ToggleButtonGroup,
   Tooltip,
   Typography,
+  TableContainer,
+  Paper
 } from "@mui/material";
-import { Add, DeleteOutline, Close } from "@mui/icons-material";
+import { Add, DeleteOutline, Close, RequestQuote } from "@mui/icons-material";
 
-import {
-  PROJECTION_CAL_DETAILS,
-  PROJECTION_COLUMNS_FOR_PA,
-} from "&src/constants/PaymentAggregratorConstant";
+import { PROJECTION_CAL_DETAILS } from "&src/constants/PaymentAggregratorConstant";
 import aggregatorByApplication from "&src/services/aggregatorByApplication";
 import aggregatorProjections from "&src/services/aggregatorProjections";
 import applicationServices from "&src/services/applications";
@@ -39,6 +38,7 @@ import {
   calculateTotals,
   getProjectionsForCustomer,
   getChannelOrder,
+  isZeroProjectionChannel,
 } from "&src/utils/calculation";
 import DialogWithHeader from "../Dialog/DialogWithHeader";
 import FullScreenLoader from "../Loaders/FullScreenLoader";
@@ -197,7 +197,7 @@ const GetRates = ({
   const handleRateChange = (id, value) => {
     setRateDetails((prev) =>
       prev.map((row) =>
-        row.id === id ? { ...row, rate: value, chargesProposed: row.chargesProposed || value } : row
+        row.id === id ? { ...row, rate: value } : row
       )
     );
   };
@@ -281,7 +281,12 @@ const GetRates = ({
         isNaN(Number(value)) ||
         Number(value) < 0;
 
-      const invalidRows = rateDetails.filter((row) => row.allow && isInvalidNumber(row.rate));
+      const invalidRows = rateDetails.filter(
+        (row) =>
+          !isZeroProjectionChannel(row) &&
+          !(row.transactionType?.toLowerCase().includes("internet") && !row.isIB) &&
+          isInvalidNumber(row.rate)
+      );
 
       if (invalidRows.length > 0) {
         const invalidIds = invalidRows.map((r) => r.id);
@@ -305,7 +310,7 @@ const GetRates = ({
             item.chargesProposed !== "" &&
             Number(item.chargesProposed) >= 0
             ? item.chargesProposed
-            : item.rate;
+            : "";
         return calculateQuoteRow(item, charges, item.unit, item.rate);
       });
 
@@ -373,6 +378,9 @@ const GetRates = ({
         open={openModal}
         onClose={() => setOpenModal(false)}
         headerText={`Add / Edit Quotation Rates ${aggregatorName ? `— ${aggregatorName}` : ""}`}
+        applicationId={applicationId}
+        icon={RequestQuote}
+        contentSx={{ p: 2.5, overflow: "hidden", display: "flex", flexDirection: "column" }}
         sx={{ zIndex: 1600 }}
       >
         {loading && <FullScreenLoader />}
@@ -392,121 +400,136 @@ const GetRates = ({
           </Button>
         </Box>
 
-        <Table size="small" sx={{ border: "1px solid #e2e8f0" }}>
-          <TableHead>
-            <TableRow sx={{ bgcolor: "#f8fafc" }}>
-              <TableCell sx={{ fontWeight: 700, fontSize: "12px", width: 45 }}>#</TableCell>
-              <TableCell sx={{ fontWeight: 700, fontSize: "12px" }}>Transactions Types / Payment Channels</TableCell>
-              <TableCell sx={{ fontWeight: 700, fontSize: "12px", width: 180 }}>Rate</TableCell>
-              <TableCell sx={{ fontWeight: 700, fontSize: "12px", width: 50, textAlign: "center" }}>Action</TableCell>
-            </TableRow>
-          </TableHead>
+        <TableContainer
+          component={Paper}
+          elevation={0}
+          sx={{
+            maxHeight: "55vh",
+            overflow: "auto",
+            border: "1px solid #cbd5e1",
+            borderRadius: "8px",
+            position: "relative",
+            "&::-webkit-scrollbar": { width: "6px", height: "6px" },
+            "&::-webkit-scrollbar-track": { background: "#f1f5f9", borderRadius: "4px" },
+            "&::-webkit-scrollbar-thumb": { background: "#cbd5e1", borderRadius: "4px", "&:hover": { background: "#94a3b8" } }
+          }}
+        >
+          <Table stickyHeader size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 700, fontSize: "12px", width: 45, bgcolor: "#0E4F8D !important", color: "#ffffff !important", borderBottom: "2px solid #062545" }}>#</TableCell>
+                <TableCell sx={{ fontWeight: 700, fontSize: "12px", bgcolor: "#0E4F8D !important", color: "#ffffff !important", borderBottom: "2px solid #062545" }}>Transactions Types / Payment Channels</TableCell>
+                <TableCell sx={{ fontWeight: 700, fontSize: "12px", width: 180, bgcolor: "#0E4F8D !important", color: "#ffffff !important", borderBottom: "2px solid #062545" }}>Rate</TableCell>
+                <TableCell sx={{ fontWeight: 700, fontSize: "12px", width: 50, textAlign: "center", bgcolor: "#0E4F8D !important", color: "#ffffff !important", borderBottom: "2px solid #062545" }}>Action</TableCell>
+              </TableRow>
+            </TableHead>
 
-          <TableBody>
-            {rateDetails?.length ? (
-              rateDetails.map((row, i) => {
-                const srNo = !row.isIB
-                  ? rateDetails.slice(0, i + 1).filter((r) => !r.isIB).length
-                  : "";
+            <TableBody>
+              {rateDetails?.length ? (
+                rateDetails.map((row, i) => {
+                  const srNo = !row.isIB
+                    ? rateDetails.slice(0, i + 1).filter((r) => !r.isIB).length
+                    : "";
 
-                return (
-                  <TableRow key={row.id || i} hover>
-                    <TableCell sx={{ fontSize: "12px", color: "text.secondary" }}>{srNo}</TableCell>
-                    <TableCell sx={{ fontSize: "12.5px", fontWeight: row.isIB ? 500 : 700, pl: row.isIB ? 3 : 1 }}>
-                      {row.transactionType}
-                      {row.isCustom && (
-                        <Typography
-                          component="span"
-                          sx={{
-                            ml: 1,
-                            fontSize: "10px",
-                            bgcolor: "#e0f2fe",
-                            color: "#0369a1",
-                            px: 0.8,
-                            py: 0.2,
-                            borderRadius: "4px",
-                            fontWeight: 700,
-                          }}
-                        >
-                          Additional
-                        </Typography>
-                      )}
-                    </TableCell>
-
-                    {row.allow ? (
-                      <TableCell>
-                        <Box display="flex" alignItems="center" gap={0.8}>
-                          <ToggleButtonGroup
-                            value={row.unit || PERCENTAGE}
-                            exclusive
-                            size="small"
-                            onChange={(e, newUnit) => {
-                              if (newUnit) handleRateTypeChange(row.id, newUnit);
-                            }}
+                  return (
+                    <TableRow key={row.id || i} hover>
+                      <TableCell sx={{ fontSize: "12px", color: "text.secondary" }}>{srNo}</TableCell>
+                      <TableCell sx={{ fontSize: "12.5px", fontWeight: row.isIB ? 500 : 700, pl: row.isIB ? 3 : 1 }}>
+                        {row.transactionType}
+                        {row.isCustom && (
+                          <Typography
+                            component="span"
                             sx={{
-                              height: 32,
-                              "& .MuiToggleButton-root": {
-                                px: 1,
-                                py: "2px",
-                                fontSize: "12px",
-                                fontWeight: 700,
-                                textTransform: "none",
-                                borderColor: "#cbd5e1",
-                                "&.Mui-selected": {
-                                  bgcolor: "#0E4F8D !important",
-                                  color: "#ffffff !important"
-                                }
-                              }
+                              ml: 1,
+                              fontSize: "10px",
+                              bgcolor: "#e0f2fe",
+                              color: "#0369a1",
+                              px: 0.8,
+                              py: 0.2,
+                              borderRadius: "4px",
+                              fontWeight: 700,
                             }}
                           >
-                            <ToggleButton value={PERCENTAGE}>%</ToggleButton>
-                            <ToggleButton value={RS}>₹</ToggleButton>
-                          </ToggleButtonGroup>
-                          <TextField
-                            size="small"
-                            variant="outlined"
-                            type="text"
-                            value={row.rate}
-                            error={errorRowIds.includes(row.id)}
-                            helperText={errorRowIds.includes(row.id) ? "Required" : ""}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              if (val === "" || /^\d{0,3}(\.\d{0,4})?$/.test(val)) {
-                                handleRateChange(row.id, val);
-                              }
-                            }}
-                            inputProps={{ style: { textAlign: "right", padding: "5px 8px", fontSize: "12px", fontWeight: 600 } }}
-                            sx={{ width: 90 }}
-                          />
-                        </Box>
+                            Additional
+                          </Typography>
+                        )}
                       </TableCell>
-                    ) : (
-                      <TableCell sx={{ color: "text.disabled", fontSize: "12px" }}>—</TableCell>
-                    )}
 
-                    <TableCell align="center">
-                      {row.isCustom ? (
-                        <Tooltip title="Remove custom mode" arrow>
-                          <IconButton size="small" color="error" onClick={() => handleDeleteRow(row.id)}>
-                            <DeleteOutline fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
+                      {!isZeroProjectionChannel(row) && !(row.transactionType?.toLowerCase().includes("internet") && !row.isIB) ? (
+                        <TableCell>
+                          <Box display="flex" alignItems="center" gap={0.8}>
+                            <ToggleButtonGroup
+                              value={row.unit || PERCENTAGE}
+                              exclusive
+                              size="small"
+                              onChange={(e, newUnit) => {
+                                if (newUnit) handleRateTypeChange(row.id, newUnit);
+                              }}
+                              sx={{
+                                height: 32,
+                                "& .MuiToggleButton-root": {
+                                  px: 1,
+                                  py: "2px",
+                                  fontSize: "12px",
+                                  fontWeight: 700,
+                                  textTransform: "none",
+                                  borderColor: "#cbd5e1",
+                                  "&.Mui-selected": {
+                                    bgcolor: "#0E4F8D !important",
+                                    color: "#ffffff !important"
+                                  }
+                                }
+                              }}
+                            >
+                              <ToggleButton value={PERCENTAGE}>%</ToggleButton>
+                              <ToggleButton value={RS}>₹</ToggleButton>
+                            </ToggleButtonGroup>
+                            <TextField
+                              size="small"
+                              variant="outlined"
+                              type="text"
+                              value={row.rate}
+                              error={errorRowIds.includes(row.id)}
+                              helperText={errorRowIds.includes(row.id) ? "Required" : ""}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === "" || /^\d{0,3}(\.\d{0,4})?$/.test(val)) {
+                                  handleRateChange(row.id, val);
+                                }
+                              }}
+                              inputProps={{ style: { textAlign: "right", padding: "5px 8px", fontSize: "12px", fontWeight: 600 } }}
+                              sx={{ width: 90 }}
+                            />
+                          </Box>
+                        </TableCell>
                       ) : (
-                        <Typography variant="caption" color="text.disabled">—</Typography>
+                        <TableCell sx={{ color: "text.disabled", fontSize: "13px", fontWeight: 700, pl: 2 }}>—</TableCell>
                       )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            ) : (
-              <TableRow>
-                <TableCell colSpan={4} align="center" sx={{ py: 3 }}>
-                  No projection channels available
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+
+                      <TableCell align="center">
+                        {row.isCustom ? (
+                          <Tooltip title="Remove custom mode" arrow>
+                            <IconButton size="small" color="error" onClick={() => handleDeleteRow(row.id)}>
+                              <DeleteOutline fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        ) : (
+                          <Typography variant="caption" color="text.disabled">—</Typography>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={4} align="center" sx={{ py: 3 }}>
+                    No projection channels available
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
 
         <Box display="flex" justifyContent="flex-end" gap={1.5} mt={2.5}>
           <Button variant="outlined" color="inherit" onClick={() => setOpenModal(false)}>
@@ -525,22 +548,40 @@ const GetRates = ({
         maxWidth="xs"
         fullWidth
         sx={{ zIndex: 1700 }}
-        PaperProps={{ sx: { borderRadius: "10px" } }}
+        PaperProps={{ sx: { borderRadius: "14px", overflow: "hidden" } }}
       >
         <DialogTitle
           sx={{
-            background: "linear-gradient(135deg, #0E4F8D 0%, #176FC1 100%)",
+            background: "linear-gradient(90deg, #176FC1 0%, #135FA6 40%, #9B0A2E 80%, #CE0F3E 100%)",
+            backgroundColor: "#176FC1",
             color: "#ffffff",
             fontWeight: 700,
-            fontSize: "0.95rem",
+            fontSize: "1.05rem",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            p: 1.8,
+            py: 1.8,
+            px: 2.5,
+            boxShadow: "0 4px 20px rgba(0, 0, 0, 0.25)",
+            borderBottom: "3px solid #CE0F3E",
           }}
         >
-          Add Additional Channel / Mode
-          <IconButton size="small" onClick={() => setAddChannelOpen(false)} sx={{ color: "#ffffff" }}>
+          <Box display="flex" alignItems="center" gap={1.2}>
+            <Add sx={{ color: "#ffffff", fontSize: 24 }} />
+            <Typography variant="h6" sx={{ fontWeight: 700, fontSize: "1.05rem", color: "#ffffff" }}>
+              Add Additional Channel / Mode
+            </Typography>
+          </Box>
+          <IconButton
+            size="small"
+            onClick={() => setAddChannelOpen(false)}
+            sx={{
+              color: "#ffffff",
+              bgcolor: "rgba(255,255,255,0.15)",
+              borderRadius: "8px",
+              "&:hover": { bgcolor: "rgba(255,255,255,0.3)" },
+            }}
+          >
             <Close fontSize="small" />
           </IconButton>
         </DialogTitle>

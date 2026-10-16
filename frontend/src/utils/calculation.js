@@ -321,17 +321,12 @@ export function calculateProjectionDetails({
       });
     }
 
-    // Allow logic
+    // Allow logic: all instruments except Internet Banking parent row are allowed
     updatedItem.allow = item.isIB
       ? true
       : item.transactionType === "Internet banking"
         ? false
         : true;
-
-    //  Override for UPI and Rupay
-    if (["UPI", "Debit card - Rupay"].includes(item.transactionType)) {
-      updatedItem.allow = false;
-    }
 
     //  Ensure numeric values remain formatted to 3 decimals
     updatedItem = {
@@ -676,73 +671,92 @@ export function markAllowedIBTransactions(data, projectionList = []) {
 //     expectedRevenue,
 //   };
 // };
-export const calculateQuoteRow = (row, newCharges, newUnit, newRate) => {
-  const unit = newUnit || row.unit || "₹";         // Aggregator unit (% or ₹)
-  const rateNum = newRate !== undefined ? parseFloat(newRate) || 0 : (parseFloat(row.rate) || 0);
+/**
+ * Helper to identify whether a channel has 0% projection / zero volume.
+ */
+export function isZeroProjectionChannel(item) {
+  if (!item) return true;
+  if (item.isIB) {
+    const pct = parseFloat(String(item.transactionTypePercent || '').replace(/[%₹,\s]/g, '')) || 0;
+    const est = Number(item.estimatedTransactions) || 0;
+    const amt = Number(item.aggregateAmount) || 0;
+    return pct === 0 && est === 0 && amt === 0;
+  }
 
-  let chargesStr = newCharges !== undefined && newCharges !== null && newCharges !== ""
-    ? newCharges
-    : (row.chargesProposed !== undefined && row.chargesProposed !== null && row.chargesProposed !== "" && Number(row.chargesProposed) > 0
-        ? row.chargesProposed
-        : (rateNum > 0 ? String(rateNum) : ""));
+  const parseNum = (val) => {
+    if (val === undefined || val === null || val === '') return 0;
+    const cleaned = String(val).replace(/[%₹,\s]/g, '');
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? 0 : num;
+  };
+
+  const count = parseNum(item.transactionCount);
+  const value = parseNum(item.transactionValue);
+  const estTxn = parseNum(item.estimatedTransactions);
+  const aggAmt = parseNum(item.aggregateAmount);
+
+  if (count > 0 || value > 0 || estTxn > 0 || aggAmt > 0) {
+    return false;
+  }
+  return true;
+}
+
+export const calculateQuoteRow = (row, newCharges, newUnit, newRate) => {
+  if (!row) return row;
+
+  if (isZeroProjectionChannel(row)) {
+    return {
+      ...row,
+      chargesProposed: "",
+      rate: 0,
+      grossAmount: 0,
+      vendorShare: 0,
+      expectedRevenue: 0,
+    };
+  }
+
+  const unit = newUnit || row.unit || "₹";         // Aggregator unit (% or ₹)
+  const rateNum = newRate !== undefined && !Number.isNaN(Number(newRate))
+    ? parseFloat(newRate) || 0
+    : (parseFloat(row.rate) || 0);
+
+  // Clean charges string: sanitize NaN, null, undefined
+  let rawCharges = newCharges !== undefined ? newCharges : row.chargesProposed;
+  if (rawCharges === "NaN" || Number.isNaN(rawCharges) || Number.isNaN(Number(rawCharges))) {
+    rawCharges = "";
+  }
+
+  let chargesStr = rawCharges !== undefined && rawCharges !== null && rawCharges !== "" && Number(rawCharges) > 0
+    ? String(rawCharges)
+    : "";
 
   const bankUnit = row?.bankUnit || unit;            // Bank-side unit (% or ₹)
-  const chargesNum = parseFloat(chargesStr) || 0;
+  const aggAmt = Number(row.aggregateAmount) || 0;
+  const estTxn = Number(row.estimatedTransactions) || 0;
+  const existingGross = Number(row.grossAmount) || 0;
 
-  const aggAmt = row.aggregateAmount || 0;
-  const estTxn = row.estimatedTransactions || 0;
+  let chargesNum = chargesStr !== "" ? (parseFloat(chargesStr) || 0) : 0;
+
+  // If charges are 0 but grossAmount exists, dynamically compute the proposed charge
+  if (chargesNum === 0 && existingGross > 0) {
+    if ((bankUnit === PERCENTAGE || bankUnit === "%") && aggAmt > 0) {
+      chargesNum = (existingGross * 100) / aggAmt;
+      chargesStr = String(parseFloat(chargesNum.toFixed(4)));
+    } else if (estTxn > 0) {
+      chargesNum = existingGross / estTxn;
+      chargesStr = String(parseFloat(chargesNum.toFixed(4)));
+    }
+  }
 
   let grossAmount = 0;
   let vendorShare = 0;
   let expectedRevenue = 0;
 
+  grossAmount = chargesStr !== "" && chargesNum > 0
+    ? ((bankUnit === PERCENTAGE || bankUnit === "%") ? (aggAmt * chargesNum) / 100 : estTxn * chargesNum)
+    : existingGross;
 
-  grossAmount = bankUnit === PERCENTAGE ?  (aggAmt * chargesNum) / 100 : estTxn * chargesNum;
-
-  vendorShare = unit === PERCENTAGE ?  (aggAmt * rateNum) / 100 : estTxn * rateNum;
-
-
-  // if(unit === RS){
-  //   vendorShare = rateNum * estTxn
-  //   grossAmount = 
-  // }
-  // // ----------------------------------------------------------
-  // // CASE 1: SAME UNIT → Standard calculation
-  // // ----------------------------------------------------------
-  // if (unit === bankUnit) {
-  //   if (unit === "%") {
-  //     grossAmount = (aggAmt * chargesNum) / 100;
-  //     vendorShare = (aggAmt * rateNum) / 100;
-  //   } else {
-  //     // INR (₹)
-  //     grossAmount = row.isIB ? estTxn * chargesNum : aggAmt * chargesNum;
-  //     vendorShare = estTxn * rateNum;
-  //   }
-  // }
-
-  // // ----------------------------------------------------------
-  // // CASE 2: DIFFERENT UNITS → Convert properly
-  // // ----------------------------------------------------------
-  // else {
-  //   // unit = %, bankUnit = Rs
-  //   if (unit === PERCENTAGE && bankUnit === RS) {
-  //     // chargesNum is %, convert vendorShare from Rs to %
-  //     grossAmount = (aggAmt * chargesNum) / 100;
-
-  //     // bank rate (rateNum) is Rs per txn → convert to absolute
-  //     vendorShare = estTxn * rateNum;
-  //   }
-
-  //   // unit = Rs, bankUnit = %
-  //   else if (unit === RS && bankUnit === PERCENTAGE) {
-  //     // chargesNum is Rs → absolute amount
-  //     grossAmount =  estTxn * chargesNum 
-
-  //     // bank rate is % → convert to absolute
-  //     vendorShare = unit ===  PERCENTAGE ? estTxn * rateNum: (aggAmt * rateNum) / 100;
-  //   }
-  // }
-
+  vendorShare = (unit === PERCENTAGE || unit === "%") ? (aggAmt * rateNum) / 100 : estTxn * rateNum;
   expectedRevenue = grossAmount - vendorShare;
 
   return {
@@ -750,10 +764,10 @@ export const calculateQuoteRow = (row, newCharges, newUnit, newRate) => {
     chargesProposed: chargesStr,
     bankUnit,
     unit,
-    rate: rateNum,
-    grossAmount,
-    vendorShare,
-    expectedRevenue,
+    rate: Number.isNaN(rateNum) ? 0 : rateNum,
+    grossAmount: Number.isNaN(grossAmount) ? 0 : grossAmount,
+    vendorShare: Number.isNaN(vendorShare) ? 0 : vendorShare,
+    expectedRevenue: Number.isNaN(expectedRevenue) ? 0 : expectedRevenue,
   };
 };
 

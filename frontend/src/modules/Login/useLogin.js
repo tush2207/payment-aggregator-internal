@@ -1,4 +1,4 @@
-import useStatusWiseAlert from "&src/components/ToastNotifications/useStatusWiseAlert";
+import useStatusWiseAlert from "&src/components/feedback/ToastNotifications/useStatusWiseAlert";
 import { APPLICATION_ROUTES_URLS } from "&src/routes/routesConfig";
 import { CBI_DEFAULT_LOCATIONS } from "&src/constants/PaymentAggregratorConstant";
 import AuthServices from "&src/services/authServices";

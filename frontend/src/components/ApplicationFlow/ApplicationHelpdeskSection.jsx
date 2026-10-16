@@ -17,7 +17,7 @@ import {
 } from '@mui/icons-material';
 import TicketChatSection from '&src/components/TicketChatSection';
 import HelpdeskServices from '&src/services/helpdesk';
-import useStatusWiseAlert from '&src/components/ToastNotifications/useStatusWiseAlert';
+import useStatusWiseAlert from '&src/components/feedback/ToastNotifications/useStatusWiseAlert';
 
 /**
  * Collapsible Helpdesk & Audit Thread Section for Application Row.

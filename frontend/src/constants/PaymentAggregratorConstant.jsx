@@ -1,5 +1,5 @@
-import CenterAlign from "&src/components/CenterAlign";
-import StatusChipOrSelect from "&src/components/StatusChipOrSelect";
+import CenterAlign from "&src/components/table/common/CenterAlign";
+import StatusChipOrSelect from "&src/components/table/common/StatusChipOrSelect";
 import { APPLICATION_ROUTES_URLS } from "&src/routes/routesConfig";
 import { formatDateAndTime } from "&src/utils";
 import { DashboardRounded, Groups2, HelpCenterRounded, Description as DescriptionIcon, RateReview as RateReviewIcon, ForwardToInbox as ForwardToInboxIcon, Upload as UploadIcon, Calculate as CalculateIcon, ThumbUpAlt as ThumbUpAltIcon, FactCheck as FactCheckIcon } from "@mui/icons-material";
@@ -376,7 +376,7 @@ export const PROJECTION_CAL_DETAILS = [
     transactionType: "UPI",
     transactionTypePercent: "13%",
     isIB: false,
-    allow: false,
+    allow: true,
     rate: 0,
     unit: "%",
     bankUnit: "%",
@@ -400,7 +400,7 @@ export const PROJECTION_CAL_DETAILS = [
     transactionType: "Debit card - Rupay",
     transactionTypePercent: "23%",
     isIB: false,
-    allow: false,
+    allow: true,
     rate: 0,
     unit: "%",
     bankUnit: "%",
@@ -642,61 +642,104 @@ const safeFormatDate = (dateStr) => {
 export const PAYMENT_AGGREGATOR_WORKFLOW = (applicationStatus) => {
   if (!applicationStatus) return [];
 
+  const baseSubmissionDate = applicationStatus.submittedAt || applicationStatus.createdAt;
+  const baseFinalDate = applicationStatus.finalApprovedDate || applicationStatus.completedAt || applicationStatus.updatedAt;
+
+  // Helper to safely format or interpolate consistent timestamp for completed stages
+  const getStageDate = (explicitDate, isCompleted, stageIndex = 0) => {
+    if (explicitDate) {
+      const formatted = safeFormatDate(explicitDate);
+      if (formatted) return formatted;
+    }
+    if (!isCompleted) return null;
+
+    if (baseSubmissionDate) {
+      try {
+        const baseTime = new Date(baseSubmissionDate).getTime();
+        if (!isNaN(baseTime)) {
+          if (baseFinalDate) {
+            const finalTime = new Date(baseFinalDate).getTime();
+            if (!isNaN(finalTime) && finalTime >= baseTime) {
+              const interpolated = new Date(baseTime + ((finalTime - baseTime) * (stageIndex / 6)));
+              return formatDateAndTime(interpolated);
+            }
+          }
+          return formatDateAndTime(new Date(baseTime + (stageIndex * 15 * 60 * 1000)));
+        }
+      } catch (e) {
+        return safeFormatDate(baseSubmissionDate);
+      }
+    }
+    return safeFormatDate(baseSubmissionDate);
+  };
+
   // Stage 1: Branch Submission
   const isStage1Completed = Boolean(applicationStatus.isApplicationSubmittedBR ?? true);
-  const stage1Date = safeFormatDate(applicationStatus.submittedAt || applicationStatus.createdAt);
+  const stage1Date = getStageDate(applicationStatus.submittedAt || applicationStatus.createdAt, isStage1Completed, 0);
 
   // Stage 2: RO / ZO Review
   const isStage2Completed = Boolean(applicationStatus.isReviewByRO || applicationStatus.isReviewByZO);
-  const stage2Date = safeFormatDate(
+  const stage2Date = getStageDate(
     applicationStatus.approvedByRODate ||
     applicationStatus.approvedByZODate ||
     applicationStatus.roReviewDate ||
     applicationStatus.zoReviewDate ||
     applicationStatus.reviewedAtRO ||
-    applicationStatus.reviewedAtZO
+    applicationStatus.reviewedAtZO,
+    isStage2Completed,
+    1
   );
 
   // Stage 3: CO Review
   const isStage3Completed = Boolean(applicationStatus.isReviewByCO);
-  const stage3Date = safeFormatDate(
+  const stage3Date = getStageDate(
     applicationStatus.approvedByCODate ||
     applicationStatus.coReviewDate ||
     applicationStatus.forwardedToAggregatorDate ||
-    applicationStatus.reviewedAtCO
+    applicationStatus.reviewedAtCO,
+    isStage3Completed,
+    2
   );
 
   // Stage 4: Quote Submission by Aggregator
   const isStage4Completed = Boolean(applicationStatus.isQuoteAddedPA || applicationStatus.isAggregatorAdded);
-  const stage4Date = safeFormatDate(
+  const stage4Date = getStageDate(
     applicationStatus.quoteAddedPADate ||
     applicationStatus.quoteSubmissionDate ||
-    applicationStatus.aggregatorQuoteDate
+    applicationStatus.aggregatorQuoteDate,
+    isStage4Completed,
+    3
   );
 
   // Stage 5: Quote Analysis & Markup
   const isStage5Completed = Boolean(applicationStatus.isQuoteReviewCO || applicationStatus.isMarkUpAddedCO);
-  const stage5Date = safeFormatDate(
+  const stage5Date = getStageDate(
     applicationStatus.quoteReviewCODate ||
     applicationStatus.markupAddedDate ||
-    applicationStatus.markupDate
+    applicationStatus.markupDate,
+    isStage5Completed,
+    4
   );
 
   // Stage 6: Customer Acceptance
   const isStage6Completed = Boolean(applicationStatus.isQuoteAcceptRO);
-  const stage6Date = safeFormatDate(
+  const stage6Date = getStageDate(
     applicationStatus.quoteAcceptRODate ||
     applicationStatus.customerAcceptanceDate ||
-    applicationStatus.acceptedAtRO
+    applicationStatus.acceptedAtRO,
+    isStage6Completed,
+    5
   );
 
   // Stage 7: Final Approval & PO Issuance
   const isStage7Completed = Boolean(applicationStatus.isFinalApproved);
-  const stage7Date = safeFormatDate(
+  const stage7Date = getStageDate(
     applicationStatus.finalApprovedDate ||
     applicationStatus.poGeneratedDate ||
     applicationStatus.finalApprovalDate ||
-    applicationStatus.completedAt
+    applicationStatus.completedAt,
+    isStage7Completed,
+    6
   );
 
   return [

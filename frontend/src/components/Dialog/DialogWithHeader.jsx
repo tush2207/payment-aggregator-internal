@@ -28,16 +28,26 @@ const DialogWithHeader = ({
   open,
   onClose,
   headerText,
+  title,
   subHeaderText,
+  subtitle,
   icon: HeaderIcon,
+  appId,
+  applicationId,
   maxWidth = 'sm',
   headerBg,
   headerColor,
   actions,
   children,
   PaperProps,
+  contentSx,
   ...props
-}) => (
+}) => {
+  const displayTitle = headerText || title;
+  const displaySubtitle = subHeaderText || subtitle;
+  const currentAppId = appId || applicationId;
+
+  return (
   <Dialog
     fullWidth
     maxWidth={maxWidth}
@@ -50,8 +60,7 @@ const DialogWithHeader = ({
         borderRadius: '16px',
         overflow: 'hidden',
         boxShadow: (theme) => theme.shadows[8] || '0 25px 50px -12px rgba(10, 35, 66, 0.25)',
-        border: '1px solid',
-        borderColor: 'divider',
+        border: '1px solid #cbd5e1',
         ...(PaperProps?.sx || {}),
       },
       ...PaperProps,
@@ -61,20 +70,20 @@ const DialogWithHeader = ({
     {/* ================= HEADER ================= */}
     <DialogTitle
       sx={{
-        p: 2.2,
+        py: 1.8,
         px: 3,
-        background: (theme) =>
-          headerBg ||
-          `linear-gradient(90deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark || theme.palette.primary.main} 40%, ${theme.palette.secondary.main} 100%)`,
-        color: headerColor || 'primary.contrastText',
+        background: headerBg || 'linear-gradient(90deg, #176FC1 0%, #135FA6 40%, #9B0A2E 80%, #CE0F3E 100%)',
+        backgroundColor: '#176FC1',
+        color: headerColor || '#ffffff',
         position: 'relative',
-        boxShadow: (theme) => `0 4px 12px ${theme.palette.action.focus}`,
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
+        borderBottom: '3px solid #CE0F3E',
       }}
     >
-      <Box display="flex" alignItems="center" justifyContent="space-between">
-        <Box display="flex" alignItems="center" gap={1.5}>
-          {HeaderIcon && <HeaderIcon sx={{ fontSize: 24, color: 'accent.main' }} />}
-          <Box>
+      <Box display="flex" alignItems="center" justifyContent="space-between" gap={2}>
+        <Box display="flex" alignItems="center" gap={1.5} sx={{ minWidth: 0, flex: 1 }}>
+          {HeaderIcon && <HeaderIcon sx={{ fontSize: 26, color: '#ffffff', flexShrink: 0 }} />}
+          <Box sx={{ minWidth: 0 }}>
             <Typography
               variant="h6"
               component="div"
@@ -82,69 +91,98 @@ const DialogWithHeader = ({
                 fontWeight: 700,
                 fontSize: '1.05rem',
                 letterSpacing: '0.3px',
-                color: 'inherit',
+                color: '#ffffff',
                 lineHeight: 1.3,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
               }}
             >
-              {headerText}
+              {displayTitle}
             </Typography>
-            {subHeaderText && (
+            {displaySubtitle && (
               <Typography
                 variant="caption"
                 sx={{
-                  color: 'rgba(255, 255, 255, 0.85)',
+                  color: 'rgba(255, 255, 255, 0.9)',
                   fontSize: '0.75rem',
                   display: 'block',
                   mt: 0.2,
                 }}
               >
-                {subHeaderText}
+                {displaySubtitle}
               </Typography>
             )}
           </Box>
         </Box>
 
-        {onClose && (
-          <IconButton
-            aria-label="close"
-            onClick={onClose}
-            size="small"
-            sx={{
-              color: 'primary.contrastText',
-              bgcolor: 'rgba(255, 255, 255, 0.12)',
-              backdropFilter: 'blur(4px)',
-              transition: 'all 0.2s ease-in-out',
-              '&:hover': {
-                bgcolor: 'rgba(255, 255, 255, 0.25)',
-                transform: 'rotate(90deg)',
-              },
-            }}
-          >
-            <Close fontSize="small" />
-          </IconButton>
-        )}
+        <Box display="flex" alignItems="center" gap={1.5} sx={{ flexShrink: 0 }}>
+          {currentAppId && (
+            <Typography
+              variant="subtitle2"
+              sx={{
+                backgroundColor: 'rgba(255,255,255,0.15)',
+                px: 1.5,
+                py: 0.5,
+                borderRadius: '6px',
+                fontWeight: 600,
+                fontSize: '12px',
+                color: '#ffffff',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              App ID: {currentAppId}
+            </Typography>
+          )}
+
+          {onClose && (
+            <IconButton
+              aria-label="close"
+              onClick={onClose}
+              size="small"
+              sx={{
+                color: '#ffffff',
+                bgcolor: 'rgba(255, 255, 255, 0.15)',
+                backdropFilter: 'blur(4px)',
+                borderRadius: '8px',
+                transition: 'all 0.2s ease-in-out',
+                '&:hover': {
+                  bgcolor: 'rgba(255, 255, 255, 0.3)',
+                  transform: 'scale(1.05)',
+                },
+              }}
+            >
+              <Close fontSize="small" />
+            </IconButton>
+          )}
+        </Box>
       </Box>
     </DialogTitle>
 
-    {/* Brand Accent Stripe */}
-    <Box
-      sx={{
-        height: '3px',
-        background: (theme) =>
-          `linear-gradient(90deg, ${theme.palette.secondary.main}, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-      }}
-    />
-
     {/* Content */}
-    <DialogContent sx={{ p: 3, bgcolor: 'background.paper' }}>{children}</DialogContent>
+    <DialogContent
+      sx={{
+        p: { xs: 2, sm: 3 },
+        bgcolor: 'background.paper',
+        maxHeight: 'calc(85vh - 100px)',
+        overflowY: 'auto',
+        '&::-webkit-scrollbar': { width: '6px', height: '6px' },
+        '&::-webkit-scrollbar-track': { background: '#f1f5f9', borderRadius: '4px' },
+        '&::-webkit-scrollbar-thumb': { background: '#cbd5e1', borderRadius: '4px', '&:hover': { background: '#94a3b8' } },
+        ...(contentSx || {}),
+      }}
+    >
+      {children}
+    </DialogContent>
 
     {/* Optional Footer Actions */}
     {actions && (
-      <DialogActions sx={{ px: 3, py: 2, bgcolor: 'action.hover', borderTop: '1px solid', borderColor: 'divider' }}>
+      <DialogActions sx={{ px: 3, py: 2, bgcolor: '#f8fafc', borderTop: '1px solid #e2e8f0' }}>
         {actions}
       </DialogActions>
     )}
   </Dialog>
-);
+  );
+};
 
 export default DialogWithHeader;

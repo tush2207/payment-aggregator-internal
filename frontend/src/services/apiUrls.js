@@ -126,6 +126,12 @@ const ApiUrls = {
   DELETE_HELPDESK: (ticketId) => `/helpdesk/${ticketId}`,
   GET_APPLICATION_QUERIES_SUMMARY: (appId) => `/helpdesk/application/${appId}/summary`,
   ADD_HELPDESK_COMMENT: (ticketId) => `/helpdesk/${ticketId}/comment`,
+
+  // ---------------- QA & Testing Database Management ----------------
+  QA_TABLES_SUMMARY: '/qa/tables-summary',
+  QA_TRUNCATE_TABLE: (tableName) => `/qa/truncate-table/${tableName}`,
+  QA_WIPE_ALL_APPLICATIONS: '/qa/applications/all',
+  QA_FORCE_DELETE_APPLICATION: (applicationId) => `/qa/applications/${applicationId}/force`,
 };
 
 export default ApiUrls;

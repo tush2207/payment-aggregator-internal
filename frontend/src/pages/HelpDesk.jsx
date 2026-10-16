@@ -45,12 +45,12 @@ import {
 import ConfirmationDialogWithReason from '&src/components/Dialog/ConfirmationDialogWithReason';
 import DialogWithHeader from '&src/components/Dialog/DialogWithHeader';
 import SectionHeader from '&src/components/Headers/SectionHeader';
-import FullScreenLoader from '&src/components/Loaders/FullScreenLoader';
-import NoData from '&src/components/NoData';
-import StatusChipOrSelect from '&src/components/StatusChipOrSelect';
+import FullScreenLoader from '&src/components/feedback/FullScreenLoader';
+import NoData from '&src/components/feedback/NoData';
+import StatusChipOrSelect from '&src/components/table/common/StatusChipOrSelect';
 import { isBO, isCO } from '&src/constants/PaymentAggregratorConstant';
-import ApplicationQueryModal from '&src/components/ApplicationFlow/ApplicationQueryModal';
-import ManageHelpDeskForm from '&src/modules/HelpDesk/ManageHelpDeskForm';
+import ApplicationQueryModal from '&src/features/application-flow/ApplicationQueryModal';
+import ManageHelpDeskForm from '&src/features/helpdesk/ManageHelpDeskForm';
 import useHelpDesk from '&src/hooks/useHelpDesk';
 import { formatDateOnly, formatTimeOnly } from '&src/utils';
 import { CommonTableFilterSection } from '&src/components/Filters';
@@ -111,13 +111,15 @@ const ManageHelpDesk = () => {
       {
         label: 'Export All',
         onClick: handleExportExcel,
-        variant: 'contained',
-        color: 'success',
+        variant: 'outlined',
+        color: 'primary',
         startIcon: <FileDownloadRounded />,
         sx: {
-          bgcolor: '#2E7D32',
-          '&:hover': { bgcolor: '#1B5E20' },
-          boxShadow: '0 2px 8px rgba(46, 125, 50, 0.25)',
+          fontWeight: 700,
+          borderRadius: '8px',
+          px: 2.2,
+          py: 0.9,
+          boxShadow: '0 2px 8px rgba(155, 10, 46, 0.25)',
         },
       },
     ];

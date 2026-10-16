@@ -86,6 +86,7 @@ export default function AggregatorSelectionModal({ open, onClose, applicationDat
       maxWidth="md"
       headerText="Select Aggregators for Quotation"
       subHeaderText="Choose the payment aggregators to invite for quote submission."
+      applicationId={applicationData?.applicationId}
       icon={GroupsIcon}
       actions={
         <Box display="flex" justifyContent="space-between" width="100%" alignItems="center">

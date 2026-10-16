@@ -4,6 +4,7 @@ import {
   Button,
   Table,
   TableBody,
+  TableCell,
   Typography,
   Paper,
   Chip,
@@ -17,11 +18,11 @@ import {
   WarningAmberRounded,
   TrendingUpRounded,
 } from '@mui/icons-material';
-import { CommonAppTable, CommonTableHeader, CommonTableTotalRow, CommonTableEmptyState } from '&src/components/Tables/common';
+import { CommonAppTable, CommonTableHeader, CommonTableTotalRow, CommonTableEmptyState } from '&src/components/table/common';
 import { PROJECTION_CAL_DETAILS } from '&src/constants/PaymentAggregratorConstant';
 import aggregatorProjections from '&src/services/aggregatorProjections';
-import useStatusWiseAlert from '&src/components/ToastNotifications/useStatusWiseAlert';
-import FullScreenLoader from '&src/components/Loaders/FullScreenLoader';
+import useStatusWiseAlert from '&src/components/feedback/ToastNotifications/useStatusWiseAlert';
+import FullScreenLoader from '&src/components/feedback/FullScreenLoader';
 import { generateProjectionArray, calculateProjectionDetails, getProjectionsForCustomer } from '&src/utils/calculation';
 import { formatNumber } from '&src/utils';
 import { useDispatch } from 'react-redux';

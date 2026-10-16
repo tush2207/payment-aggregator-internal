@@ -20,7 +20,7 @@ import {
   ArticleOutlined,
   QuestionAnswerRounded,
 } from '@mui/icons-material';
-import { CommonAppTable, CommonTableHeader, CommonTableEmptyState } from '&src/components/Tables/common';
+import { CommonAppTable, CommonTableHeader, CommonTableEmptyState } from '&src/components/table/common';
 import { CommonTableFilterSection } from '&src/components/Filters';
 import { useApplicationFlowTable } from '&src/hooks/useApplicationFlowTable';
 import { openWorkflowDialog } from '&src/store/applicationFlowSlice';

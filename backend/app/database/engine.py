@@ -274,6 +274,13 @@ def init_db():
             agg_columns = [
                 ("alternateEmail", "VARCHAR2(255)"),
                 ("status", "VARCHAR2(50) DEFAULT 'active'"),
+                ("hashedPassword", "VARCHAR2(255)"),
+                ("mustResetPassword", "NUMBER(1) DEFAULT 1"),
+                ("failedLoginAttempts", "NUMBER(5) DEFAULT 0"),
+                ("lockedUntil", "TIMESTAMP WITH TIME ZONE"),
+                ("lastLoginAt", "TIMESTAMP WITH TIME ZONE"),
+                ("lastLoginIp", "VARCHAR2(255)"),
+                ("createdAt", "TIMESTAMP WITH TIME ZONE"),
                 ("hashed_password", "VARCHAR2(255)"),
                 ("must_reset_password", "NUMBER(1) DEFAULT 1"),
                 ("failed_login_attempts", "NUMBER(5) DEFAULT 0"),
@@ -324,11 +331,18 @@ def init_db():
     except Exception as e:
         logger.debug(f"DB column verification notice: {e}")
 
-    # 4. MSSQL Engine (Production view) - Read-only view, no table creation needed
-    if mssql_engine is not None and check_mssql_health():
-        print("[DATABASE] [OK] Secondary MSSQL Employee view connected.")
+    # 5. Seed default reference data if tables are empty
+    try:
+        from app.database.seed_data import seed_default_data
+        seed_db = SessionLocal()
+        try:
+            seed_default_data(seed_db)
+        finally:
+            seed_db.close()
+    except Exception as e:
+        logger.debug(f"DB auto-seed notice: {e}")
 
-    # 5. Initialization complete
+    # 6. Initialization complete
     print(f"[DATABASE] [OK] Database initialization complete. All tables ready.\n")
 
 

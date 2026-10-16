@@ -1,11 +1,11 @@
-import FullScreenLoader from '&src/components/Loaders/FullScreenLoader';
+import FullScreenLoader from '&src/components/feedback/FullScreenLoader';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { Suspense } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import './App.css';
-import ToastNotificationsProvider from './components/ToastNotifications/ToastNotificationsProvider';
-import ErrorBoundary from './containers/ErrorBoundary';
+import ToastNotificationsProvider from '&src/components/feedback/ToastNotifications/ToastNotificationsProvider';
+import ErrorBoundary from '&src/components/layout/ErrorBoundary';
 import ScrollTop from './hooks/ScrollTop';
 import RoutingProvider from './routes';
 import ThemeProvider from './theme';

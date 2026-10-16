@@ -7,7 +7,15 @@ class User(Base):
     __tablename__ = 'users'
     id = Column(Integer, Sequence('user_id_seq'), primary_key=True)
     username = Column(String(255), unique=True)
-    hashed_password = Column(String(255))
+    hashedPassword = Column(String(255))
+
+    @property
+    def hashed_password(self):
+        return self.hashedPassword
+
+    @hashed_password.setter
+    def hashed_password(self, value):
+        self.hashedPassword = value
 
 class PaymentAggregatorInDB(Base):
     __tablename__ = 'payment_aggregators'
@@ -26,6 +34,10 @@ class PaymentAggregatorInDB(Base):
     status = Column(String(255))
     quoteStatus = Column(String(255))
     sumOfRate = Column(Float, nullable=True)
+    email = Column(String(255), nullable=True)
+    avgTransactionYearly = Column(Float, nullable=True)
+    avgTransactionSize = Column(Float, nullable=True)
+    category = Column(String(255), nullable=True)
 
 class ManageAggregatorInDB(Base):
     __tablename__ = 'manage_aggregators'
@@ -39,13 +51,70 @@ class ManageAggregatorInDB(Base):
     alternateEmail = Column(String(255), nullable=True)
     status = Column(String(50), default="active", nullable=True)
     isDeleted = Column(Boolean, default=False)
-    hashed_password = Column(String(255), nullable=True)
-    must_reset_password = Column(Boolean, default=True, nullable=True)
-    failed_login_attempts = Column(Integer, default=0, nullable=True)
-    locked_until = Column(DateTime(timezone=True), nullable=True)
-    last_login_at = Column(DateTime(timezone=True), nullable=True)
-    last_login_ip = Column(String(255), nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.current_timestamp(), nullable=True)
+    hashedPassword = Column(String(255), nullable=True)
+    mustResetPassword = Column(Boolean, default=True, nullable=True)
+    failedLoginAttempts = Column(Integer, default=0, nullable=True)
+    lockedUntil = Column(DateTime(timezone=True), nullable=True)
+    lastLoginAt = Column(DateTime(timezone=True), nullable=True)
+    lastLoginIp = Column(String(255), nullable=True)
+    createdAt = Column(DateTime(timezone=True), server_default=func.current_timestamp(), nullable=True)
+
+    # Backward compatibility properties
+    @property
+    def hashed_password(self):
+        return self.hashedPassword
+
+    @hashed_password.setter
+    def hashed_password(self, value):
+        self.hashedPassword = value
+
+    @property
+    def must_reset_password(self):
+        return self.mustResetPassword
+
+    @must_reset_password.setter
+    def must_reset_password(self, value):
+        self.mustResetPassword = value
+
+    @property
+    def failed_login_attempts(self):
+        return self.failedLoginAttempts
+
+    @failed_login_attempts.setter
+    def failed_login_attempts(self, value):
+        self.failedLoginAttempts = value
+
+    @property
+    def locked_until(self):
+        return self.lockedUntil
+
+    @locked_until.setter
+    def locked_until(self, value):
+        self.lockedUntil = value
+
+    @property
+    def last_login_at(self):
+        return self.lastLoginAt
+
+    @last_login_at.setter
+    def last_login_at(self, value):
+        self.lastLoginAt = value
+
+    @property
+    def last_login_ip(self):
+        return self.lastLoginIp
+
+    @last_login_ip.setter
+    def last_login_ip(self, value):
+        self.lastLoginIp = value
+
+    @property
+    def created_at(self):
+        return self.createdAt
+
+    @created_at.setter
+    def created_at(self, value):
+        self.createdAt = value
 
 class ApplicationsInDB(Base):
     __tablename__ = "applications"
@@ -121,6 +190,12 @@ class ApplicationsInDB(Base):
     negotiationRemarks = Column(String(1020), nullable=True)
     negotiationRequestedBy = Column(String(255), nullable=True)
     negotiationRequestedDate = Column(DateTime(timezone=True), nullable=True)
+    approvedByRODate = Column(DateTime(timezone=True), nullable=True)
+    approvedByCODate = Column(DateTime(timezone=True), nullable=True)
+    quoteAddedPADate = Column(DateTime(timezone=True), nullable=True)
+    quoteReviewCODate = Column(DateTime(timezone=True), nullable=True)
+    quoteAcceptRODate = Column(DateTime(timezone=True), nullable=True)
+    finalApprovedDate = Column(DateTime(timezone=True), nullable=True)
     
 class ProjectionDetailsInDB(Base):
     __tablename__ = 'projection_details'

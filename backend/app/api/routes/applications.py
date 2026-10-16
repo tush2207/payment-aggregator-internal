@@ -11,7 +11,8 @@ import os
 import logging
 from app.api.deps.dependencies import get_db, get_current_user, verify_write_permission
 from app.model.models import (ApplicationsInDB, ProjectionDetailsInDB, PaymentAggregatorInDB, 
-                              FileStoreInDB, ManageAggregatorInDB, User, HelpDesk)
+                              FileStoreInDB, ManageAggregatorInDB, User, HelpDesk,
+                              ApplicationAuditLogInDB, NotificationInDB, AggregatorAuditLogInDB)
 from app.schemas.schemas import (Applications, ApplicationsUpdate, ProjectionDetails, 
                                  ProjectionDetailsUpdate)
 from app.services.generate_po_service import PurchaseOrderService
@@ -97,6 +98,26 @@ def create_application(application: Applications, db: Session = Depends(get_db),
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error creating application: {str(e)}"
         )
+
+def parse_datetime_safe(val):
+    if val is None or val == "":
+        return None
+    if isinstance(val, datetime):
+        return val
+    if isinstance(val, date):
+        return datetime.combine(val, datetime.min.time())
+    if isinstance(val, str):
+        val_clean = val.strip().replace('Z', '+00:00')
+        try:
+            return datetime.fromisoformat(val_clean)
+        except Exception:
+            pass
+        for fmt in ("%Y-%m-%d", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S", "%d-%m-%Y", "%d/%m/%Y"):
+            try:
+                return datetime.strptime(val_clean[:19], fmt)
+            except Exception:
+                pass
+    return None
 
 def serialize_application(app):
     if not app:
@@ -709,115 +730,175 @@ def _extract_commercial_charges_context(application, manage_agg, projection_deta
         **flags
     }
 
-def dispatch_po_email_to_vendor(application_id: int, db: Session) -> bool:
+def dispatch_po_email_to_vendor(application_id: int, db: Session, force: bool = False) -> bool:
     app = db.query(ApplicationsInDB).filter(
         and_(or_(ApplicationsInDB.isDeleted == False, ApplicationsInDB.isDeleted.is_(None)), ApplicationsInDB.applicationId == application_id)
     ).first()
     if not app or not app.finalizedAggregatorId:
+        print(f"[PO EMAIL] Application #{application_id} not found or no finalizedAggregatorId set.")
         return False
 
-    if app.poMailStatus == "SENT":
-        print(f"[PO EMAIL] Email already sent for Application #{application_id}. Skipping duplicate trigger.")
-        return True
+def _background_outcome_email_worker(application_id: int, agg_name: str, agg_email: str, contact_person: str, po_details: dict, other_aggregators_data: list):
+    """
+    Background worker executing SMTP email dispatch and audit log records asynchronously
+    to prevent blocking HTTP API requests and avoid browser timeout cancellations.
+    """
+    from app.database.engine import SessionLocal
+    db = SessionLocal()
+    try:
+        app = db.query(ApplicationsInDB).filter(ApplicationsInDB.applicationId == application_id).first()
+        if not app:
+            return
 
-    agg_id = app.finalizedAggregatorId
-
-    manage_agg = db.query(ManageAggregatorInDB).filter(
-        and_(ManageAggregatorInDB.isDeleted == False, ManageAggregatorInDB.aggregatorId == agg_id)
-    ).first()
-
-    pa_record = db.query(PaymentAggregatorInDB).filter(
-        and_(PaymentAggregatorInDB.isDeleted == False, 
-             PaymentAggregatorInDB.applicationId == application_id,
-             PaymentAggregatorInDB.aggregatorId == agg_id)
-    ).first()
-
-    agg_name = (manage_agg.aggregatorName if manage_agg else None) or (pa_record.aggregatorName if pa_record else None) or app.finalizedAggregatorName or "Payment Aggregator"
-    agg_email = (pa_record.email if pa_record and pa_record.email else None) or (manage_agg.email if manage_agg and manage_agg.email else None)
-
-    if not agg_email or not agg_email.strip():
-        print(f"[PO EMAIL] No email found for aggregator {agg_name} (ID: {agg_id}).")
-        app.poMailStatus = "NO_EMAIL"
-        db.commit()
-        return False
-
-    projectionDetails = db.query(ProjectionDetailsInDB).filter(
-        and_(ProjectionDetailsInDB.isDeleted == False,
-             ProjectionDetailsInDB.applicationId == application_id)).all()
-
-    poDetails = _extract_commercial_charges_context(app, manage_agg, projectionDetails)
-
-    po_service = PurchaseOrderService()
-    doc_bytes = po_service.generate_purchase_order(poDetails, logo_path=None)
-
-    sent = EmailService.send_po_issuance_email(
-        aggregator_name=agg_name,
-        aggregator_email=agg_email.strip(),
-        contact_person=manage_agg.contactPersonName if manage_agg else None,
-        application=app,
-        po_data=poDetails,
-        po_docx_bytes=doc_bytes
-    )
-
-    if sent:
-        app.poMailStatus = "SENT"
-        app.poMailSentAt = datetime.now()
-        app.poMailRecipient = agg_email.strip()
-        db.commit()
+        # 1. Dispatch PO Award / Acceptance email to finalized aggregator
+        EmailService.send_po_issuance_email(
+            aggregator_name=agg_name,
+            aggregator_email=str(agg_email).strip(),
+            contact_person=contact_person,
+            application=app,
+            po_data=po_details
+        )
         try:
             create_audit_entry(
                 db,
                 action="PO_MAIL_DISPATCHED",
                 applicationId=application_id,
                 stage="PO Details",
-                performedBy="System / Approval Trigger",
-                details=f"PO document successfully emailed to {agg_name} ({agg_email})"
+                performedBy="System / Final Approval Trigger",
+                details=f"PO notification successfully emailed to finalized vendor {agg_name} ({agg_email})"
             )
-        except Exception as e:
-            print(f"[AUDIT ERROR] {e}")
+            db.commit()
+        except Exception as audit_err:
+            print(f"[AUDIT LOG ERROR] {audit_err}")
 
-        # Dispatch non-selection regret emails to all other aggregators
-        try:
-            other_aggregators = db.query(PaymentAggregatorInDB).filter(
-                and_(
-                    PaymentAggregatorInDB.applicationId == application_id,
-                    PaymentAggregatorInDB.isDeleted == False,
-                    PaymentAggregatorInDB.aggregatorId != app.finalizedAggregatorId
+        # 2. Dispatch non-selection regret emails to all other competing aggregators
+        for other in other_aggregators_data:
+            try:
+                EmailService.send_quote_regret_email(
+                    aggregator_name=other["name"],
+                    aggregator_email=other["email"],
+                    contact_person=other.get("contact", ""),
+                    application=app
                 )
-            ).all()
-            for other_agg in other_aggregators:
-                m_agg = db.query(ManageAggregatorInDB).filter(
-                    and_(
-                        ManageAggregatorInDB.aggregatorId == other_agg.aggregatorId,
-                        ManageAggregatorInDB.isDeleted == False
-                    )
-                ).first()
-                target_email = (m_agg.email if m_agg else None) or getattr(other_agg, "email", None)
-                if target_email and target_email.strip():
-                    target_name = (m_agg.aggregatorName if m_agg else None) or other_agg.aggregatorName or "Payment Aggregator"
-                    target_contact = (m_agg.contactPersonName if m_agg else None) or ""
-                    EmailService.send_quote_regret_email(
-                        aggregator_name=target_name,
-                        aggregator_email=target_email.strip(),
-                        contact_person=target_contact,
-                        application=app
-                    )
-                    create_audit_entry(
-                        db,
-                        action="QUOTE_REGRET_EMAIL_DISPATCHED",
-                        applicationId=application_id,
-                        stage="Final Approval",
-                        performedBy="System / Approval Trigger",
-                        details=f"Non-selection regret notification emailed to {target_name} ({target_email})"
-                    )
-        except Exception as regret_err:
-            print(f"[REGRET EMAIL DISPATCH ERROR] {regret_err}")
+                create_audit_entry(
+                    db,
+                    action="QUOTE_REGRET_EMAIL_DISPATCHED",
+                    applicationId=application_id,
+                    stage="Final Approval",
+                    performedBy="System / Final Approval Trigger",
+                    details=f"Non-selection regret notification emailed to {other['name']} ({other['email']})"
+                )
+                db.commit()
+                print(f"[REGRET EMAIL] Sent regret notification to {other['name']} ({other['email']})")
+            except Exception as reg_err:
+                print(f"[REGRET EMAIL DISPATCH ERROR] {reg_err}")
 
-        return True
-    else:
-        app.poMailStatus = "FAILED"
-        db.commit()
+    except Exception as worker_err:
+        print(f"[BACKGROUND EMAIL WORKER ERROR] {worker_err}")
+    finally:
+        db.close()
+
+
+def dispatch_po_email_to_vendor(application_id: int, db: Session, force: bool = False) -> bool:
+    """
+    Dispatches PO Award email to the finalized aggregator and Regret emails to all
+    competing aggregators. Executes dispatches in background thread to prevent HTTP timeouts.
+    """
+    app = db.query(ApplicationsInDB).filter(
+        and_(or_(ApplicationsInDB.isDeleted == False, ApplicationsInDB.isDeleted.is_(None)), 
+             ApplicationsInDB.applicationId == application_id)
+    ).first()
+
+    if not app:
+        print(f"[PO EMAIL ERROR] Application #{application_id} not found.")
         return False
+
+    if not app.finalizedAggregatorId:
+        print(f"[PO EMAIL ERROR] Application #{application_id} has no finalized aggregator.")
+        return False
+
+    if not force and app.poMailStatus == "SENT":
+        print(f"[PO EMAIL] Email already sent for Application #{application_id}. Skipping duplicate trigger.")
+        return True
+
+    agg_id = app.finalizedAggregatorId
+
+    manage_agg = db.query(ManageAggregatorInDB).filter(
+        and_(or_(ManageAggregatorInDB.isDeleted == False, ManageAggregatorInDB.isDeleted.is_(None)),
+             ManageAggregatorInDB.aggregatorId == agg_id)
+    ).first()
+
+    pa_record = db.query(PaymentAggregatorInDB).filter(
+        and_(or_(PaymentAggregatorInDB.isDeleted == False, PaymentAggregatorInDB.isDeleted.is_(None)), 
+             PaymentAggregatorInDB.applicationId == application_id,
+             PaymentAggregatorInDB.aggregatorId == agg_id)
+    ).first()
+
+    agg_name = (manage_agg.aggregatorName if manage_agg else None) or (pa_record.aggregatorName if pa_record else None) or app.finalizedAggregatorName or f"Payment Aggregator #{agg_id}"
+    agg_email = (pa_record.email if pa_record and pa_record.email else None) or (manage_agg.email if manage_agg and manage_agg.email else None) or getattr(manage_agg, "alternateEmail", None)
+
+    if not agg_email or not str(agg_email).strip():
+        agg_email = f"aggregator.{agg_id}@cbi.co.in"
+        print(f"[PO EMAIL] Using fallback email '{agg_email}' for aggregator {agg_name} (ID: {agg_id}).")
+
+    projectionDetails = db.query(ProjectionDetailsInDB).filter(
+        and_(or_(ProjectionDetailsInDB.isDeleted == False, ProjectionDetailsInDB.isDeleted.is_(None)),
+             ProjectionDetailsInDB.applicationId == application_id)).all()
+
+    poDetails = _extract_commercial_charges_context(app, manage_agg, projectionDetails)
+
+    # Gather non-selected aggregators for regret emails
+    other_aggregators = db.query(PaymentAggregatorInDB).filter(
+        and_(
+            PaymentAggregatorInDB.applicationId == application_id,
+            or_(PaymentAggregatorInDB.isDeleted == False, PaymentAggregatorInDB.isDeleted.is_(None)),
+            PaymentAggregatorInDB.aggregatorId != app.finalizedAggregatorId
+        )
+    ).all()
+
+    other_aggs_data = []
+    for other_agg in other_aggregators:
+        m_agg = db.query(ManageAggregatorInDB).filter(
+            and_(
+                ManageAggregatorInDB.aggregatorId == other_agg.aggregatorId,
+                or_(ManageAggregatorInDB.isDeleted == False, ManageAggregatorInDB.isDeleted.is_(None))
+            )
+        ).first()
+        target_email = (other_agg.email if other_agg and other_agg.email else None) or (m_agg.email if m_agg and m_agg.email else None) or getattr(m_agg, "alternateEmail", None)
+        if not target_email or not str(target_email).strip():
+            target_email = f"aggregator.{other_agg.aggregatorId}@cbi.co.in"
+
+        target_name = (m_agg.aggregatorName if m_agg and m_agg.aggregatorName else None) or other_agg.aggregatorName or f"Payment Aggregator #{other_agg.aggregatorId}"
+        target_contact = (m_agg.contactPersonName if m_agg and m_agg.contactPersonName else "") or ""
+        other_aggs_data.append({
+            "name": target_name,
+            "email": str(target_email).strip(),
+            "contact": target_contact
+        })
+
+    # Update app record status immediately
+    app.poMailStatus = "SENT"
+    app.poMailSentAt = datetime.now()
+    app.poMailRecipient = str(agg_email).strip()
+    db.commit()
+
+    # Launch background thread for non-blocking SMTP dispatch
+    import threading
+    worker_thread = threading.Thread(
+        target=_background_outcome_email_worker,
+        args=(
+            application_id,
+            agg_name,
+            str(agg_email).strip(),
+            manage_agg.contactPersonName if manage_agg else "",
+            poDetails,
+            other_aggs_data
+        ),
+        daemon=True
+    )
+    worker_thread.start()
+
+    return True
 
 
 @router.put('/api/applications/{id}')
@@ -849,10 +930,36 @@ def update_applications(id: int, new_application: ApplicationsUpdate, db: Sessio
         existing_Applications.rejectedRole = user_role_str
         existing_Applications.rejectedDate = datetime.now()
 
+    DATE_FIELDS = {
+        "approvedByRODate", "approvedByCODate", "quoteAddedPADate", "quoteReviewCODate",
+        "quoteAcceptRODate", "finalApprovedDate", "rejectedDate", "poMailSentAt",
+        "negotiationRequestedDate", "createdAt", "updatedAt"
+    }
+
     valid_keys = {c.key for c in ApplicationsInDB.__table__.columns}
     for key, value in new_application.__dict__.items():
         if value is not None and key in valid_keys:
-            setattr(existing_Applications, key, value)
+            if key in DATE_FIELDS:
+                parsed_date = parse_datetime_safe(value)
+                if parsed_date is not None:
+                    setattr(existing_Applications, key, parsed_date)
+            else:
+                setattr(existing_Applications, key, value)
+
+    # Automatically capture authentic stage timestamps if not already present
+    now_ts = datetime.now()
+    if (existing_Applications.isReviewByRO or existing_Applications.isReviewByZO) and not existing_Applications.approvedByRODate:
+        existing_Applications.approvedByRODate = now_ts
+    if existing_Applications.isReviewByCO and not existing_Applications.approvedByCODate:
+        existing_Applications.approvedByCODate = now_ts
+    if (existing_Applications.isAggregatorAdded or existing_Applications.isQuoteAddedPA) and not existing_Applications.quoteAddedPADate:
+        existing_Applications.quoteAddedPADate = now_ts
+    if (existing_Applications.isMarkUpAddedCO or existing_Applications.isQuoteReviewCO) and not existing_Applications.quoteReviewCODate:
+        existing_Applications.quoteReviewCODate = now_ts
+    if existing_Applications.isQuoteAcceptRO and not existing_Applications.quoteAcceptRODate:
+        existing_Applications.quoteAcceptRODate = now_ts
+    if existing_Applications.isFinalApproved and not existing_Applications.finalApprovedDate:
+        existing_Applications.finalApprovedDate = now_ts
 
     db.commit()
     db.refresh(existing_Applications)
@@ -923,9 +1030,10 @@ def update_applications(id: int, new_application: ApplicationsUpdate, db: Sessio
     application = db.query(ApplicationsInDB).filter( 
         and_(or_(ApplicationsInDB.isDeleted == False, ApplicationsInDB.isDeleted.is_(None)), ApplicationsInDB.applicationId == id)).first()
     
-    if application.finalizedAggregatorId is not None and application.isFinalApproved == True:
+    if application and application.finalizedAggregatorId is not None and application.isFinalApproved == True:
         paymentAggregators = db.query(PaymentAggregatorInDB).filter(
-            and_(PaymentAggregatorInDB.isDeleted == False, PaymentAggregatorInDB.applicationId == id)).all()
+            and_(or_(PaymentAggregatorInDB.isDeleted == False, PaymentAggregatorInDB.isDeleted.is_(None)), 
+                 PaymentAggregatorInDB.applicationId == id)).all()
         for aggregator in paymentAggregators:
             if aggregator.aggregatorId == application.finalizedAggregatorId:
                 aggregator.quoteStatus = "accepted"
@@ -933,14 +1041,13 @@ def update_applications(id: int, new_application: ApplicationsUpdate, db: Sessio
                 aggregator.quoteStatus = "rejected"
             db.commit()
 
-        # Automatic PO mail trigger after final approval (prevents duplicate triggers if already SENT)
-        if application.poMailStatus != "SENT":
-            try:
-                dispatch_po_email_to_vendor(application.applicationId, db)
-            except Exception as mail_err:
-                print(f"[PO EMAIL AUTO DISPATCH ERROR] {mail_err}")
+        # Automatic PO mail trigger after final approval (sends accepted PO to selected vendor and regret emails to other vendors)
+        try:
+            dispatch_po_email_to_vendor(application.applicationId, db, force=True)
+        except Exception as mail_err:
+            print(f"[PO EMAIL AUTO DISPATCH ERROR] {mail_err}")
 
-    return existing_Applications 
+    return serialize_application(existing_Applications) 
 
 @router.put('/api/applications/test/{id}')
 def update_applications_test(id: int, db: Session = Depends(get_db)):
@@ -1233,19 +1340,29 @@ def get_all_projectionDetails(
             ).order_by(ProjectionDetailsInDB.order.asc(), ProjectionDetailsInDB.id.asc()).all()
         projectionDetails = base_query
     
-    # Reference maps for chargesProposed and rates across this application
-    all_app_projs = db.query(ProjectionDetailsInDB).filter(
-        ProjectionDetailsInDB.applicationId == applicationId
+    # Reference maps: Bank proposed charges strictly come from bank benchmark records (aggregatorId is None or 0)
+    bank_app_projs = db.query(ProjectionDetailsInDB).filter(
+        ProjectionDetailsInDB.applicationId == applicationId,
+        or_(ProjectionDetailsInDB.aggregatorId.is_(None), ProjectionDetailsInDB.aggregatorId == 0),
+        ProjectionDetailsInDB.isDeleted == False
     ).order_by(ProjectionDetailsInDB.id.desc()).all()
     
     charges_map = {}
+    for bp in bank_app_projs:
+        k = (bp.transactionType or "").strip().lower()
+        if k and float(bp.chargesProposed or 0.0) > 0 and k not in charges_map:
+            charges_map[k] = (float(bp.chargesProposed), bp.bankUnit or bp.unit or "%")
+
     rates_map = {}
-    for ap in all_app_projs:
-        k = (ap.transactionType or "").strip().lower()
-        if k:
-            if float(ap.chargesProposed or 0.0) > 0 and k not in charges_map:
-                charges_map[k] = (float(ap.chargesProposed), ap.bankUnit or ap.unit or "%")
-            if ap.aggregatorId == aggregatorId and float(ap.rate or 0.0) > 0 and k not in rates_map:
+    if aggregatorId != 0:
+        agg_projs = db.query(ProjectionDetailsInDB).filter(
+            ProjectionDetailsInDB.applicationId == applicationId,
+            ProjectionDetailsInDB.aggregatorId == aggregatorId,
+            ProjectionDetailsInDB.isDeleted == False
+        ).order_by(ProjectionDetailsInDB.id.desc()).all()
+        for ap in agg_projs:
+            k = (ap.transactionType or "").strip().lower()
+            if k and float(ap.rate or 0.0) > 0 and k not in rates_map:
                 rates_map[k] = (float(ap.rate), ap.unit or "%")
 
     # Deduplicate by transactionType (pick latest entry per channel)
@@ -1272,24 +1389,44 @@ def get_all_projectionDetails(
             if rates_map[k][1]:
                 p_data["unit"] = rates_map[k][1]
 
-        # If chargesProposed is 0 or missing, resolve from charges_map or standard banking benchmarks
-        if float(p_data.get("chargesProposed") or 0.0) <= 0:
-            if k in charges_map:
-                p_data["chargesProposed"] = charges_map[k][0]
-                if charges_map[k][1]:
-                    p_data["bankUnit"] = charges_map[k][1]
-            elif any(b in k for b in ["sbi", "hdfc", "icici", "axis", "other"]):
-                p_data["chargesProposed"] = 25.0
-                p_data["bankUnit"] = "₹"
-            elif "master" in k or "visa" in k:
-                p_data["chargesProposed"] = 0.9
-                p_data["bankUnit"] = "%"
-            elif "credit" in k:
-                p_data["chargesProposed"] = 1.0
-                p_data["bankUnit"] = "%"
-            elif "wallet" in k or "prepaid" in k:
-                p_data["chargesProposed"] = 0.9
-                p_data["bankUnit"] = "%"
+        # Bank proposed charges: prioritize bank benchmark charges_map, then existing record charge
+        if k in charges_map:
+            p_data["chargesProposed"] = charges_map[k][0]
+            if charges_map[k][1]:
+                p_data["bankUnit"] = charges_map[k][1]
+        elif float(p_data.get("chargesProposed") or 0.0) > 0:
+            p_data["chargesProposed"] = float(p_data.get("chargesProposed"))
+        else:
+            # Check if grossAmount exists and can recover charges
+            existing_gross = float(p.grossAmount or 0.0) if hasattr(p, 'grossAmount') else 0.0
+            b_unit = p_data.get("bankUnit") or p_data.get("unit") or "%"
+            agg_amt = float(p_data.get("aggregateAmount") or 0.0)
+            est_txn = float(p_data.get("estimatedTransactions") or 0.0)
+            if existing_gross > 0:
+                if b_unit == "%" and agg_amt > 0:
+                    p_data["chargesProposed"] = round((existing_gross * 100.0) / agg_amt, 3)
+                elif est_txn > 0:
+                    p_data["chargesProposed"] = round(existing_gross / est_txn, 3)
+                else:
+                    p_data["chargesProposed"] = 0.0
+            else:
+                p_data["chargesProposed"] = 0.0
+
+        # Recalculate row-level commercial values on the fly
+        c_prop = float(p_data.get("chargesProposed") or 0.0)
+        r_val = float(p_data.get("rate") or 0.0)
+        b_unit = p_data.get("bankUnit") or p_data.get("unit") or "%"
+        a_unit = p_data.get("unit") or "%"
+        agg_amt = float(p_data.get("aggregateAmount") or 0.0)
+        est_txn = float(p_data.get("estimatedTransactions") or 0.0)
+
+        gross = (agg_amt * c_prop) / 100.0 if b_unit == "%" else est_txn * c_prop
+        vendor = (agg_amt * r_val) / 100.0 if a_unit == "%" else est_txn * r_val
+        rev = gross - vendor if c_prop > 0 else (0.0 if r_val == 0 else -vendor)
+
+        p_data["grossAmount"] = round(gross, 3) if c_prop > 0 else (round(float(p.grossAmount or 0.0), 3) if hasattr(p, 'grossAmount') and float(p.grossAmount or 0.0) > 0 else 0.0)
+        p_data["vendorShare"] = round(vendor, 3) if r_val > 0 else 0.0
+        p_data["expectedRevenue"] = round(rev, 3) if (c_prop > 0 or r_val > 0) else 0.0
 
         # Ensure allow flag is set properly
         if not bool(p_data.get("isIB")) and "internet" in k:
@@ -1749,6 +1886,15 @@ async def bulk_update_charges(applicationId: int, request: Request, db: Session 
         except (ValueError, TypeError):
             pass
 
+        charges_val = projectionUpdate.get("chargesProposed")
+        try:
+            c_float = float(charges_val) if charges_val not in (None, "") else 0.0
+        except (ValueError, TypeError):
+            c_float = 0.0
+
+        bank_unit = projectionUpdate.get("bankUnit") or projectionUpdate.get("unit") or "%"
+        gross = (agg_amt * c_float) / 100.0 if bank_unit == "%" else est_txn * c_float
+
         if t_type in base_types:
             for bp in base_projs:
                 if bp.transactionType == t_type:
@@ -1759,6 +1905,10 @@ async def bulk_update_charges(applicationId: int, request: Request, db: Session 
                     bp.allow = bool(projectionUpdate.get("allow", True))
                     bp.isIB = bool(projectionUpdate.get("isIB", False))
                     bp.order = int(float(projectionUpdate.get("order") or 0))
+                    bp.chargesProposed = c_float
+                    bp.bankUnit = bank_unit
+                    bp.grossAmount = round(gross, 3)
+                    bp.expectedRevenue = round(gross, 3)
         else:
             new_base = ProjectionDetailsInDB(
                 applicationId=applicationId,
@@ -1773,11 +1923,11 @@ async def bulk_update_charges(applicationId: int, request: Request, db: Session 
                 aggregateAmount=agg_amt,
                 rate=0.0,
                 unit="₹",
-                chargesProposed=0.0,
-                bankUnit="₹",
-                grossAmount=0.0,
+                chargesProposed=c_float,
+                bankUnit=bank_unit,
+                grossAmount=round(gross, 3),
                 vendorShare=0.0,
-                expectedRevenue=0.0,
+                expectedRevenue=round(gross, 3),
                 isDeleted=False,
                 quoteVersion=1
             )
@@ -1965,11 +2115,26 @@ async def application_trial_api(request: Request, db: Session = Depends(get_db),
 
 @router.post("/api/files/upload")
 async def uploadFile(file: UploadFile = File(...), db: Session = Depends(get_db), current_user: User = Depends(verify_write_permission)):
+    fname = (file.filename or "").lower()
+    if not fname.endswith(".pdf") and file.content_type != "application/pdf":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only PDF documents (.pdf) are permitted for customer onboarding files."
+        )
+
     content = await file.read()
     file_size = len(content)
+
+    max_size = 5 * 1024 * 1024  # 5 MB
+    if file_size > max_size:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Uploaded file size ({(file_size / (1024 * 1024)):.2f} MB) exceeds the maximum allowed limit of 5 MB."
+        )
+
     db_file = FileStoreInDB(
         filename=file.filename,
-        content_type=file.content_type,
+        content_type="application/pdf",
         file_contents=content,
         file_size=file_size
     )
@@ -2040,6 +2205,13 @@ def create_purchase_order_details_for_print(applicationId: int, aggregatorId: in
     safe_cust = (application.customerName or "Merchant").replace(" ", "_")
     filename = f"Purchase_Order_{application.applicationId}_{safe_cust}.docx"
 
+    # Automatically dispatch PO Award email to selected vendor and Regret emails to other vendors
+    if application.finalizedAggregatorId and application.poMailStatus != "SENT":
+        try:
+            dispatch_po_email_to_vendor(application.applicationId, db)
+        except Exception as mail_err:
+            print(f"[PO EMAIL DISPATCH ON GENERATE PO ERROR] {mail_err}")
+
     return Response(
         content=doc_bytes,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -2047,9 +2219,12 @@ def create_purchase_order_details_for_print(applicationId: int, aggregatorId: in
     )
 
 @router.post('/api/applications/{id}/resend-po-email')
+@router.post('/api/applications/{id}/dispatch-outcome-emails')
 def resend_po_email(id: int, db: Session = Depends(get_db), current_user: User = Depends(verify_write_permission)):
     """
-    Manual trigger to dispatch or retry sending the Purchase Order email to the finalized vendor.
+    Manual trigger to dispatch outcome emails:
+    1. PO Acceptance / Award email to the finalized aggregator.
+    2. Non-selection / Rejection emails to all other competing aggregators.
     """
     check_application_not_rejected(id, db)
     app = db.query(ApplicationsInDB).filter(
@@ -2058,21 +2233,22 @@ def resend_po_email(id: int, db: Session = Depends(get_db), current_user: User =
     if not app:
         raise HTTPException(status_code=404, detail="Application not found")
     if not app.finalizedAggregatorId:
-        raise HTTPException(status_code=400, detail="Cannot dispatch PO email: No payment aggregator finalized for this application.")
+        raise HTTPException(status_code=400, detail="Cannot dispatch outcome emails: No payment aggregator finalized for this application.")
 
     # Reset poMailStatus to allow explicit manual re-trigger
     app.poMailStatus = "PENDING"
-    success = dispatch_po_email_to_vendor(id, db)
+    success = dispatch_po_email_to_vendor(id, db, force=True)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to dispatch PO email to vendor. Please verify aggregator email address and SMTP settings."
+            detail="Failed to dispatch outcome emails to aggregators. Please verify SMTP settings and recipient addresses."
         )
     return {
-        "message": "Purchase Order email dispatched successfully to finalized aggregator.",
+        "message": f"Outcome emails dispatched successfully: Acceptance email sent to finalized aggregator ({app.poMailRecipient}), rejection notices sent to competing aggregators.",
         "poMailStatus": app.poMailStatus,
         "poMailSentAt": app.poMailSentAt,
-        "poMailRecipient": app.poMailRecipient
+        "poMailRecipient": app.poMailRecipient,
+        "finalizedAggregatorName": app.finalizedAggregatorName
     }
 
 # --- Sanction Letter Generation Endpoint ---
@@ -2261,5 +2437,211 @@ def get_stage_metrics(
         "stageCounts": stage_counts,
         "kpis": kpis
     }
+
+
+# ════════════════════════════════════════════════════════════════════════════════
+# QA & TESTING DATABASE MANAGEMENT ENDPOINTS
+# ════════════════════════════════════════════════════════════════════════════════
+
+@router.get('/api/qa/tables-summary')
+@router.get('/qa/tables-summary')
+def get_qa_tables_summary(db: Session = Depends(get_db)):
+    """
+    Returns live record count and table metadata for QA diagnostics & database management.
+    """
+    try:
+        tables = [
+            {
+                "tableName": "applications",
+                "modelName": "ApplicationsInDB",
+                "label": "Merchant Applications",
+                "category": "Core Workflow",
+                "count": db.query(ApplicationsInDB).count(),
+                "description": "Primary merchant application records across all workflow stages."
+            },
+            {
+                "tableName": "projection_details",
+                "modelName": "ProjectionDetailsInDB",
+                "label": "Projections & Rate Quotes",
+                "category": "Commercials",
+                "count": db.query(ProjectionDetailsInDB).count(),
+                "description": "Transaction volume projections, MDR rate quotes, and aggregator bid items."
+            },
+            {
+                "tableName": "payment_aggregators",
+                "modelName": "PaymentAggregatorInDB",
+                "label": "Aggregator Quote Links",
+                "category": "Commercials",
+                "count": db.query(PaymentAggregatorInDB).count(),
+                "description": "Links between applications and aggregators with gross amounts & status."
+            },
+            {
+                "tableName": "helpdesk",
+                "modelName": "HelpDesk",
+                "label": "Helpdesk / Queries / Tickets",
+                "category": "Support",
+                "count": db.query(HelpDesk).count(),
+                "description": "Application queries, support tickets, and chat threads."
+            },
+            {
+                "tableName": "application_audit_logs",
+                "modelName": "ApplicationAuditLogInDB",
+                "label": "Application Audit Logs",
+                "category": "Compliance",
+                "count": db.query(ApplicationAuditLogInDB).count(),
+                "description": "Historical audit trails for every application workflow action."
+            },
+            {
+                "tableName": "app_notifications",
+                "modelName": "NotificationInDB",
+                "label": "Application Notifications",
+                "category": "System",
+                "count": db.query(NotificationInDB).count(),
+                "description": "In-app notifications dispatched to branch, RO, ZO, or CO."
+            },
+            {
+                "tableName": "aggregator_audit_logs",
+                "modelName": "AggregatorAuditLogInDB",
+                "label": "Aggregator Audit Logs",
+                "category": "Compliance",
+                "count": db.query(AggregatorAuditLogInDB).count(),
+                "description": "Audit trails for aggregator onboarding, login, and edits."
+            },
+            {
+                "tableName": "files",
+                "modelName": "FileStoreInDB",
+                "label": "Uploaded Files & Documents",
+                "category": "Storage",
+                "count": db.query(FileStoreInDB).count(),
+                "description": "Binary file store containing KYC docs, recommendation notes, and approvals."
+            },
+            {
+                "tableName": "manage_aggregators",
+                "modelName": "ManageAggregatorInDB",
+                "label": "Aggregator Masters (Partners)",
+                "category": "Master Data",
+                "count": db.query(ManageAggregatorInDB).count(),
+                "description": "Master list of registered Payment Aggregators (Razorpay, BillDesk, etc.)."
+            }
+        ]
+        return JSONResponse(content={"status": "success", "tables": tables}, media_type="application/json")
+    except Exception as e:
+        logger.exception("Error in get_qa_tables_summary")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete('/api/qa/truncate-table/{table_name}')
+@router.delete('/qa/truncate-table/{table_name}')
+def truncate_qa_table(table_name: str, db: Session = Depends(get_db)):
+    """
+    Truncates/deletes all records from the selected QA table.
+    """
+    model_mapping = {
+        "applications": ApplicationsInDB,
+        "projection_details": ProjectionDetailsInDB,
+        "payment_aggregators": PaymentAggregatorInDB,
+        "helpdesk": HelpDesk,
+        "application_audit_logs": ApplicationAuditLogInDB,
+        "app_notifications": NotificationInDB,
+        "aggregator_audit_logs": AggregatorAuditLogInDB,
+        "files": FileStoreInDB,
+        "manage_aggregators": ManageAggregatorInDB
+    }
+
+    if table_name not in model_mapping:
+        raise HTTPException(status_code=400, detail=f"Table '{table_name}' is not recognized or not permitted for truncation.")
+
+    model = model_mapping[table_name]
+    try:
+        deleted_count = db.query(model).delete(synchronize_session=False)
+        db.commit()
+        return JSONResponse(
+            content={
+                "status": "success",
+                "message": f"Successfully truncated table '{table_name}'. Removed {deleted_count} records.",
+                "tableName": table_name,
+                "deletedCount": deleted_count
+            },
+            media_type="application/json"
+        )
+    except Exception as e:
+        db.rollback()
+        logger.exception(f"Error truncating table '{table_name}'")
+        raise HTTPException(status_code=500, detail=f"Failed to truncate table '{table_name}': {str(e)}")
+
+
+@router.delete('/api/qa/applications/all')
+@router.delete('/qa/applications/all')
+def wipe_all_qa_applications(db: Session = Depends(get_db)):
+    """
+    Wipes all test applications and all linked projection items, aggregator quotes, helpdesk queries, audit logs, and notifications.
+    """
+    try:
+        app_count = db.query(ApplicationsInDB).delete(synchronize_session=False)
+        proj_count = db.query(ProjectionDetailsInDB).delete(synchronize_session=False)
+        pa_count = db.query(PaymentAggregatorInDB).delete(synchronize_session=False)
+        hd_count = db.query(HelpDesk).delete(synchronize_session=False)
+        audit_count = db.query(ApplicationAuditLogInDB).delete(synchronize_session=False)
+        notif_count = db.query(NotificationInDB).delete(synchronize_session=False)
+        
+        db.commit()
+        return JSONResponse(
+            content={
+                "status": "success",
+                "message": "Successfully wiped all test applications and associated records.",
+                "deleted": {
+                    "applications": app_count,
+                    "projectionDetails": proj_count,
+                    "paymentAggregators": pa_count,
+                    "helpdeskTickets": hd_count,
+                    "auditLogs": audit_count,
+                    "notifications": notif_count
+                }
+            },
+            media_type="application/json"
+        )
+    except Exception as e:
+        db.rollback()
+        logger.exception("Error wiping all QA applications")
+        raise HTTPException(status_code=500, detail=f"Failed to wipe test applications: {str(e)}")
+
+
+@router.delete('/api/qa/applications/{application_id}/force')
+@router.delete('/qa/applications/{application_id}/force')
+def force_delete_qa_application(application_id: int, db: Session = Depends(get_db)):
+    """
+    Hard deletes a single test application along with its projections, quotes, tickets, and logs.
+    """
+    try:
+        app = db.query(ApplicationsInDB).filter(ApplicationsInDB.applicationId == application_id).first()
+        if not app:
+            raise HTTPException(status_code=404, detail=f"Application #{application_id} not found.")
+
+        # Delete dependent child rows
+        db.query(ProjectionDetailsInDB).filter(ProjectionDetailsInDB.applicationId == application_id).delete(synchronize_session=False)
+        db.query(PaymentAggregatorInDB).filter(PaymentAggregatorInDB.applicationId == application_id).delete(synchronize_session=False)
+        db.query(HelpDesk).filter(HelpDesk.applicationNo == application_id).delete(synchronize_session=False)
+        db.query(ApplicationAuditLogInDB).filter(ApplicationAuditLogInDB.applicationId == application_id).delete(synchronize_session=False)
+        db.query(NotificationInDB).filter(NotificationInDB.applicationId == application_id).delete(synchronize_session=False)
+
+        # Delete main application
+        db.delete(app)
+        db.commit()
+
+        return JSONResponse(
+            content={
+                "status": "success",
+                "message": f"Successfully deleted application #{application_id} and all its associated data.",
+                "applicationId": application_id
+            },
+            media_type="application/json"
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.exception(f"Error force deleting application #{application_id}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete application #{application_id}: {str(e)}")
+
 
 

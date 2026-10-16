@@ -22,7 +22,7 @@ import {
   TaskAltRounded,
 } from '@mui/icons-material';
 import { formatDateOnly, formatTimeOnly } from '&src/utils';
-import StatusChipOrSelect from '&src/components/StatusChipOrSelect';
+import StatusChipOrSelect from '&src/components/table/common/StatusChipOrSelect';
 import RoleBasedStepper from '&src/components/RoleBasedStepper';
 import { PAYMENT_AGGREGATOR_WORKFLOW, deriveApplicationStatus } from '&src/constants/PaymentAggregratorConstant';
 

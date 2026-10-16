@@ -1,10 +1,9 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import useToggle from './useToggle';
 import useQueryWebSocket from './useQueryWebSocket';
-import useStatusWiseAlert from '&src/components/ToastNotifications/useStatusWiseAlert';
+import useStatusWiseAlert from '&src/components/feedback/ToastNotifications/useStatusWiseAlert';
 import HelpdeskServices from '&src/services/helpdesk';
-import * as XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
+import { exportHelpDeskToExcel } from '&src/utils/excelExport';
 
 /**
  * Custom hook encapsulating all ticket query workflows, WebSocket synchronization,
@@ -103,33 +102,27 @@ export default function useHelpDesk() {
   }, [ticketData, fetchAllTicketsData, errorNotification, successNotification]);
 
   const handleExportExcel = useCallback(() => {
-    const list = Array.isArray(allTicketsDetails?.data) ? allTicketsDetails.data : [];
+    const list = Array.isArray(allTicketsDetails?.data)
+      ? allTicketsDetails.data
+      : Array.isArray(allTicketsDetails)
+      ? allTicketsDetails
+      : [];
+
     if (!list.length) {
       errorNotification('No ticket records available for export');
       return;
     }
 
-    const exportRows = list.map((item, index) => ({
-      'Sr No.': index + 1,
-      'Created Date': item.createdAt ? new Date(item.createdAt).toLocaleDateString('en-GB') : '-',
-      'Ticket Subject': item.ticketName || '-',
-      'Merchant / Customer': item.customerName || '-',
-      'A/C Number': item.accountNo || '-',
-      'Branch': item.branchName || '-',
-      'Region': item.regionName || '-',
-      'Zone': item.zoneName || '-',
-      'Priority': (item.priority || 'medium').toUpperCase(),
-      'Status': (item.status || 'open').toUpperCase(),
-      'Description': item.description || '-',
-    }));
-
-    const worksheet = XLSX.utils.json_to_sheet(exportRows);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Help Desk Tickets');
-    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-    const dataBlob = new Blob([excelBuffer], { type: 'application/octet-stream' });
-    saveAs(dataBlob, `CBI_Helpdesk_Tickets_${new Date().toISOString().slice(0, 10)}.xlsx`);
-    successNotification('Support tickets report exported successfully');
+    try {
+      exportHelpDeskToExcel(
+        list,
+        `CBI_HelpDesk_Tickets_${new Date().toISOString().slice(0, 10)}.xlsx`
+      );
+      successNotification(`Exported ${list.length} support tickets to Excel successfully!`);
+    } catch (err) {
+      console.error('Export tickets failed:', err);
+      errorNotification('Failed to export tickets report');
+    }
   }, [allTicketsDetails, errorNotification, successNotification]);
 
   const ticketsList = useMemo(() => {

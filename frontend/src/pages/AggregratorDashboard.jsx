@@ -1,11 +1,11 @@
 import DialogWithHeader from '&src/components/Dialog/DialogWithHeader';
-import { NumberField } from '&src/components/FormFields';
+import { NumberField } from '&src/components/form/FormFields';
 import SectionHeader from '&src/components/Headers/SectionHeader';
-import FullScreenLoader from '&src/components/Loaders/FullScreenLoader';
-import StatusChipOrSelect from '&src/components/StatusChipOrSelect';
-import ExpandableTable from '&src/components/Tables/ExpandableTable';
-import TransactionRateTable from '&src/components/Tables/TransactionRateTable';
-import useStatusWiseAlert from "&src/components/ToastNotifications/useStatusWiseAlert";
+import FullScreenLoader from '&src/components/feedback/FullScreenLoader';
+import StatusChipOrSelect from '&src/components/table/common/StatusChipOrSelect';
+import ExpandableTable from '&src/components/table/ExpandableTable';
+import TransactionRateTable from '&src/components/table/TransactionRateTable';
+import useStatusWiseAlert from "&src/components/feedback/ToastNotifications/useStatusWiseAlert";
 import useToggle from '&src/hooks/useToggle';
 import applicationServices from '&src/services/applications';
 import { RS } from '&src/utils';

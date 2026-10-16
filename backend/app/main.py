@@ -208,6 +208,29 @@ async def system_db_status():
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# EMAIL PREVIEW & TESTING VIEWER ENDPOINTS
+# ─────────────────────────────────────────────────────────────────────────────
+from fastapi.responses import HTMLResponse
+
+@app.get("/api/latest-email-preview", response_class=HTMLResponse, include_in_schema=False)
+@app.get("/latest-email-preview", response_class=HTMLResponse, include_in_schema=False)
+def get_latest_email_preview():
+    preview_file = BACKEND_DIR / "sent_emails" / "latest_email_preview.html"
+    if preview_file.is_file():
+        content = preview_file.read_text(encoding="utf-8")
+        return HTMLResponse(content=content)
+    return HTMLResponse(
+        content="""
+        <html><body style="font-family: Arial; padding: 40px; text-align: center; color: #334155;">
+            <h2 style="color: #0E4F8D;">No Email Dispatched Yet</h2>
+            <p>Trigger a quotation request, credentials reset, or test email from the portal to view live preview here.</p>
+        </body></html>
+        """,
+        status_code=200
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # INCLUDE API ROUTERS
 # ─────────────────────────────────────────────────────────────────────────────
 app.include_router(auth.router)
